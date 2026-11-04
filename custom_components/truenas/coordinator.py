@@ -71,6 +71,8 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         )
 
         self._systemstats_errored = []
+        # Device registry id of the "System" device, set by async_setup_entry
+        self.system_device_id: str | None = None
         self.datasets_hass_device_id = None
         self.last_updatecheck_update = datetime(1970, 1, 1)
 

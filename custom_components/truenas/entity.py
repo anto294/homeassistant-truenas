@@ -28,6 +28,42 @@ from .helper import format_attribute
 _LOGGER = getLogger(__name__)
 
 
+# Home Assistant 2026.8 added "via_device_id" (the parent's device registry
+# id) to DeviceInfo. 2026.9 dropped "via_device" (the parent's identifier
+# tuple) from DeviceInfo and deprecated it, to be removed in 2027.8. Older
+# releases, back to the minimum 2024.11, only know "via_device" and reject
+# a device info with "via_device_id" as invalid. Detect the key instead of
+# comparing versions.
+VIA_DEVICE_ID_SUPPORTED = "via_device_id" in (
+    DeviceInfo.__required_keys__ | DeviceInfo.__optional_keys__
+)
+
+
+# ---------------------------
+#   system_device_info
+# ---------------------------
+def system_device_info(coordinator: TrueNASCoordinator) -> DeviceInfo:
+    """Return the device info of the TrueNAS "System" device.
+
+    The System device is the parent of every other TrueNAS device. It is
+    registered from async_setup_entry, before the platforms, so its device
+    id exists when child devices link to it, and by the System entities.
+    Both use this function, so they always describe the same device.
+    """
+    inst = coordinator.config_entry.data[CONF_NAME]
+    system_info = coordinator.data["system_info"]
+    device_key = (DOMAIN, f"{inst}_{system_info['hostname']}")
+    return DeviceInfo(
+        connections={device_key},
+        identifiers={device_key},
+        name="System",
+        model=f"{system_info['system_product']}",
+        manufacturer=f"{system_info['system_manufacturer']}",
+        sw_version=f"{system_info['version']}",
+        configuration_url=f"http://{coordinator.config_entry.data[CONF_HOST]}",
+    )
+
+
 # ---------------------------
 #   build_entity_id
 # ---------------------------
@@ -198,29 +234,28 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
                 )
 
         if self.entity_description.ha_group == "System":
-            return DeviceInfo(
-                connections={(dev_connection, f"{dev_connection_value}")},
-                identifiers={(dev_connection, f"{dev_connection_value}")},
-                name=dev_group,
-                model=f"{self.coordinator.data['system_info']['system_product']}",
-                manufacturer=f"{self.coordinator.data['system_info']['system_manufacturer']}",
-                sw_version=f"{self.coordinator.data['system_info']['version']}",
-                configuration_url=f"http://{self.coordinator.config_entry.data[CONF_HOST]}",
-            )
+            return system_device_info(self.coordinator)
+
+        # Plain name/model/manufacturer: the default_* variants are
+        # deprecated (removed in HA 2027.9), and mixing them with these
+        # keys is an invalid device info on HA 2024.11.
+        info = DeviceInfo(
+            connections={(dev_connection, f"{dev_connection_value}")},
+            name=dev_group,
+            model=f"{self.coordinator.data['system_info']['system_product']}",
+            manufacturer=f"{self.coordinator.data['system_info']['system_manufacturer']}",
+        )
+        if VIA_DEVICE_ID_SUPPORTED:
+            # Registered in async_setup_entry before any platform is set up
+            if self.coordinator.system_device_id:
+                info["via_device_id"] = self.coordinator.system_device_id
         else:
-            # Plain name/model/manufacturer: the default_* variants are
-            # deprecated (removed in HA 2027.9), and mixing them with these
-            # keys is an invalid device info on HA 2024.11.
-            return DeviceInfo(
-                connections={(dev_connection, f"{dev_connection_value}")},
-                name=dev_group,
-                model=f"{self.coordinator.data['system_info']['system_product']}",
-                manufacturer=f"{self.coordinator.data['system_info']['system_manufacturer']}",
-                via_device=(
-                    DOMAIN,
-                    f"{self._inst}_{self.coordinator.data['system_info']['hostname']}",
-                ),
+            info["via_device"] = (
+                DOMAIN,
+                f"{self._inst}_{self.coordinator.data['system_info']['hostname']}",
             )
+
+        return info
 
     @property
     def extra_state_attributes(self) -> Mapping[str, Any]:

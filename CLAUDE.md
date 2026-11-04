@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Home Assistant custom integration (HACS) for TrueNAS. Domain: `truenas`. All code lives in `custom_components/truenas/`. Repository: `anto294/homeassistant-truenas`, a fork of `tomaae/homeassistant-truenas` distributed separately as a HACS custom repository. Repository links (manifest, README, release scripts) must point to the fork, not upstream.
+Home Assistant custom integration (HACS) for TrueNAS, named "TrueNAS Link". Domain: `truenas_link` (renamed from `truenas` in 2.0.0 so it can sit next to upstream). All code lives in `custom_components/truenas_link/`. Repository: `anto294/homeassistant-truenas`, which started as a fork of `tomaae/homeassistant-truenas` (domain `truenas`) and is distributed separately through HACS. Repository links (manifest, README, release scripts) must point to the fork, not upstream.
 
 ## TrueNAS API reference
 
@@ -46,8 +46,9 @@ Check a method's name, parameters and return shape in these docs before adding o
   # ---------------------------
   ```
 - Never block the event loop. Every `api.query` call from async code goes through `async_add_executor_job`.
+- Keep `DEFAULT_DEVICE_NAME = "TrueNAS"` in `const.py`. Entity IDs are built from the entry name (`build_entity_id` in `entity.py`), and the 1.x → 2.0 migration relies on users getting the same entity IDs back when they add the entry again with the same name.
 - `manifest.json` keeps `"version": "0.0.0"`. The release workflow (`.github/update_version.py`) sets the real version.
-- HACS installs from the `truenas.zip` asset that `release.yml` attaches to each published GitHub release (`zip_release` in `hacs.json`). Publish a full GitHub release, not just a tag; mark betas as pre-releases. Tags are `vX.Y.Z` or `vX.Y.ZbN` (the release workflow rejects anything else). Every user-facing change gets an entry under `## [Unreleased]` in `CHANGELOG.md` (Keep a Changelog format); the release notes are that version's section, passed with `gh release create --notes-file`. README.md is the page HACS shows (no `info.md`).
+- HACS installs from the `truenas_link.zip` asset that `release.yml` attaches to each published GitHub release (`zip_release` in `hacs.json`). Publish a full GitHub release, not just a tag; mark betas as pre-releases. Tags are `vX.Y.Z` or `vX.Y.ZbN` (the release workflow rejects anything else). Every user-facing change gets an entry under `## [Unreleased]` in `CHANGELOG.md` (Keep a Changelog format); the release notes are that version's section, passed with `gh release create --notes-file`. README.md is the page HACS shows (no `info.md`).
 - Keep `hacs.json` `homeassistant` at the oldest core that has every HA API the code uses.
 - Minimum HA version: see `hacs.json` (`homeassistant`) and `Pipfile` (dev dependency).
 
@@ -59,4 +60,4 @@ black .
 flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 ```
 
-Tests live in `tests/` (pytest, `[tool:pytest]` in `setup.cfg`) and run against an installed Home Assistant: `python -m pytest`. `tests/conftest.py` provides a `FakeWebSocket` and a `connected_api` fixture, so `TrueNASAPI.query()` and the coordinator run unmodified against canned JSON-RPC responses; build payloads from the real API shapes. CI runs them in the "Import and test" job on the oldest supported and the latest Home Assistant. CI also runs hassfest (`home-assistant/actions/hassfest`) and Bandit. To check changes by hand, copy `custom_components/truenas` into the `config/custom_components/` directory of a Home Assistant dev instance that is connected to a real TrueNAS system. Turn on debug logging for `custom_components.truenas` to see every query and response.
+Tests live in `tests/` (pytest, `[tool:pytest]` in `setup.cfg`) and run against an installed Home Assistant: `python -m pytest`. `tests/conftest.py` provides a `FakeWebSocket` and a `connected_api` fixture, so `TrueNASAPI.query()` and the coordinator run unmodified against canned JSON-RPC responses; build payloads from the real API shapes. CI runs them in the "Import and test" job on the oldest supported and the latest Home Assistant. CI also runs hassfest (`home-assistant/actions/hassfest`) and Bandit. To check changes by hand, copy `custom_components/truenas_link` into the `config/custom_components/` directory of a Home Assistant dev instance that is connected to a real TrueNAS system. Turn on debug logging for `custom_components.truenas_link` to see every query and response.

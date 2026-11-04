@@ -898,6 +898,58 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     # ---------------------------
     def get_vm(self) -> None:
         """Get VMs from TrueNAS."""
+        if self.version_at_least(25, 10):
+            self._get_vm_libvirt()
+        else:
+            self._get_vm_virt()
+
+    # ---------------------------
+    #   _get_vm_libvirt
+    # ---------------------------
+    def _get_vm_libvirt(self) -> None:
+        """Get VMs with vm.query (TrueNAS 25.10+).
+
+        25.10 dropped the Incus based virt.instance API and went back to the
+        libvirt vm.* API. Entries are keyed by name, like virt.instance used
+        to be, so "id" keeps holding the name and entity unique ids stay the
+        same. The numeric libvirt id that vm.start/vm.stop expect is stored
+        in "vm_id".
+        """
+        self.ds["vm"] = parse_api(
+            data={},
+            source=self.api.query("vm.query"),
+            key="name",
+            vals=[
+                {"name": "vm_id", "source": "id", "default": 0},
+                {"name": "name", "default": "unknown"},
+                {"name": "description", "default": ""},
+                {"name": "vcpus", "default": 1},
+                {"name": "cores", "default": 1},
+                {"name": "threads", "default": 1},
+                {"name": "memory", "default": 0},
+                {"name": "autostart", "type": "bool", "default": False},
+                {"name": "status", "source": "status/state", "default": "unknown"},
+            ],
+            ensure_vals=[
+                {"name": "running", "type": "bool", "default": False},
+            ],
+        )
+
+        for uid, vals in self.ds["vm"].items():
+            vm = self.ds["vm"][uid]
+            vm["id"] = uid
+            vm["type"] = "VM"
+            vm["image"] = "unknown"
+            vm["cpu"] = vals["vcpus"] * vals["cores"] * vals["threads"]
+            # vm.query reports memory in MiB, the sensor exposes GiB
+            vm["memory"] = round(vals["memory"] / 1024, 1)
+            vm["running"] = vals["status"] == "RUNNING"
+
+    # ---------------------------
+    #   _get_vm_virt
+    # ---------------------------
+    def _get_vm_virt(self) -> None:
+        """Get VMs and containers with virt.instance.query (TrueNAS 25.04)."""
         self.ds["vm"] = parse_api(
             data=self.ds["vm"],
             source=self.api.query("virt.instance.query"),

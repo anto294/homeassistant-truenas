@@ -76,9 +76,16 @@ class TrueNASUpdate(TrueNASEntity, UpdateEntity):
 
     async def async_install(self, version: str, backup: bool, **kwargs: Any) -> None:
         """Install an update."""
+        # Since 25.10 update.update only edits the update settings and the
+        # download/apply job moved to update.run (same attrs, returns a job id).
+        method = (
+            "update.run"
+            if self.coordinator.version_at_least(25, 10)
+            else "update.update"
+        )
         self._data["update_jobid"] = await self.hass.async_add_executor_job(
             self.coordinator.api.query,
-            "update.update",
+            method,
             {"reboot": True},
         )
         await self.coordinator.async_refresh()

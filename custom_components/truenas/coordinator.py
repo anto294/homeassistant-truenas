@@ -61,6 +61,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             "replication": {},
             "snapshottask": {},
             "app": {},
+            "container": {},
         }
 
         self.api = TrueNASAPI(
@@ -104,6 +105,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             self.get_replication,
             self.get_snapshottask,
             self.get_app,
+            self.get_container,
         ]
 
         for job in jobs:
@@ -986,6 +988,48 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         for uid, vals in self.ds["vm"].items():
             self.ds["vm"][uid]["memory"] = round(vals["memory"] / 1024 / 1024 / 1024)
             self.ds["vm"][uid]["running"] = vals["status"] == "RUNNING"
+
+    # ---------------------------
+    #   get_container
+    # ---------------------------
+    def get_container(self) -> None:
+        """Get containers with container.query (TrueNAS 27.0+).
+
+        Containers got their own container.* API in 27.0. Older releases have
+        no such namespace (25.04 listed containers through virt.instance.*,
+        which get_vm already covers), so nothing is queried there.
+        Entries are keyed by name, like VMs, and the numeric id that
+        container.start/container.stop expect is stored in "container_id".
+        """
+        if not self.version_at_least(27, 0):
+            self.ds["container"] = {}
+            return
+
+        self.ds["container"] = parse_api(
+            data={},
+            source=self.api.query("container.query"),
+            key="name",
+            vals=[
+                {"name": "container_id", "source": "id", "default": 0},
+                {"name": "name", "default": "unknown"},
+                {"name": "description", "default": ""},
+                {"name": "autostart", "type": "bool", "default": False},
+                {"name": "cpuset", "default": None},
+                {"name": "memory", "default": None},
+                {"name": "status", "source": "status/state", "default": "unknown"},
+            ],
+            ensure_vals=[
+                {"name": "running", "type": "bool", "default": False},
+            ],
+        )
+
+        for uid, vals in self.ds["container"].items():
+            container = self.ds["container"][uid]
+            container["id"] = uid
+            # Memory limit in MiB, null means no limit (host memory is shared)
+            if isinstance(vals["memory"], int):
+                container["memory"] = round(vals["memory"] / 1024, 1)
+            container["running"] = vals["status"] == "RUNNING"
 
     # ---------------------------
     #   get_cloudsync

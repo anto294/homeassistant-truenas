@@ -120,6 +120,22 @@ vm_stop:
       integration: truenas
       domain: binary_sensor
 
+container_start:
+  name: Container Start
+  description: Start a container (TrueNAS 27.0 and later)
+  target:
+    entity:
+      integration: truenas
+      domain: binary_sensor
+
+container_stop:
+  name: Container Stop
+  description: Stop a container (TrueNAS 27.0 and later)
+  target:
+    entity:
+      integration: truenas
+      domain: binary_sensor
+
 app_start:
   name: App Start
   description: Start a app

@@ -29,6 +29,7 @@ async def async_setup_entry(
     dispatcher = {
         "TrueNASBinarySensor": TrueNASBinarySensor,
         "TrueNASVMBinarySensor": TrueNASVMBinarySensor,
+        "TrueNASContainerBinarySensor": TrueNASContainerBinarySensor,
         "TrueNASServiceBinarySensor": TrueNASServiceBinarySensor,
         "TrueNASAppBinarySensor": TrueNASAppBinarySensor,
     }
@@ -145,6 +146,71 @@ class TrueNASVMBinarySensor(TrueNASBinarySensor):
                 "virt.instance.stop",
                 [self._data["id"], {"timeout": 0, "force": True}],
             )
+
+
+# ---------------------------
+#   TrueNASContainerBinarySensor
+# ---------------------------
+class TrueNASContainerBinarySensor(TrueNASBinarySensor):
+    """Define a TrueNAS Container Binary Sensor (TrueNAS 27.0+)."""
+
+    # ---------------------------
+    #   _get_state
+    # ---------------------------
+    async def _get_state(self) -> str | None:
+        """Return the current container state ("RUNNING", "STOPPED", ...) or None."""
+        tmp_container = await self.hass.async_add_executor_job(
+            self.coordinator.api.query,
+            "container.get_instance",
+            [self._data["container_id"]],
+        )
+        status = (
+            tmp_container.get("status") if isinstance(tmp_container, dict) else None
+        )
+        state = status.get("state") if isinstance(status, dict) else None
+        if state is None:
+            _LOGGER.error(
+                "Container %s (%s) invalid", self._data["name"], self._data["id"]
+            )
+
+        return state
+
+    async def start(self):
+        """Start a container."""
+        state = await self._get_state()
+        if state is None:
+            return
+
+        if state != "STOPPED":
+            _LOGGER.warning(
+                "Container %s (%s) is not down", self._data["name"], self._data["id"]
+            )
+            return
+
+        await self.hass.async_add_executor_job(
+            self.coordinator.api.query,
+            "container.start",
+            [self._data["container_id"]],
+        )
+
+    async def stop(self):
+        """Stop a container."""
+        state = await self._get_state()
+        if state is None:
+            return
+
+        if state != "RUNNING":
+            _LOGGER.warning(
+                "Container %s (%s) is not up", self._data["name"], self._data["id"]
+            )
+            return
+
+        # Clean shutdown, killed if it exceeds the container's shutdown_timeout
+        await self.hass.async_add_executor_job(
+            self.coordinator.api.query,
+            "container.stop",
+            [self._data["container_id"], {"force_after_timeout": True}],
+        )
 
 
 # ---------------------------

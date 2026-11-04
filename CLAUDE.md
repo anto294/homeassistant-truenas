@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Home Assistant custom integration (HACS) for TrueNAS. Domain: `truenas`. All code lives in `custom_components/truenas/`. Upstream: `tomaae/homeassistant-truenas`.
+Home Assistant custom integration (HACS) for TrueNAS. Domain: `truenas`. All code lives in `custom_components/truenas/`. Repository: `anto294/homeassistant-truenas`, a fork of `tomaae/homeassistant-truenas` distributed separately as a HACS custom repository. Repository links (manifest, README, release scripts) must point to the fork, not upstream.
 
 ## TrueNAS API reference
 
@@ -32,7 +32,7 @@ Check a method's name, parameters and return shape in these docs before adding o
 1. Check the method in the API docs (see above).
 2. Add a `get_<x>` method in `coordinator.py`, add the `ds["<x>"]` section in `__init__`, and add the job to the list in `_async_update_data`.
 3. Add descriptions in the right `*_types.py` file, plus an entity class if it needs actions.
-4. Update `strings.json` **and** `translations/en.json`. Other languages are managed through Lokalise.
+4. Update `strings.json` **and** `translations/en.json`. Other languages are contributed by pull request to `translations/`.
 5. If there is new sensitive data, add it to `TO_REDACT` in `const.py`, which `diagnostics.py` uses.
 
 ## Conventions
@@ -47,6 +47,8 @@ Check a method's name, parameters and return shape in these docs before adding o
   ```
 - Never block the event loop. Every `api.query` call from async code goes through `async_add_executor_job`.
 - `manifest.json` keeps `"version": "0.0.0"`. The release workflow (`.github/update_version.py`) sets the real version.
+- HACS installs from the `truenas.zip` asset that `release.yml` attaches to each published GitHub release (`zip_release` in `hacs.json`). Publish a full GitHub release, not just a tag; mark betas as pre-releases. README.md is the page HACS shows (no `info.md`).
+- Keep `hacs.json` `homeassistant` at the oldest core that has every HA API the code uses.
 - Minimum HA version: see `hacs.json` (`homeassistant`) and `Pipfile` (dev dependency).
 
 ## Development commands

@@ -11,6 +11,8 @@ from homeassistant.components.binary_sensor import (
 from .const import (
     SCHEMA_SERVICE_APP_START,
     SCHEMA_SERVICE_APP_STOP,
+    SCHEMA_SERVICE_CONTAINER_START,
+    SCHEMA_SERVICE_CONTAINER_STOP,
     SCHEMA_SERVICE_SERVICE_RELOAD,
     SCHEMA_SERVICE_SERVICE_RESTART,
     SCHEMA_SERVICE_SERVICE_START,
@@ -19,6 +21,8 @@ from .const import (
     SCHEMA_SERVICE_VM_STOP,
     SERVICE_APP_START,
     SERVICE_APP_STOP,
+    SERVICE_CONTAINER_START,
+    SERVICE_CONTAINER_STOP,
     SERVICE_SERVICE_RELOAD,
     SERVICE_SERVICE_RESTART,
     SERVICE_SERVICE_START,
@@ -47,6 +51,14 @@ DEVICE_ATTRIBUTES_VM = [
     "memory",
     "autostart",
     "image",
+]
+
+DEVICE_ATTRIBUTES_CONTAINER = [
+    "description",
+    "autostart",
+    "cpuset",
+    "memory",
+    "status",
 ]
 
 DEVICE_ATTRIBUTES_SERVICE = [
@@ -117,6 +129,22 @@ SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
         func="TrueNASVMBinarySensor",
     ),
     TrueNASBinarySensorEntityDescription(
+        key="container",
+        name="",
+        icon_enabled="mdi:package-variant",
+        icon_disabled="mdi:package-variant-remove",
+        device_class=None,
+        entity_category=None,
+        ha_group="Containers",
+        data_path="container",
+        data_is_on="running",
+        data_name="name",
+        data_uid="",
+        data_reference="id",
+        data_attributes_list=DEVICE_ATTRIBUTES_CONTAINER,
+        func="TrueNASContainerBinarySensor",
+    ),
+    TrueNASBinarySensorEntityDescription(
         key="service",
         name="",
         icon_enabled="mdi:cog",
@@ -153,6 +181,8 @@ SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
 SENSOR_SERVICES = [
     [SERVICE_VM_START, SCHEMA_SERVICE_VM_START, "start"],
     [SERVICE_VM_STOP, SCHEMA_SERVICE_VM_STOP, "stop"],
+    [SERVICE_CONTAINER_START, SCHEMA_SERVICE_CONTAINER_START, "start"],
+    [SERVICE_CONTAINER_STOP, SCHEMA_SERVICE_CONTAINER_STOP, "stop"],
     [SERVICE_SERVICE_START, SCHEMA_SERVICE_SERVICE_START, "start"],
     [SERVICE_SERVICE_STOP, SCHEMA_SERVICE_SERVICE_STOP, "stop"],
     [SERVICE_SERVICE_RESTART, SCHEMA_SERVICE_SERVICE_RESTART, "restart"],

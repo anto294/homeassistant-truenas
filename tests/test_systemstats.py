@@ -100,3 +100,82 @@ def test_arcsize_without_samples_reports_zero(connected_api):
     coordinator.get_systemstats()
 
     assert coordinator.ds["system_info"]["cache_size-arc_value"] == 0.0
+
+
+def _graphs_by_request(request):
+    """Return the canned graphs matching the graphs a request asks for."""
+    wanted = {(g["name"], g.get("identifier")) for g in request["params"][0]}
+    return [g for g in REPORTING_GRAPHS if (g["name"], g["identifier"]) in wanted]
+
+
+def test_request_parameters(connected_api):
+    """Graphs and a valid query (start before end, boolean aggregate) are sent."""
+    api, ws = connected_api(_reply(result=REPORTING_GRAPHS))
+    coordinator = _coordinator(api)
+
+    coordinator.get_systemstats()
+
+    graphs, query = ws.requests[0]["params"]
+    assert {"name": "interface", "identifier": "eno1"} in graphs
+    assert {"name": "arcsize"} in graphs
+    assert query["start"] < query["end"]
+    assert query["end"] - query["start"] == 60
+    assert query["aggregate"] is True
+
+
+def test_failing_graph_is_isolated_and_skipped(connected_api, caplog):
+    """One graph TrueNAS rejects no longer drops all system statistics."""
+
+    def responder(request):
+        names = [g["name"] for g in request["params"][0]]
+        if "cputemp" in names:
+            return {
+                "jsonrpc": "2.0",
+                "id": request["id"],
+                "error": {"code": -32001, "message": "Method call error"},
+            }
+        return {
+            "jsonrpc": "2.0",
+            "id": request["id"],
+            "result": _graphs_by_request(request),
+        }
+
+    api, ws = connected_api(responder)
+    coordinator = _coordinator(api)
+
+    coordinator.get_systemstats()
+
+    # Batch, then one request per graph, each shaped [[graph], query]
+    assert len(ws.requests) == 1 + 6
+    for request in ws.requests[1:]:
+        graphs, query = request["params"]
+        assert len(graphs) == 1 and query["aggregate"] is True
+    assert coordinator._systemstats_errored == [("cputemp", None)]
+    assert "cputemp" in caplog.text
+    assert api.connected()
+    system_info = coordinator.ds["system_info"]
+    assert system_info["cache_size-arc_value"] == round(8.5 * GIB, 2)
+    assert system_info["cpu_usage"] == 12.35
+    assert coordinator.ds["interface"]["eno1"] == {"rx": 12.21, "tx": 6.1}
+
+    # Next refresh: one batch request without the failing graph
+    ws.requests.clear()
+    coordinator.get_systemstats()
+    assert len(ws.requests) == 1
+    assert {"name": "cputemp"} not in ws.requests[0]["params"][0]
+
+
+def test_connection_loss_does_not_mark_graphs_as_failed(connected_api):
+    """A dropped connection is retried later, not treated as a bad graph."""
+
+    def responder(request):
+        raise ConnectionError("connection reset")
+
+    api, ws = connected_api(responder)
+    coordinator = _coordinator(api)
+
+    coordinator.get_systemstats()
+
+    assert len(ws.requests) == 1
+    assert coordinator._systemstats_errored == []
+    assert not api.connected()

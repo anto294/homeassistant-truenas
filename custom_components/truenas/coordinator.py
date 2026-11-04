@@ -397,56 +397,56 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         if self._is_virtual:
             tmp_graphs.remove({"name": "cputemp"})
 
-        for tmp in tmp_graphs:
-            if tmp["name"] in self._systemstats_errored:
-                tmp_graphs.remove(tmp)
-
+        tmp_graphs = [
+            tmp
+            for tmp in tmp_graphs
+            if self._systemstats_graph_key(tmp) not in self._systemstats_errored
+        ]
         if not tmp_graphs:
             return
 
-        tmp_params = [
-            tmp_graphs,
-            {
-                "start": report_epoch - 30,
-                "end": report_epoch - 90,
-                "aggregate": True,
-            },
-        ]
+        # Mean over the 60 seconds that ended 30 seconds ago, so the most
+        # recent samples netdata may still be collecting are left out.
+        tmp_query = {
+            "start": report_epoch - 90,
+            "end": report_epoch - 30,
+            "aggregate": True,
+        }
 
         reporting_path = "reporting.netdata_get_data"
 
-        tmp_graph = self.api.query(
-            reporting_path,
-            params=tmp_params,
-        )
+        tmp_graph = self.api.query(reporting_path, params=[tmp_graphs, tmp_query])
 
         if not isinstance(tmp_graph, list):
-            if self.api.error == 500:
-                for tmp in tmp_params["graphs"]:
-                    tmp_params2 = {
-                        [tmp],
-                        {
-                            "start": report_epoch - 30,
-                            "end": report_epoch - 90,
-                            "aggregate": "true",
-                        },
-                    }
+            if not self.api.connected():
+                # Connection lost: try again on the next refresh
+                return
 
-                    tmp2 = self.api.query(
-                        reporting_path,
-                        params=tmp_params2,
-                    )
-                    if not isinstance(tmp2, list) and self.api.error == 500:
-                        self._systemstats_errored.append(tmp["name"])
+            # TrueNAS rejected the request. A single graph it cannot serve
+            # (cputemp on some hardware, a removed interface) fails the whole
+            # call, so query each graph on its own, keep the ones that work
+            # and stop requesting the failing ones.
+            tmp_graph = []
+            tmp_errored = []
+            for tmp in tmp_graphs:
+                tmp_single = self.api.query(reporting_path, params=[[tmp], tmp_query])
+                if isinstance(tmp_single, list):
+                    tmp_graph.extend(tmp_single)
+                elif not self.api.connected():
+                    return
+                else:
+                    tmp_errored.append(self._systemstats_graph_key(tmp))
 
+            if tmp_errored:
+                self._systemstats_errored.extend(tmp_errored)
                 _LOGGER.warning(
                     "TrueNAS %s fetching following graphs failed, check your NAS: %s",
                     self.host,
-                    self._systemstats_errored,
+                    ", ".join(
+                        f"{name} ({identifier})" if identifier else name
+                        for name, identifier in tmp_errored
+                    ),
                 )
-                self.get_systemstats()
-
-            return
 
         for i in range(len(tmp_graph)):
             if "name" not in tmp_graph[i]:
@@ -534,6 +534,18 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                 # truenas_arcstats.size has a single "size" dimension
                 tmp_arr = ("size",)
                 self._systemstats_process(tmp_arr, tmp_graph[i], "arcsize")
+
+    # ---------------------------
+    #   _systemstats_graph_key
+    # ---------------------------
+    @staticmethod
+    def _systemstats_graph_key(graph: dict) -> tuple:
+        """Return the (name, identifier) pair that identifies a requested graph.
+
+        Interfaces share the graph name "interface", so the identifier is
+        needed to skip only the interface that failed.
+        """
+        return graph["name"], graph.get("identifier")
 
     # ---------------------------
     #   _systemstats_mean

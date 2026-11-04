@@ -26,7 +26,7 @@ jobs:
       # The last tagged release (v2.0, 2020) predates the retry inputs, so
       # this follows master.
       - name: Label pull requests with merge conflicts
-        uses: mschilde/auto-label-merge-conflicts@master
+        uses: mschilde/auto-label-merge-conflicts@3fdaf1c8b3f8e5b0f88753d9cb3c9c779370b3ef # master
         with:
           CONFLICT_LABEL_NAME: conflict
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -4,59 +4,56 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
 jobs:
-
-  release_zip:
-    name: Prepare release
+  build:
+    # HACS installs from the truenas.zip asset of the release
+    # ("zip_release" in hacs.json). Release notes are written by hand from
+    # CHANGELOG.md when the release is created, so this job only builds and
+    # attaches the asset.
+    name: Build and attach truenas.zip
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
+    env:
+      TAG: ${{ github.event.release.tag_name }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Get version number
-        run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/} # Remove refs/tags/
-          TAG_NAME=${TAG_NAME#v}            # Remove leading v if present
-          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
-
-      - name: Update version number in manifest
-        run: |
-          python3 .github/update_version.py --version $TAG_NAME
-
-      - name: Zip truenas dir
-        run: |
-          cd custom_components/truenas
-          zip truenas.zip -r ./
-      - name: Upload zip to release
-        uses: svenstaro/upload-release-action@v1-release
-
+      - name: Check out the release tag
+        uses: actions/checkout@v7
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: custom_components/truenas/truenas.zip
-          asset_name: truenas.zip
-          tag: ${{ github.ref }}
-          overwrite: true
+          ref: ${{ github.event.release.tag_name }}
 
-  releasenotes:
-    name: Prepare releasenotes
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - name: Validate tag and derive version
+        run: |
+          VERSION="${TAG#v}"
+          # X.Y.Z with an optional beta suffix, e.g. 1.5.0 or 1.5.0b1.
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(b[0-9]+)?$ ]]; then
+            echo "::error::Tag '$TAG' is not a valid version (expected vX.Y.Z or vX.Y.ZbN)"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: 3.13
+          python-version: "3.13"
 
-      - name: Install requirements
-        run: |
-          python3 -m pip install setuptools wheel PyGithub
+      - name: Set version in manifest.json
+        run: python .github/update_version.py --version "$VERSION"
 
-      - name: Update release notes
+      - name: Build truenas.zip
+        working-directory: custom_components/truenas
         run: |
-          python3 .github/generate_releasenotes.py --token ${{ secrets.GITHUB_TOKEN }} --release yes --tag ${{ github.ref }}
+          zip -r "$RUNNER_TEMP/truenas.zip" . -x '__pycache__/*' '*/__pycache__/*' '*.pyc'
+          unzip -p "$RUNNER_TEMP/truenas.zip" manifest.json | grep -q "\"version\": \"$VERSION\""
+
+      - name: Attach truenas.zip to the release
+        run: gh release upload "$TAG" "$RUNNER_TEMP/truenas.zip" --clobber

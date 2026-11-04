@@ -11,6 +11,7 @@
 
 ![English](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/us.png)
 ![Portuguese](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/pt.png)
+![Italian](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/it.png)
 
 ![Truenas Logo](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/header.png)
 

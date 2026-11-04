@@ -452,10 +452,13 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
 
             # CPU temperature
             if tmp_graph[i]["name"] == "cputemp":
-                if "aggregations" in tmp_graph[i]:
-                    self.ds["system_info"]["cpu_temperature"] = round(
-                        max(tmp_graph[i]["aggregations"]["mean"].values()), 2
-                    )
+                tmp_temps = [
+                    v
+                    for v in self._systemstats_mean(tmp_graph[i]).values()
+                    if v is not None
+                ]
+                if tmp_temps:
+                    self.ds["system_info"]["cpu_temperature"] = round(max(tmp_temps), 2)
                 else:
                     self.ds["system_info"]["cpu_temperature"] = 0.0
 
@@ -476,31 +479,20 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             if tmp_graph[i]["name"] == "interface":
                 tmp_etc = tmp_graph[i]["identifier"]
                 if tmp_etc in self.ds["interface"]:
-                    tmp_graph[i]["legend"] = [
-                        tmp.replace("received", "rx") for tmp in tmp_graph[i]["legend"]
-                    ]
-                    tmp_graph[i]["legend"] = [
-                        tmp.replace("sent", "tx") for tmp in tmp_graph[i]["legend"]
-                    ]
-                    tmp_graph[i]["aggregations"]["mean"] = {
-                        k.replace("received", "rx"): v
-                        for k, v in tmp_graph[i]["aggregations"]["mean"].items()
-                    }
-                    tmp_graph[i]["aggregations"]["mean"] = {
-                        k.replace("sent", "tx"): v
-                        for k, v in tmp_graph[i]["aggregations"]["mean"].items()
-                    }
-
                     tmp_arr = ("rx", "tx")
-                    if "aggregations" in tmp_graph[i]:
-                        for e in range(len(tmp_graph[i]["legend"])):
-                            tmp_var = tmp_graph[i]["legend"][e]
+                    tmp_mean = self._systemstats_mean(tmp_graph[i])
+                    if tmp_mean:
+                        tmp_mean = {
+                            k.replace("received", "rx").replace("sent", "tx"): v
+                            for k, v in tmp_mean.items()
+                        }
+                        tmp_legend = [
+                            tmp.replace("received", "rx").replace("sent", "tx")
+                            for tmp in tmp_graph[i].get("legend") or []
+                        ]
+                        for tmp_var in tmp_legend:
                             if tmp_var in tmp_arr:
-                                tmp_val = (
-                                    tmp_graph[i]["aggregations"]["mean"][tmp_var] or 0.0
-                                    if tmp_var in tmp_graph[i]["aggregations"]["mean"]
-                                    else 0.0
-                                )
+                                tmp_val = tmp_mean.get(tmp_var) or 0.0
                                 self.ds["interface"][tmp_etc][tmp_var] = round(
                                     (tmp_val * 0.12207), 2
                                 )
@@ -533,35 +525,57 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                 self._systemstats_process(tmp_arr, tmp_graph[i], "arcsize")
 
     # ---------------------------
+    #   _systemstats_mean
+    # ---------------------------
+    @staticmethod
+    def _systemstats_mean(graph: dict) -> dict:
+        """Return the "mean" aggregation of a reporting graph, or {}.
+
+        Since 27.0 reporting.netdata_get_data may return "aggregations": null
+        (for example when no samples exist for the requested window), so the
+        key being present is not enough.
+        """
+        tmp_aggregations = graph.get("aggregations")
+        if not isinstance(tmp_aggregations, dict):
+            return {}
+
+        tmp_mean = tmp_aggregations.get("mean")
+        return tmp_mean if isinstance(tmp_mean, dict) else {}
+
+    # ---------------------------
     #   _systemstats_process
     # ---------------------------
     def _systemstats_process(self, arr, graph, t) -> None:
-        if "aggregations" in graph:
-            for e in range(len(graph["legend"])):
-                tmp_var = graph["legend"][e]
-                if tmp_var in arr:
-                    e = tmp_var
+        """Store the mean values of the requested legend entries of a graph."""
+        if isinstance(arr, str):
+            arr = (arr,)
 
-                    tmp_val = graph["aggregations"]["mean"][e] or 0.0
-                    if t == "memory":
-                        if tmp_var == "available":
-                            self.ds["system_info"]["memory-free_value"] = round(tmp_val)
-                    elif t == "cpu":
-                        self.ds["system_info"][f"cpu_{tmp_var}"] = round(tmp_val, 2)
-                    elif t == "load":
-                        self.ds["system_info"][f"load_{tmp_var}"] = round(tmp_val, 2)
-                    elif t == "arcsize":
-                        self.ds["system_info"]["cache_size-arc_value"] = round(
-                            tmp_val, 2
-                        )
-                    else:
-                        self.ds["system_info"][tmp_var] = round(tmp_val, 2)
+        tmp_mean = self._systemstats_mean(graph)
+        if tmp_mean:
+            for tmp_var in graph.get("legend") or []:
+                if tmp_var in arr:
+                    self._systemstats_store(t, tmp_var, tmp_mean.get(tmp_var) or 0.0)
         else:
-            for tmp_load in arr:
-                if t == "cpu":
-                    self.ds["system_info"][f"cpu_{tmp_load}"] = 0.0
-                else:
-                    self.ds["system_info"][tmp_load] = 0.0
+            # No data for this window: reset to 0 under the same keys
+            for tmp_var in arr:
+                self._systemstats_store(t, tmp_var, 0.0)
+
+    # ---------------------------
+    #   _systemstats_store
+    # ---------------------------
+    def _systemstats_store(self, t: str, tmp_var: str, tmp_val: float) -> None:
+        """Store one reporting value in system_info under its sensor key."""
+        if t == "memory":
+            if tmp_var == "available":
+                self.ds["system_info"]["memory-free_value"] = round(tmp_val)
+        elif t == "cpu":
+            self.ds["system_info"][f"cpu_{tmp_var}"] = round(tmp_val, 2)
+        elif t == "load":
+            self.ds["system_info"][f"load_{tmp_var}"] = round(tmp_val, 2)
+        elif t == "arcsize":
+            self.ds["system_info"]["cache_size-arc_value"] = round(tmp_val, 2)
+        else:
+            self.ds["system_info"][tmp_var] = round(tmp_val, 2)
 
     # ---------------------------
     #   get_service

@@ -931,9 +931,15 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         same. The numeric libvirt id that vm.start/vm.stop expect is stored
         in "vm_id".
         """
+        tmp_source = self.api.query("vm.query")
+        if not isinstance(tmp_source, list):
+            # Query failed: keep the last known entries instead of dropping
+            # them (entities would raise KeyError) or converting them twice.
+            return
+
         self.ds["vm"] = parse_api(
-            data={},
-            source=self.api.query("vm.query"),
+            data=self.ds["vm"],
+            source=tmp_source,
             key="name",
             vals=[
                 {"name": "vm_id", "source": "id", "default": 0},
@@ -966,9 +972,15 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     # ---------------------------
     def _get_vm_virt(self) -> None:
         """Get VMs and containers with virt.instance.query (TrueNAS 25.04)."""
+        tmp_source = self.api.query("virt.instance.query")
+        if not isinstance(tmp_source, list):
+            # Query failed: keep the last known entries instead of dropping
+            # them (entities would raise KeyError) or converting them twice.
+            return
+
         self.ds["vm"] = parse_api(
             data=self.ds["vm"],
-            source=self.api.query("virt.instance.query"),
+            source=tmp_source,
             key="id",
             vals=[
                 {"name": "id", "default": 0},
@@ -1005,9 +1017,15 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             self.ds["container"] = {}
             return
 
+        tmp_source = self.api.query("container.query")
+        if not isinstance(tmp_source, list):
+            # Query failed: keep the last known entries instead of dropping
+            # them (entities would raise KeyError) or converting them twice.
+            return
+
         self.ds["container"] = parse_api(
-            data={},
-            source=self.api.query("container.query"),
+            data=self.ds["container"],
+            source=tmp_source,
             key="name",
             vals=[
                 {"name": "container_id", "source": "id", "default": 0},

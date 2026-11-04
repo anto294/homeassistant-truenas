@@ -76,6 +76,16 @@ class TrueNASVMBinarySensor(TrueNASBinarySensor):
     async def _get_state(self) -> str | None:
         """Return the current VM state ("RUNNING", "STOPPED", ...) or None."""
         if self._use_libvirt:
+            if not self._data.get("vm_id"):
+                # Entry left over from the 25.04 virt.instance API, not yet
+                # refreshed by vm.query, so its libvirt id is unknown.
+                _LOGGER.error(
+                    "VM %s (%s) has no libvirt id yet",
+                    self._data["name"],
+                    self._data["id"],
+                )
+                return None
+
             tmp_vm = await self.hass.async_add_executor_job(
                 self.coordinator.api.query,
                 "vm.get_instance",

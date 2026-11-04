@@ -63,11 +63,12 @@ Version 2.0 renamed the domain from `truenas` to `truenas_link`. Home Assistant 
 
 1. Note the name of each TrueNAS entry in **Settings → Devices & services → TrueNAS**. It is the entry's title, `TrueNAS` unless you changed it.
 2. Delete those entries (three-dot menu → **Delete**).
-3. Update this integration in HACS (from 1.x), or download it as described above (from upstream, then remove the upstream **TrueNAS** integration in HACS).
-4. If the `config/custom_components/truenas/` folder still exists and no other integration uses it, delete it.
-5. Restart Home Assistant.
-6. Add **TrueNAS Link** with the same name, host and API key as before (see [Configuration](#configuration)).
-7. In automations and scripts, replace `truenas.` actions with `truenas_link.` (for example `truenas.vm_start` becomes `truenas_link.vm_start`).
+3. Install the new version:
+   - **From 1.x of this integration:** in HACS, open **TrueNAS Link** → three-dot menu → **Remove** (this also deletes `config/custom_components/truenas/`), then download it again from HACS. Do not use **Update**: HACS keeps the old domain, and the download (and the repository refresh) fails with "No manifest.json file found custom_components/truenas/manifest.json".
+   - **From the upstream integration:** download TrueNAS Link as described above, then remove the upstream **TrueNAS** integration in HACS. If the `config/custom_components/truenas/` folder still exists and no other integration uses it, delete it.
+4. Restart Home Assistant.
+5. Add **TrueNAS Link** with the same name, host and API key as before (see [Configuration](#configuration)).
+6. In automations and scripts, replace `truenas.` actions with `truenas_link.` (for example `truenas.vm_start` becomes `truenas_link.vm_start`).
 
 If you prefer, you can instead keep the upstream integration and run both side by side. Then give the TrueNAS Link entry a different name, so the entity IDs do not collide (otherwise Home Assistant adds a `_2` suffix to the new ones).
 

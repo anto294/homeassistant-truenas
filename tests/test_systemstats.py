@@ -179,3 +179,23 @@ def test_connection_loss_does_not_mark_graphs_as_failed(connected_api):
     assert len(ws.requests) == 1
     assert coordinator._systemstats_errored == []
     assert not api.connected()
+
+
+def test_cpu_and_memory_attributes_are_filled(connected_api):
+    """Every CPU/memory sensor attribute gets a real value from the graphs."""
+    from custom_components.truenas.sensor_types import (
+        DEVICE_ATTRIBUTES_CPU,
+        DEVICE_ATTRIBUTES_MEMORY,
+    )
+
+    api, _ = connected_api(_reply(result=REPORTING_GRAPHS))
+    coordinator = _coordinator(api)
+
+    coordinator.get_systemstats()
+
+    system_info = coordinator.ds["system_info"]
+    for attribute in DEVICE_ATTRIBUTES_CPU + DEVICE_ATTRIBUTES_MEMORY:
+        assert system_info.get(attribute), attribute
+    assert system_info["memory-total_value"] == 16 * GIB
+    assert system_info["memory-free_value"] == 12 * GIB
+    assert system_info["memory-used_value"] == 4 * GIB

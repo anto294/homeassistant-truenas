@@ -7,6 +7,15 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- The 2.0.0 upgrade steps (README and changelog) told 1.x users to update
+  the integration in HACS. That fails, because HACS keeps the old domain:
+  the download and the repository refresh stop with "No manifest.json file
+  found custom_components/truenas/manifest.json". The steps now say to
+  remove TrueNAS Link in HACS (three-dot menu → **Remove**, which also
+  deletes `config/custom_components/truenas/`) and download it again.
+
 ## [2.0.1] - 2026-11-04
 
 ### Fixed
@@ -38,12 +47,14 @@ statistics, dashboards and automation triggers:
 1. Note the name of each entry in **Settings → Devices & services →
    TrueNAS** (`TrueNAS` unless you changed it).
 2. Delete those entries **before** updating.
-3. Update the integration in HACS.
-4. If `config/custom_components/truenas/` is still there and no other
-   integration uses it, delete it.
-5. Restart Home Assistant.
-6. Add **TrueNAS Link** with the same name, host and API key.
-7. Rename the actions in automations and scripts from `truenas.*` to
+3. In HACS, open **TrueNAS Link** → three-dot menu → **Remove** (this
+   also deletes `config/custom_components/truenas/`), then download it
+   again from HACS. Do not use **Update**: HACS keeps the old domain, and
+   the download fails with "No manifest.json file found
+   custom_components/truenas/manifest.json".
+4. Restart Home Assistant.
+5. Add **TrueNAS Link** with the same name, host and API key.
+6. Rename the actions in automations and scripts from `truenas.*` to
    `truenas_link.*`, for example `truenas.vm_start` to
    `truenas_link.vm_start`.
 

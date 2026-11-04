@@ -1,6 +1,6 @@
 {
     "domain": "truenas_link",
-    "name": "TrueNAS",
+    "name": "TrueNAS Link",
     "categories": [
         "computers_network.nas_servers"
     ],

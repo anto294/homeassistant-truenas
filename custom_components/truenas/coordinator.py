@@ -510,6 +510,11 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                     self.ds["system_info"]["physmem"]
                 )
 
+                # Without samples free memory would be stored as 0 and usage
+                # reported as 100%; keep the last known values instead.
+                if not self._systemstats_mean(tmp_graph[i]):
+                    continue
+
                 self._systemstats_process(tmp_arr, tmp_graph[i], "memory")
                 if self.ds["system_info"]["memory-total_value"] > 0:
                     self.ds["system_info"]["memory-usage_percent"] = round(

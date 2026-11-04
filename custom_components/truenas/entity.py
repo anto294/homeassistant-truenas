@@ -29,6 +29,23 @@ _LOGGER = getLogger(__name__)
 
 
 # ---------------------------
+#   build_entity_id
+# ---------------------------
+def build_entity_id(domain: str, inst: str, group: Any, name: Any) -> str:
+    """Return "<domain>.<inst>_<group>_<name>" as a valid entity id.
+
+    This is the id scheme the integration has always used, so existing
+    entities keep their registry ids. Empty parts are skipped: the system
+    update entity has an empty name and used to produce the invalid
+    "update.truenas_system_" (Home Assistant registered it as
+    "update.truenas_system"). Every part is slugified, which also keeps
+    instance names with spaces or other characters valid.
+    """
+    parts = [slugify(str(part).lower()) for part in (inst, group, name)]
+    return f"{domain}.{'_'.join(part for part in parts if part)}"
+
+
+# ---------------------------
 #   async_add_entities
 # ---------------------------
 async def async_add_entities(
@@ -120,7 +137,9 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
             if dev_group in self._data:
                 dev_group = self._data[dev_group]
 
-        self.entity_id = f"{platform.domain}.{self._inst.lower()}_{slugify(str(dev_group).lower())}_{slugify(str(self.name).lower())}"
+        self.entity_id = build_entity_id(
+            platform.domain, self._inst, dev_group, self.name
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:

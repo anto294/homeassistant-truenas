@@ -7,6 +7,18 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- The "ARC size" sensor always reported 0. The integration now reads the
+  `size` entry of the ARC size reporting graph, the name TrueNAS uses on
+  25.04, 25.10 and 27.0.
+
+### Development
+
+- Tests now cover system statistics with realistic
+  `reporting.netdata_get_data` payloads for every graph the integration
+  reads (ARC size, CPU, CPU temperature, load, memory and interfaces).
+
 ## [1.5.1] - 2026-11-04
 
 ### Removed

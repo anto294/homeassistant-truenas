@@ -12,6 +12,9 @@
 ![English](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/us.png)
 ![Portuguese](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/pt.png)
 ![Italian](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/it.png)
+![Spanish](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/es.png)
+![Russian](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/ru.png)
+![Slovak](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/sk.png)
 
 ![Truenas Logo](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/header.png)
 

@@ -1,14 +1,22 @@
 {
     "domain": "truenas",
     "name": "TrueNAS",
+    "categories": [
+        "computers_network.nas_servers"
+    ],
     "codeowners": [
         "@anto294"
     ],
     "config_flow": true,
+    "connectivity": [
+        "network"
+    ],
     "dependencies": [],
     "documentation": "https://github.com/anto294/homeassistant-truenas",
     "iot_class": "local_polling",
     "issue_tracker": "https://github.com/anto294/homeassistant-truenas/issues",
-    "requirements": ["websockets>=15.0.1"],
+    "requirements": [
+        "websockets>=15.0.1"
+    ],
     "version": "0.0.0"
 }

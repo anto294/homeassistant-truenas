@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from datetime import datetime, timedelta
 
@@ -22,6 +23,9 @@ from .apiparser import parse_api, utc_from_timestamp
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+# First "<major>.<minor>" pair in a TrueNAS version string
+_VERSION_RE = re.compile(r"(\d+)\.(\d+)")
 
 
 # ---------------------------
@@ -195,23 +199,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                 self.ds["system_info"]["update_jobid"] = 0
                 self.ds["system_info"]["update_state"] = "unknown"
 
-        if not self._version_major:
-            self._version_major = int(
-                self.ds["system_info"]
-                .get("version")
-                .removeprefix("TrueNAS-")
-                .removeprefix("SCALE-")
-                .split(".")[0]
-            )
-
-        if not self._version_minor:
-            self._version_minor = int(
-                self.ds["system_info"]
-                .get("version")
-                .removeprefix("TrueNAS-")
-                .removeprefix("SCALE-")
-                .split(".")[1]
-            )
+        self._detect_version(self.ds["system_info"].get("version"))
 
         self._is_virtual = self.ds["system_info"]["system_manufacturer"] in [
             "QEMU",
@@ -265,6 +253,52 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                 {"name": "tx", "default": 0},
             ],
         )
+
+    # ---------------------------
+    #   _detect_version
+    # ---------------------------
+    def _detect_version(self, version: str | None) -> None:
+        """Parse the TrueNAS version string into major and minor numbers.
+
+        Accepts every format TrueNAS has used, for example "TrueNAS-SCALE-24.10.2",
+        "25.10.1", "25.10-RC.1" or "27.0.0-BETA.1". The version is parsed on every
+        refresh so an in-place TrueNAS upgrade switches API code paths without
+        reloading the integration.
+        """
+        match = _VERSION_RE.search(str(version or ""))
+        if not match:
+            _LOGGER.warning(
+                "TrueNAS %s unable to parse version '%s', assuming latest API",
+                self.host,
+                version,
+            )
+            return
+
+        major, minor = int(match.group(1)), int(match.group(2))
+        if (major, minor) != (self._version_major, self._version_minor):
+            _LOGGER.debug(
+                "TrueNAS %s detected version %s.%s (%s)",
+                self.host,
+                major,
+                minor,
+                version,
+            )
+            self._version_major = major
+            self._version_minor = minor
+
+    # ---------------------------
+    #   version_at_least
+    # ---------------------------
+    def version_at_least(self, major: int, minor: int = 0) -> bool:
+        """Return True if the connected TrueNAS is at least major.minor.
+
+        An undetected version (0.0) is treated as the newest release, because
+        the API methods of current releases are the most likely to be correct.
+        """
+        if not self._version_major:
+            return True
+
+        return (self._version_major, self._version_minor) >= (major, minor)
 
     # ---------------------------
     #   get_updatecheck

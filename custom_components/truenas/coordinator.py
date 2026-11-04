@@ -466,12 +466,14 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
 
             # CPU load
             if tmp_graph[i]["name"] == "load":
+                # TrueNAS renames load1/load5/load15 to these
                 tmp_arr = ("shortterm", "midterm", "longterm")
                 self._systemstats_process(tmp_arr, tmp_graph[i], "load")
 
             # CPU usage
             if tmp_graph[i]["name"] == "cpu":
-                tmp_arr = "cpu"
+                # Aggregate "cpu" only, not the per-core "cpu0", "cpu1", ...
+                tmp_arr = ("cpu",)
                 self._systemstats_process(tmp_arr, tmp_graph[i], "cpu")
                 self.ds["system_info"]["cpu_usage"] = round(
                     self.ds["system_info"]["cpu_cpu"], 2
@@ -505,7 +507,8 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
 
             # memory
             if tmp_graph[i]["name"] == "memory":
-                tmp_arr = "available"
+                # Legend is "total", "available"; only available is used
+                tmp_arr = ("available",)
                 self.ds["system_info"]["memory-total_value"] = round(
                     self.ds["system_info"]["physmem"]
                 )
@@ -528,7 +531,8 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
 
             # arcsize
             if tmp_graph[i]["name"] == "arcsize":
-                tmp_arr = "arc_size"
+                # truenas_arcstats.size has a single "size" dimension
+                tmp_arr = ("size",)
                 self._systemstats_process(tmp_arr, tmp_graph[i], "arcsize")
 
     # ---------------------------
@@ -553,7 +557,13 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     #   _systemstats_process
     # ---------------------------
     def _systemstats_process(self, arr, graph, t) -> None:
-        """Store the mean values of the requested legend entries of a graph."""
+        """Store the mean values of the requested legend entries of a graph.
+
+        `arr` is a tuple of exact legend names. Upstream passed some of them
+        as plain strings, which made `in` a substring check ("size" matched
+        "arc_size"); a bare string is still wrapped, but it then only
+        matches that exact name, so always list the real legend entries.
+        """
         if isinstance(arr, str):
             arr = (arr,)
 

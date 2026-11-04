@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- Leftover `jail_start`, `jail_stop` and `jail_restart` action definitions.
+  Jails were a TrueNAS CORE feature; the integration never registered these
+  actions, so they could not be called.
+
 ## [1.5.0] - 2026-11-04
 
 First release of this fork, [anto294/homeassistant-truenas](https://github.com/anto294/homeassistant-truenas),
@@ -158,4 +166,5 @@ only as 1.4 betas or not released yet:
   and attaches `truenas.zip`, which HACS installs from. Release notes come
   from this changelog.
 
+[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.0...HEAD
 [1.5.0]: https://github.com/anto294/homeassistant-truenas/releases/tag/v1.5.0

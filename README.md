@@ -5,8 +5,6 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/anto294/homeassistant-truenas/ci.yml?style=plastic)](https://github.com/anto294/homeassistant-truenas/actions)
 ![Downloads](https://img.shields.io/github/downloads/anto294/homeassistant-truenas/total?style=plastic)
 
-![TrueNAS](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/header.png)
-
 Monitor and control a TrueNAS SCALE system from Home Assistant: pools, datasets, disks, services, apps, virtual machines, containers, cloud sync, replication and snapshot tasks, and system updates.
 
 > [!NOTE]
@@ -71,9 +69,6 @@ Your config entries, entities and their history are kept, because the domain and
 ## Configuration
 
 1. In the TrueNAS web UI, create an API key for Home Assistant (user menu → **API Keys** → **Add**).
-
-   ![Create API key](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/setup_1.png)
-
 2. In Home Assistant, go to **Settings → Devices & services → Add integration → TrueNAS** and fill in:
 
    | Field | Description |
@@ -112,9 +107,6 @@ Data is polled every 60 seconds; available updates are checked every 12 hours.
 | Snapshot tasks | Status | sensor | One per periodic snapshot task |
 
 Most entities expose extra details as attributes (for example pool scrub state, disk model and serial, dataset compression and quota, VM memory and vCPUs).
-
-![Pool health](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/pool_healthy.png)
-![Datasets](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/dataset.png)
 
 ## Actions
 
@@ -170,12 +162,7 @@ You can also download diagnostics from the integration's page (sensitive data is
 
 ## Translations
 
-![English](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/us.png)
-![Portuguese](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/pt.png)
-![Italian](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/it.png)
-![Spanish](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/es.png)
-![Russian](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/ru.png)
-![Slovak](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/sk.png)
+Available in English, Italian, Portuguese (Brazil), Russian, Slovak and Spanish.
 
 English strings live in `custom_components/truenas/strings.json` and `custom_components/truenas/translations/en.json`. To add or improve a language, open a pull request that adds or updates the matching file in [`custom_components/truenas/translations/`](custom_components/truenas/translations/).
 

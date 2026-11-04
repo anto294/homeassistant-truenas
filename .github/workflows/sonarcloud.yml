@@ -13,12 +13,18 @@ jobs:
   sonarcloud:
     name: SonarQube
     runs-on: ubuntu-latest
+    env:
+      # Exposed as an env var so steps can be skipped when the secret is not
+      # configured (the secrets context is not allowed in `if:` expressions).
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Check out code from GitHub
+        if: env.SONAR_TOKEN != ''
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - name: SonarQube Scan
+        if: env.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any

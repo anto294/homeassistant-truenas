@@ -208,11 +208,14 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
                 configuration_url=f"http://{self.coordinator.config_entry.data[CONF_HOST]}",
             )
         else:
+            # Plain name/model/manufacturer: the default_* variants are
+            # deprecated (removed in HA 2027.9), and mixing them with these
+            # keys is an invalid device info on HA 2024.11.
             return DeviceInfo(
                 connections={(dev_connection, f"{dev_connection_value}")},
-                default_name=dev_group,
-                default_model=f"{self.coordinator.data['system_info']['system_product']}",
-                default_manufacturer=f"{self.coordinator.data['system_info']['system_manufacturer']}",
+                name=dev_group,
+                model=f"{self.coordinator.data['system_info']['system_product']}",
+                manufacturer=f"{self.coordinator.data['system_info']['system_manufacturer']}",
                 via_device=(
                     DOMAIN,
                     f"{self._inst}_{self.coordinator.data['system_info']['hostname']}",

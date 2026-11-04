@@ -64,53 +64,87 @@ class TrueNASBinarySensor(TrueNASEntity, BinarySensorEntity):
 class TrueNASVMBinarySensor(TrueNASBinarySensor):
     """Define a TrueNAS VM Binary Sensor."""
 
-    async def start(self, overcommit: bool = False):
-        """Start a VM."""  # virt.instance.start
-        tmp_vm = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "virt.instance.get_instance",
-            [self._data["id"]],
-        )
+    @property
+    def _use_libvirt(self) -> bool:
+        """Return True if VMs are managed through the vm.* API (25.10+)."""
+        return self.coordinator.version_at_least(25, 10)
 
-        if "status" not in tmp_vm:
+    # ---------------------------
+    #   _get_state
+    # ---------------------------
+    async def _get_state(self) -> str | None:
+        """Return the current VM state ("RUNNING", "STOPPED", ...) or None."""
+        if self._use_libvirt:
+            tmp_vm = await self.hass.async_add_executor_job(
+                self.coordinator.api.query,
+                "vm.get_instance",
+                [self._data["vm_id"]],
+            )
+            status = tmp_vm.get("status") if isinstance(tmp_vm, dict) else None
+            state = status.get("state") if isinstance(status, dict) else None
+        else:
+            tmp_vm = await self.hass.async_add_executor_job(
+                self.coordinator.api.query,
+                "virt.instance.get_instance",
+                [self._data["id"]],
+            )
+            state = tmp_vm.get("status") if isinstance(tmp_vm, dict) else None
+
+        if state is None:
             _LOGGER.error("VM %s (%s) invalid", self._data["name"], self._data["id"])
+
+        return state
+
+    async def start(self, overcommit: bool = False):
+        """Start a VM."""
+        state = await self._get_state()
+        if state is None:
             return
 
-        if tmp_vm["status"] != "STOPPED":
+        if state != "STOPPED":
             _LOGGER.warning(
                 "VM %s (%s) is not down", self._data["name"], self._data["id"]
             )
             return
 
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "virt.instance.start",
-            [self._data["id"]],
-        )
+        if self._use_libvirt:
+            await self.hass.async_add_executor_job(
+                self.coordinator.api.query,
+                "vm.start",
+                [self._data["vm_id"], {"overcommit": overcommit}],
+            )
+        else:
+            await self.hass.async_add_executor_job(
+                self.coordinator.api.query,
+                "virt.instance.start",
+                [self._data["id"]],
+            )
 
     async def stop(self):
         """Stop a VM."""
-        tmp_vm = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "virt.instance.get_instance",
-            [self._data["id"]],
-        )
-
-        if "status" not in tmp_vm:
-            _LOGGER.error("VM %s (%s) invalid", self._data["name"], self._data["id"])
+        state = await self._get_state()
+        if state is None:
             return
 
-        if tmp_vm["status"] != "RUNNING":
+        if state != "RUNNING":
             _LOGGER.warning(
                 "VM %s (%s) is not up", self._data["name"], self._data["id"]
             )
             return
 
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "virt.instance.stop",
-            [self._data["id"], {"timeout": 0, "force": True}],
-        )
+        if self._use_libvirt:
+            # Graceful ACPI shutdown, powered off if it exceeds shutdown_timeout
+            await self.hass.async_add_executor_job(
+                self.coordinator.api.query,
+                "vm.stop",
+                [self._data["vm_id"], {"force_after_timeout": True}],
+            )
+        else:
+            await self.hass.async_add_executor_job(
+                self.coordinator.api.query,
+                "virt.instance.stop",
+                [self._data["id"], {"timeout": 0, "force": True}],
+            )
 
 
 # ---------------------------

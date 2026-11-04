@@ -188,30 +188,26 @@ class TrueNASAPI(object):
                 self._ws.send(json.dumps(payload))
                 message = self._ws.recv()
                 if message.startswith("{"):
-                    data = json.loads(message)
-                    if "result" in data:
-                        data = data["result"]
-                    else:
-                        self._error = "malformed_result"
+                    response = json.loads(message)
+                    # JSON-RPC 2.0: a failed call carries a top-level "error"
+                    # object and no "result". Keys inside "result" belong to
+                    # the method's own return value (update.status, for
+                    # example, always returns "error": null) and must not be
+                    # read as a protocol error.
+                    if response.get("error") is not None:
+                        self._log_rpc_error(service, response["error"])
+                        return None
 
-                    if (type(data) is list or type(data) is dict) and "error" in data:
-                        if (
-                            "data" in data["error"]
-                            and "reason" in data["error"]["data"]
-                        ):
-                            _LOGGER.error(
-                                "TrueNAS %s query (%s) error: %s",
-                                self._host,
-                                service,
-                                data["error"]["data"]["reason"],
-                            )
-                        else:
-                            _LOGGER.error(
-                                "TrueNAS %s query (%s) error: %s",
-                                self._host,
-                                service,
-                                data["error"]["message"],
-                            )
+                    if "result" not in response:
+                        _LOGGER.error(
+                            "TrueNAS %s query (%s) returned neither result nor error",
+                            self._host,
+                            service,
+                        )
+                        self._error = "malformed_result"
+                        return None
+
+                    data = response["result"]
                 else:
                     data = message
 
@@ -230,6 +226,27 @@ class TrueNASAPI(object):
                 return None
 
             return data
+
+    # ---------------------------
+    #   _log_rpc_error
+    # ---------------------------
+    def _log_rpc_error(self, service: str, error: Any) -> None:
+        """Log a JSON-RPC error object, preferring TrueNAS' detailed reason."""
+        reason = None
+        if isinstance(error, dict):
+            details = error.get("data")
+            if isinstance(details, dict):
+                reason = details.get("reason")
+
+            if not reason:
+                reason = error.get("message")
+
+        _LOGGER.error(
+            "TrueNAS %s query (%s) error: %s",
+            self._host,
+            service,
+            reason or error,
+        )
 
     @property
     def error(self):

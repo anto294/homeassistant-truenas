@@ -33,7 +33,9 @@ async def async_setup_entry(
         "TrueNASServiceBinarySensor": TrueNASServiceBinarySensor,
         "TrueNASAppBinarySensor": TrueNASAppBinarySensor,
     }
-    await async_add_entities(hass, config_entry, dispatcher)
+    await async_add_entities(
+        hass, config_entry, dispatcher, SENSOR_TYPES, SENSOR_SERVICES
+    )
 
 
 # ---------------------------

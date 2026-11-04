@@ -47,7 +47,7 @@ Check a method's name, parameters and return shape in these docs before adding o
   ```
 - Never block the event loop. Every `api.query` call from async code goes through `async_add_executor_job`.
 - `manifest.json` keeps `"version": "0.0.0"`. The release workflow (`.github/update_version.py`) sets the real version.
-- HACS installs from the `truenas.zip` asset that `release.yml` attaches to each published GitHub release (`zip_release` in `hacs.json`). Publish a full GitHub release, not just a tag; mark betas as pre-releases. README.md is the page HACS shows (no `info.md`).
+- HACS installs from the `truenas.zip` asset that `release.yml` attaches to each published GitHub release (`zip_release` in `hacs.json`). Publish a full GitHub release, not just a tag; mark betas as pre-releases. Tags are `vX.Y.Z` or `vX.Y.ZbN` (the release workflow rejects anything else). Every user-facing change gets an entry under `## [Unreleased]` in `CHANGELOG.md` (Keep a Changelog format); the release notes are that version's section, passed with `gh release create --notes-file`. README.md is the page HACS shows (no `info.md`).
 - Keep `hacs.json` `homeassistant` at the oldest core that has every HA API the code uses.
 - Minimum HA version: see `hacs.json` (`homeassistant`) and `Pipfile` (dev dependency).
 

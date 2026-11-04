@@ -8,8 +8,8 @@ import pytest
 from homeassistant.core import valid_entity_id
 from homeassistant.helpers import device_registry as dr
 
-from custom_components.truenas import entity as entity_module
-from custom_components.truenas.entity import build_entity_id
+from custom_components.truenas_link import entity as entity_module
+from custom_components.truenas_link.entity import build_entity_id
 
 
 @pytest.mark.parametrize(
@@ -65,7 +65,7 @@ def _entity(ha_group, data=None):
     """Build a TrueNASEntity with just what device_info reads."""
     from types import SimpleNamespace
 
-    from custom_components.truenas.entity import TrueNASEntity
+    from custom_components.truenas_link.entity import TrueNASEntity
 
     entity = TrueNASEntity.__new__(TrueNASEntity)
     entity.entity_description = SimpleNamespace(
@@ -108,7 +108,7 @@ def test_child_device_info_is_valid_for_installed_ha(ha_group):
     assert info["name"] == ha_group
     assert info["model"] == "TRUENAS-MINI-3.0-XL+"
     assert info["manufacturer"] == "iXsystems"
-    assert info["connections"] == {("truenas", f"TrueNAS_{ha_group}")}
+    assert info["connections"] == {("truenas_link", f"TrueNAS_{ha_group}")}
 
 
 def test_child_links_parent_the_way_installed_ha_expects():
@@ -121,7 +121,7 @@ def test_child_links_parent_the_way_installed_ha_expects():
         assert "via_device" not in info
     else:
         assert not entity_module.VIA_DEVICE_ID_SUPPORTED
-        assert info["via_device"] == ("truenas", "TrueNAS_nas")
+        assert info["via_device"] == ("truenas_link", "TrueNAS_nas")
         assert "via_device_id" not in info
 
 
@@ -141,7 +141,7 @@ def test_child_uses_via_device_on_older_ha(monkeypatch):
 
     info = _entity("Disks").device_info
 
-    assert info["via_device"] == ("truenas", "TrueNAS_nas")
+    assert info["via_device"] == ("truenas_link", "TrueNAS_nas")
     assert "via_device_id" not in info
 
 
@@ -151,8 +151,8 @@ def test_system_device_info_is_unchanged():
 
     assert set(info) <= _allowed_device_info_keys()
     assert info == entity_module.system_device_info(_coordinator())
-    assert info["identifiers"] == {("truenas", "TrueNAS_nas")}
-    assert info["connections"] == {("truenas", "TrueNAS_nas")}
+    assert info["identifiers"] == {("truenas_link", "TrueNAS_nas")}
+    assert info["connections"] == {("truenas_link", "TrueNAS_nas")}
     assert info["name"] == "System"
     assert info["sw_version"] == "25.10.1"
     assert info["configuration_url"] == "http://truenas.lan"
@@ -163,7 +163,7 @@ def test_setup_registers_system_device_before_platforms(monkeypatch):
     """async_setup_entry creates the parent device, then forwards platforms."""
     from unittest.mock import AsyncMock, MagicMock
 
-    import custom_components.truenas as integration
+    import custom_components.truenas_link as integration
 
     calls = []
     coordinator = _coordinator()

@@ -11,7 +11,7 @@ PLATFORMS = [
     Platform.UPDATE,
 ]
 
-DOMAIN = "truenas"
+DOMAIN = "truenas_link"
 DEFAULT_NAME = "root"
 ATTRIBUTION = "Data provided by TrueNAS integration"
 

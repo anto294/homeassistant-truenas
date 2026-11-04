@@ -50,7 +50,7 @@ jobs:
         run: python .github/update_version.py --version "$VERSION"
 
       - name: Build truenas.zip
-        working-directory: custom_components/truenas
+        working-directory: custom_components/truenas_link
         run: |
           zip -r "$RUNNER_TEMP/truenas.zip" . -x '__pycache__/*' '*/__pycache__/*' '*.pyc'
           unzip -p "$RUNNER_TEMP/truenas.zip" manifest.json | grep -q "\"version\": \"$VERSION\""

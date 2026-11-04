@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from custom_components.truenas.coordinator import TrueNASCoordinator
+from custom_components.truenas_link.coordinator import TrueNASCoordinator
 
 from .test_api import UPDATE_STATUS_UP_TO_DATE, _reply
 

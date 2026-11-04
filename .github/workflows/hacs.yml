@@ -1,22 +1,31 @@
-name: HACS Action
+name: HACS validation
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    # Daily, to catch new HACS requirements and repository setting changes.
+    - cron: "0 0 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-on:
-  push:
-  pull_request:
-  schedule:
-    - cron: "0 0 * * *"
-  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   hacs:
-    name: HACS Action
-    runs-on: "ubuntu-latest"
+    name: HACS validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: "actions/checkout@v4"
-      - name: HACS Action
-        uses: "hacs/action@main"
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Run HACS validation
+        uses: hacs/action@main
         with:
-          category: "integration"
+          category: integration

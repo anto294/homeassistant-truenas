@@ -7,6 +7,46 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+The integration is now called **TrueNAS Link** and uses its own domain,
+`truenas_link`, instead of `truenas`, which belongs to the upstream
+integration. It can now be installed next to upstream, and it can be
+submitted to the HACS default repositories.
+
+### Before you upgrade
+
+**This release does not update an existing setup in place.** Home
+Assistant cannot move config entries from one domain to another, so every
+TrueNAS system has to be added again. Follow these steps in order, so the
+entities come back with the same entity IDs and keep their history,
+statistics, dashboards and automation triggers:
+
+1. Note the name of each entry in **Settings → Devices & services →
+   TrueNAS** (`TrueNAS` unless you changed it).
+2. Delete those entries **before** updating.
+3. Update the integration in HACS.
+4. If `config/custom_components/truenas/` is still there and no other
+   integration uses it, delete it.
+5. Restart Home Assistant.
+6. Add **TrueNAS Link** with the same name, host and API key.
+7. Rename the actions in automations and scripts from `truenas.*` to
+   `truenas_link.*`, for example `truenas.vm_start` to
+   `truenas_link.vm_start`.
+
+The README has the same steps, and also covers switching from the upstream
+integration or running both side by side.
+
+### Changed
+
+- **Domain renamed from `truenas` to `truenas_link`.** The integration
+  files are installed in `custom_components/truenas_link/`, all actions
+  are called `truenas_link.<action>`, and the debug logger is
+  `custom_components.truenas_link`. Entity IDs are unchanged when the entry
+  is added again with the same name (see Before you upgrade).
+- **Display name is "TrueNAS Link"** in Home Assistant and HACS. Devices
+  are still named after the entry ("TrueNAS" by default).
+- **Release asset renamed to `truenas_link.zip`.** For manual
+  installation, extract it into `config/custom_components/truenas_link/`.
+
 ## [1.5.3] - 2026-11-04
 
 ### Fixed

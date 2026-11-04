@@ -108,9 +108,15 @@ class TrueNASDatasetSensor(TrueNASSensor):
     async def snapshot(self) -> None:
         """Create dataset snapshot."""
         ts = datetime.now().isoformat(sep="_", timespec="microseconds")
+        # zfs.snapshot.create was replaced by pool.snapshot.create in 25.10
+        method = (
+            "pool.snapshot.create"
+            if self.coordinator.version_at_least(25, 10)
+            else "zfs.snapshot.create"
+        )
         await self.hass.async_add_executor_job(
             self.coordinator.api.query,
-            "zfs.snapshot.create",
+            method,
             {"dataset": f"{self._data['name']}", "name": f"custom-{ts}"},
         )
 

@@ -1,0 +1,161 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.5.0] - 2026-11-04
+
+First release of this fork, [anto294/homeassistant-truenas](https://github.com/anto294/homeassistant-truenas),
+distributed as a HACS custom repository. It builds on
+[tomaae/homeassistant-truenas](https://github.com/tomaae/homeassistant-truenas)
+and includes all upstream changes since its last stable release, 1.3.1
+(the unreleased 1.4 work and the 1.4 betas), listed under
+[Included from upstream](#included-from-upstream).
+
+The integration now detects the TrueNAS version on every update and uses the
+API methods of that release, so it works on TrueNAS 25.04, 25.10 and 27.0 and
+keeps working after an in-place TrueNAS upgrade without reconfiguration.
+
+### Before you upgrade
+
+- **TrueNAS 25.04 or later is required.** The integration only uses the
+  versioned JSON-RPC 2.0 websocket API (`wss://<host>/api/current`), which
+  TrueNAS introduced in 25.04. TrueNAS CORE and SCALE releases before 25.04
+  are no longer supported.
+- **Home Assistant 2024.11.0 or later is required.** HACS will not offer the
+  update on older Home Assistant releases.
+- **Switching from the upstream integration:** both use the `truenas`
+  domain, so only one can be installed. Remove the upstream integration from
+  HACS (this only deletes its files), add this repository as a custom
+  repository, download it and restart Home Assistant. Config entries,
+  entities and their IDs are kept. See the README for step-by-step
+  instructions.
+- **Pool usage values change.** The pool usage percentage was reporting
+  free space instead of used space; it now reports used space (see Fixed).
+  Review automations or alerts that use it.
+- **Stopping a VM is now a graceful shutdown.** `vm_stop` asks the guest to
+  shut down and only forces it off after the VM's configured shutdown
+  timeout, instead of powering it off immediately.
+
+### Added
+
+- **Containers on TrueNAS 27.0.** TrueNAS 27.0 manages LXC containers
+  through a new `container.*` API. Each container gets a binary sensor in a
+  new "Containers" device, on while it is running, with description,
+  autostart, CPU set, memory limit and status attributes.
+- **`container_start` and `container_stop` actions.** Both check the live
+  container state first. `container_stop` requests a clean shutdown and only
+  forces it after the container's shutdown timeout.
+- **Support for TrueNAS 25.10 and 27.0** for system update checks, system
+  update installation, virtual machines and dataset snapshots, which had
+  stopped working on those releases (see Fixed).
+- **Italian translation** of the configuration and reconfiguration flows and
+  of all connection error messages.
+- **Brand icon and logo shipped with the integration**
+  (`custom_components/truenas/brand/`), so Home Assistant shows the TrueNAS
+  icon without relying on the central brands repository.
+- **Integration category** "Computers & network > NAS & servers" and
+  network connectivity in the manifest, used by Home Assistant to classify
+  the integration.
+
+### Changed
+
+- **TrueNAS version detection.** The version is parsed from any release
+  string (for example `25.10.1`, `25.10-RC.1`, `27.0.0-BETA.1` or
+  `TrueNAS-SCALE-24.10.2`) and re-checked on every update, so the right API
+  methods are used immediately after a TrueNAS upgrade. Pre-release version
+  strings previously broke the system information update entirely.
+- **`vm_start` honours the `overcommit` option.** It was accepted by the
+  action but ignored on TrueNAS 25.04.
+- **`vm_stop` is a graceful shutdown** with a forced power-off after the
+  VM's shutdown timeout (see Before you upgrade).
+- **Repository links.** The integration's documentation and "Report issue"
+  links in Home Assistant and HACS now point to this repository.
+- **README rewritten** for this fork: installation through HACS (including
+  a My Home Assistant button), switching from upstream, tables of all
+  entities and actions with their parameters, supported TrueNAS versions and
+  the API methods used on each, Apps, the Verify SSL option, reconfiguration
+  and diagnostics. Claims about jails and TrueNAS CORE, which are not
+  supported, were removed.
+
+### Fixed
+
+- **System update check on TrueNAS 25.10+.** `update.check_available` was
+  removed in 25.10, so the update entity never reported a new TrueNAS
+  version. The integration now uses `update.status` on 25.10 and later.
+- **Installing a TrueNAS update from Home Assistant on 25.10+.**
+  `update.update` no longer starts an upgrade on 25.10, so installing did
+  nothing. The integration now uses `update.run`, and installation progress
+  is still reported.
+- **Virtual machines on TrueNAS 25.10+.** 25.10 removed the
+  `virt.instance.*` API used by 25.04, so VM sensors disappeared and
+  `vm_start`/`vm_stop` failed. VMs are now read and controlled through
+  `vm.*` on 25.10 and later. Entity IDs are unchanged for users coming from
+  25.04.
+- **Dataset snapshots on TrueNAS 25.10+.** The `dataset_snapshot` action
+  failed because `zfs.snapshot.create` was removed; it now uses
+  `pool.snapshot.create`.
+- **System statistics on TrueNAS 27.0.** When TrueNAS returned no samples
+  for a reporting window, the whole statistics update failed and CPU, load,
+  memory, temperature, network and ARC sensors stopped updating. Missing
+  samples are now handled; CPU temperature ignores sensors without a value.
+- **Memory reported as 100 % used during reporting gaps.** When TrueNAS
+  had no memory samples, free memory dropped to 0 and usage jumped to 100 %,
+  which could trigger automations. The last known memory values are now
+  kept.
+- **Apps shown as "unknown" instead of "up to date".** TrueNAS reports no
+  latest version for apps that are up to date (and, on 27.0, when the
+  catalog cannot be checked). The app update entity now reports the
+  installed version in that case.
+- **Entities failing after a temporary connection error.** A failed VM or
+  container query (for example a network timeout) emptied their data, which
+  raised errors and stopped the update of every entity after them. The last
+  known data is now kept until the next successful query.
+- **VM memory shrinking to 0 GiB on TrueNAS 25.04** after a failed query,
+  caused by the memory conversion being applied again to already converted
+  values.
+- **Pool usage percentage** reported free space instead of used space.
+- **Wrong minimum Home Assistant version.** HACS allowed installing the
+  integration on Home Assistant 2024.3 to 2024.10, where it failed to load.
+  HACS now requires 2024.11.0.
+
+### Included from upstream
+
+Changes made in tomaae/homeassistant-truenas after 1.3.1, released upstream
+only as 1.4 betas or not released yet:
+
+- New JSON-RPC 2.0 websocket API client, replacing the REST API, for
+  TrueNAS 25.04 and later. Support for older TrueNAS versions was removed.
+- Reconfigure option to change the host, API key or SSL verification of an
+  existing entry without removing it.
+- Detailed connection errors in the setup and reconfigure flows: DNS
+  resolution, certificate verification, TLS handshake, HTTP request and
+  "websocket not supported" errors. Connection errors are logged once
+  instead of on every update.
+- Reconnection when TrueNAS is offline while Home Assistant starts, and
+  automatic disconnect and reconnect after API failures.
+- App update entities: show and install app updates, with progress while an
+  update is running. Pending updates are no longer reported for stopped
+  apps.
+- Fixed app start and stop actions.
+- Updated VM and app attributes and fixed the VM state for the new API.
+- Larger maximum websocket message size for big TrueNAS systems.
+- Xen and Hyper-V are recognised as hypervisors in the "virtual machine"
+  system attribute.
+- Translation updates.
+
+### Development
+
+- CI rebuilt with separate lint (black, flake8, JSON), security (bandit),
+  hassfest and import jobs. The import job loads every module on both the
+  minimum supported Home Assistant (2024.11.0) and the latest release.
+- HACS validation, CodeQL (v4, security-and-quality queries), stale and
+  lock workflows updated to current action versions; Dependabot keeps
+  GitHub Actions up to date.
+- Release workflow rebuilt: it validates the tag, sets the manifest version
+  and attaches `truenas.zip`, which HACS installs from. Release notes come
+  from this changelog.
+
+[1.5.0]: https://github.com/anto294/homeassistant-truenas/releases/tag/v1.5.0

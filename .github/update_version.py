@@ -4,7 +4,7 @@ import argparse
 import json
 import pathlib
 
-MANIFEST = pathlib.Path("custom_components/truenas/manifest.json")
+MANIFEST = pathlib.Path("custom_components/truenas_link/manifest.json")
 
 
 # ---------------------------

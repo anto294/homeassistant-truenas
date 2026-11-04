@@ -42,7 +42,7 @@ jobs:
 
       - name: Validate JSON files
         run: |
-          for f in hacs.json custom_components/truenas/*.json custom_components/truenas/translations/*.json; do
+          for f in hacs.json custom_components/truenas_link/*.json custom_components/truenas_link/translations/*.json; do
             python -m json.tool "$f" > /dev/null || { echo "::error file=$f::Invalid JSON"; exit 1; }
           done
 
@@ -63,7 +63,7 @@ jobs:
         run: python -m pip install --upgrade bandit
 
       - name: Scan integration with bandit
-        run: bandit -r custom_components/truenas
+        run: bandit -r custom_components/truenas_link
 
   hassfest:
     name: Hassfest
@@ -117,7 +117,7 @@ jobs:
           # installs a custom integration's requirements.
           curl -sSfL -o "$RUNNER_TEMP/constraints.txt" \
             "https://raw.githubusercontent.com/home-assistant/core/$HA_VERSION/homeassistant/package_constraints.txt"
-          mapfile -t REQUIREMENTS < <(python -c 'import json; print("\n".join(json.load(open("custom_components/truenas/manifest.json"))["requirements"]))')
+          mapfile -t REQUIREMENTS < <(python -c 'import json; print("\n".join(json.load(open("custom_components/truenas_link/manifest.json"))["requirements"]))')
           EXTRA="${{ matrix.extra }}"
           pip install "homeassistant==$HA_VERSION" "${REQUIREMENTS[@]}" pytest ${EXTRA:+"$EXTRA"} -c "$RUNNER_TEMP/constraints.txt"
 
@@ -127,8 +127,8 @@ jobs:
           import importlib
           import pathlib
 
-          for path in sorted(pathlib.Path("custom_components/truenas").glob("*.py")):
-              module = "custom_components.truenas" if path.stem == "__init__" else f"custom_components.truenas.{path.stem}"
+          for path in sorted(pathlib.Path("custom_components/truenas_link").glob("*.py")):
+              module = "custom_components.truenas_link" if path.stem == "__init__" else f"custom_components.truenas_link.{path.stem}"
               importlib.import_module(module)
               print(f"imported {module}")
           EOF

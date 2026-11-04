@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from custom_components.truenas.api import TrueNASAPI
+from custom_components.truenas_link.api import TrueNASAPI
 
 
 # ---------------------------

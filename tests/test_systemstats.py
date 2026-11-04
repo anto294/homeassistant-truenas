@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from custom_components.truenas.coordinator import TrueNASCoordinator
+from custom_components.truenas_link.coordinator import TrueNASCoordinator
 
 from .test_api import _reply
 
@@ -183,7 +183,7 @@ def test_connection_loss_does_not_mark_graphs_as_failed(connected_api):
 
 def test_cpu_and_memory_attributes_are_filled(connected_api):
     """Every CPU/memory sensor attribute gets a real value from the graphs."""
-    from custom_components.truenas.sensor_types import (
+    from custom_components.truenas_link.sensor_types import (
         DEVICE_ATTRIBUTES_CPU,
         DEVICE_ATTRIBUTES_MEMORY,
     )

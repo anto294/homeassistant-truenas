@@ -50,7 +50,7 @@ def test_rpc_error_logs_reason_and_keeps_connection(connected_api, caplog):
         )
     )
 
-    with caplog.at_level(logging.ERROR, logger="custom_components.truenas.api"):
+    with caplog.at_level(logging.ERROR, logger="custom_components.truenas_link.api"):
         assert api.query("vm.get_instance", [7]) is None
 
     assert api.connected()
@@ -64,7 +64,7 @@ def test_rpc_error_without_data_logs_message(connected_api, caplog):
         _reply(error={"code": -32601, "message": "Method not found", "data": None})
     )
 
-    with caplog.at_level(logging.ERROR, logger="custom_components.truenas.api"):
+    with caplog.at_level(logging.ERROR, logger="custom_components.truenas_link.api"):
         assert api.query("update.check_available") is None
 
     assert api.connected()

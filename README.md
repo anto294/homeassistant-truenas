@@ -24,6 +24,7 @@ Monitor and control your TrueNAS CORE/SCALE device from Home Assistant.
  * Monitor Snapshot Tasks
  * Control and Monitor Services
  * Control and Monitor Virtual Machines
+ * Control and Monitor Containers (TrueNAS 27.0 and later)
  * Control and Monitor Jails (TrueNAS CORE only)
  * Control and Monitor Cloudsync
  * Create a Dataset Snapshot
@@ -53,6 +54,12 @@ Control and monitor status and attributes for each TrueNAS Virtual Machines.
 Virtual Machines control is available through services.
 
 ![Virtual Machines](https://raw.githubusercontent.com/tomaae/homeassistant-truenas/master/docs/assets/images/ui/vm.png)
+
+## Containers
+*TrueNAS 27.0 and later*
+
+Control and monitor status and attributes for each TrueNAS container.
+Container control is available through the `container_start` and `container_stop` services.
 
 ## Jails
 *TrueNAS CORE only*
@@ -104,8 +111,21 @@ This integration is distributed using [HACS](https://hacs.xyz/).
 You can find it under "Integrations", named "TrueNAS"
 
 Minimum requirements:
-* TrueNAS Core 12.0 or TrueNAS Scale (Any version)
-* Home Assistant 2022.2.0
+* TrueNAS 25.04 or later (the integration uses the versioned JSON-RPC websocket API introduced in 25.04)
+* Home Assistant 2024.3.0
+
+## Supported TrueNAS versions
+The integration reads the TrueNAS version on every update and uses the API methods of that release, so it keeps working after an in-place TrueNAS upgrade without reconfiguration.
+
+| Feature | 25.04 | 25.10 | 27.0 |
+|---|---|---|---|
+| System update check | `update.check_available` | `update.status` | `update.status` |
+| System update install | `update.update` | `update.run` | `update.run` |
+| Virtual Machines | `virt.instance.*` | `vm.*` | `vm.*` |
+| Containers | listed with VMs (`virt.instance.*`) | not available | `container.*` |
+| Dataset snapshot | `zfs.snapshot.create` | `pool.snapshot.create` | `pool.snapshot.create` |
+
+API references: [TrueNAS 25.10](https://api.truenas.com/v25.10/), [TrueNAS 27.0](https://api.truenas.com/v27.0/).
 
 ## Using TrueNAS development branch
 If you are using development branch for TrueNAS, some features may stop working.

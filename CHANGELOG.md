@@ -16,6 +16,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   remove TrueNAS Link in HACS (three-dot menu → **Remove**, which also
   deletes `config/custom_components/truenas/`) and download it again.
 
+### Development
+
+- Fixed the open CodeQL code scanning alerts: the platforms pass their
+  entity descriptions and services to the shared entity setup explicitly
+  instead of through module imports it looked up at runtime, an unused
+  import is gone, and third-party GitHub Actions are pinned to commit SHAs.
+
 ## [2.0.1] - 2026-11-04
 
 ### Fixed

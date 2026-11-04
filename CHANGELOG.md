@@ -7,6 +7,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-11-04
+
 ### Fixed
 
 - Connecting and logging in to TrueNAS no longer runs on the Home
@@ -290,7 +292,8 @@ only as 1.4 betas or not released yet:
   and attaches `truenas.zip`, which HACS installs from. Release notes come
   from this changelog.
 
-[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/anto294/homeassistant-truenas/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.3...v2.0.0
 [1.5.3]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.1...v1.5.2

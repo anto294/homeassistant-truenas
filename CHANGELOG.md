@@ -7,6 +7,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-11-04
+
 ### Fixed
 
 - Home Assistant logged that the integration "calls
@@ -235,7 +237,8 @@ only as 1.4 betas or not released yet:
   and attaches `truenas.zip`, which HACS installs from. Release notes come
   from this changelog.
 
-[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.2...HEAD
+[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.3...HEAD
+[1.5.3]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/anto294/homeassistant-truenas/releases/tag/v1.5.0

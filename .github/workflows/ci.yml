@@ -80,7 +80,7 @@ jobs:
     # Import every module against the oldest supported Home Assistant (the
     # "homeassistant" value in hacs.json) and the latest release, so using an
     # API that is newer than the declared minimum fails CI.
-    name: Import (HA ${{ matrix.homeassistant }})
+    name: Import and test (HA ${{ matrix.homeassistant }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -119,7 +119,7 @@ jobs:
             "https://raw.githubusercontent.com/home-assistant/core/$HA_VERSION/homeassistant/package_constraints.txt"
           mapfile -t REQUIREMENTS < <(python -c 'import json; print("\n".join(json.load(open("custom_components/truenas/manifest.json"))["requirements"]))')
           EXTRA="${{ matrix.extra }}"
-          pip install "homeassistant==$HA_VERSION" "${REQUIREMENTS[@]}" ${EXTRA:+"$EXTRA"} -c "$RUNNER_TEMP/constraints.txt"
+          pip install "homeassistant==$HA_VERSION" "${REQUIREMENTS[@]}" pytest ${EXTRA:+"$EXTRA"} -c "$RUNNER_TEMP/constraints.txt"
 
       - name: Import all integration modules
         run: |
@@ -132,3 +132,6 @@ jobs:
               importlib.import_module(module)
               print(f"imported {module}")
           EOF
+
+      - name: Run tests
+        run: python -m pytest -v

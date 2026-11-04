@@ -112,7 +112,7 @@ You can find it under "Integrations", named "TrueNAS"
 
 Minimum requirements:
 * TrueNAS 25.04 or later (the integration uses the versioned JSON-RPC websocket API introduced in 25.04)
-* Home Assistant 2024.3.0
+* Home Assistant 2024.11.0
 
 ## Supported TrueNAS versions
 The integration reads the TrueNAS version on every update and uses the API methods of that release, so it keeps working after an in-place TrueNAS upgrade without reconfiguration.

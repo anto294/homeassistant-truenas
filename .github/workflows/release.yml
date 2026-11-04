@@ -13,11 +13,11 @@ concurrency:
 
 jobs:
   build:
-    # HACS installs from the truenas.zip asset of the release
+    # HACS installs from the truenas_link.zip asset of the release
     # ("zip_release" in hacs.json). Release notes are written by hand from
     # CHANGELOG.md when the release is created, so this job only builds and
     # attaches the asset.
-    name: Build and attach truenas.zip
+    name: Build and attach truenas_link.zip
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -49,11 +49,11 @@ jobs:
       - name: Set version in manifest.json
         run: python .github/update_version.py --version "$VERSION"
 
-      - name: Build truenas.zip
+      - name: Build truenas_link.zip
         working-directory: custom_components/truenas_link
         run: |
-          zip -r "$RUNNER_TEMP/truenas.zip" . -x '__pycache__/*' '*/__pycache__/*' '*.pyc'
-          unzip -p "$RUNNER_TEMP/truenas.zip" manifest.json | grep -q "\"version\": \"$VERSION\""
+          zip -r "$RUNNER_TEMP/truenas_link.zip" . -x '__pycache__/*' '*/__pycache__/*' '*.pyc'
+          unzip -p "$RUNNER_TEMP/truenas_link.zip" manifest.json | grep -q "\"version\": \"$VERSION\""
 
-      - name: Attach truenas.zip to the release
-        run: gh release upload "$TAG" "$RUNNER_TEMP/truenas.zip" --clobber
+      - name: Attach truenas_link.zip to the release
+        run: gh release upload "$TAG" "$RUNNER_TEMP/truenas_link.zip" --clobber

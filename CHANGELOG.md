@@ -7,6 +7,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-04
+
 ### Removed
 
 - Leftover `jail_start`, `jail_stop` and `jail_restart` action definitions.
@@ -183,5 +185,6 @@ only as 1.4 betas or not released yet:
   and attaches `truenas.zip`, which HACS installs from. Release notes come
   from this changelog.
 
-[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/anto294/homeassistant-truenas/releases/tag/v1.5.0

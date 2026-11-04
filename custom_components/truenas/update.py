@@ -133,7 +133,10 @@ class TrueNASAppUpdate(TrueNASEntity, UpdateEntity):
             # A stopped app cannot be upgraded, do not report a pending update
             return self._data["version"]
 
-        return self._data["latest_version"]
+        # app.query returns latest_version null when no upgrade is available
+        # (25.10) or when it cannot be determined (27.0); report the installed
+        # version then instead of an unknown state.
+        return self._data["latest_version"] or self._data["version"]
 
     async def async_install(self, version: str, backup: bool, **kwargs: Any) -> None:
         """Install an update."""

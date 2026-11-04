@@ -1,8 +1,13 @@
-"""Tests for the JSON-RPC handling of TrueNASAPI.query()."""
+"""Tests for TrueNASAPI: JSON-RPC handling of query() and the SSL context."""
 
 from __future__ import annotations
 
 import logging
+import ssl
+
+from homeassistant.util.ssl import client_context, get_default_no_verify_context
+
+from custom_components.truenas_link.api import TrueNASAPI
 
 # update.status on TrueNAS 25.10 for a system that is up to date. The
 # "error": null key is part of the method's own result, not a JSON-RPC error.
@@ -86,3 +91,22 @@ def test_list_result_is_returned(connected_api):
     api, _ = connected_api(_reply(result=pools))
 
     assert api.query("pool.query") == pools
+
+
+def test_ssl_context_verifies_with_ca_bundle():
+    """Verify SSL uses Home Assistant's context, which loads trusted CAs."""
+    api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=True)
+
+    assert api._ssl_context is client_context()
+    assert api._ssl_context.verify_mode == ssl.CERT_REQUIRED
+    assert api._ssl_context.check_hostname
+    assert api._ssl_context.cert_store_stats()["x509_ca"] > 0
+
+
+def test_ssl_context_without_verification():
+    """Without Verify SSL, use Home Assistant's no-verify context."""
+    api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=False)
+
+    assert api._ssl_context is get_default_no_verify_context()
+    assert api._ssl_context.verify_mode == ssl.CERT_NONE
+    assert not api._ssl_context.check_hostname

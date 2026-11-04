@@ -13,6 +13,23 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   Jails were a TrueNAS CORE feature; the integration never registered these
   actions, so they could not be called.
 
+### Fixed
+
+- On TrueNAS 25.10 and later the integration never finished setting up and
+  stayed in "setup retry" ("TrueNas Disconnected"), logging
+  `unable to fetch data "update.status" (argument of type 'NoneType' is not
+  a container or iterable)`. JSON-RPC errors are now read from the
+  top-level `error` member of the response, as the protocol defines,
+  instead of from inside the method result, where `update.status` always
+  returns `"error": null`. A failed API call is logged with TrueNAS' reason
+  and no longer drops the connection.
+
+### Development
+
+- Added a pytest suite, run in CI against both the oldest supported and the
+  latest Home Assistant release. It covers JSON-RPC response handling and
+  the TrueNAS 25.10+ update check.
+
 ## [1.5.0] - 2026-11-04
 
 First release of this fork, [anto294/homeassistant-truenas](https://github.com/anto294/homeassistant-truenas),

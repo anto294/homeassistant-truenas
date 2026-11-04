@@ -89,8 +89,13 @@ jobs:
         include:
           - homeassistant: "2024.11.0"
             python: "3.12"
+            # Old cores leave some transitive dependencies unpinned; josepy
+            # 2.x removed ComparableX509, which the acme release used by
+            # hass-nabucasa 0.83 still imports.
+            extra: "josepy<2"
           - homeassistant: "latest"
             python: "3.14"
+            extra: ""
     steps:
       - name: Check out code
         uses: actions/checkout@v7
@@ -103,15 +108,18 @@ jobs:
       - name: Install Home Assistant and integration requirements
         run: |
           python -m pip install --upgrade pip
-          if [ "${{ matrix.homeassistant }}" = "latest" ]; then
-            pip install homeassistant
-          else
-            pip install "homeassistant==${{ matrix.homeassistant }}"
+          HA_VERSION="${{ matrix.homeassistant }}"
+          if [ "$HA_VERSION" = "latest" ]; then
+            HA_VERSION=$(curl -sSfL https://pypi.org/pypi/homeassistant/json | python -c 'import json, sys; print(json.load(sys.stdin)["info"]["version"])')
           fi
-          python - <<'EOF' | xargs pip install
-          import json
-          print(" ".join(json.load(open("custom_components/truenas/manifest.json"))["requirements"]))
-          EOF
+          echo "Installing Home Assistant $HA_VERSION"
+          # Use the core's own constraints, as Home Assistant does when it
+          # installs a custom integration's requirements.
+          curl -sSfL -o "$RUNNER_TEMP/constraints.txt" \
+            "https://raw.githubusercontent.com/home-assistant/core/$HA_VERSION/homeassistant/package_constraints.txt"
+          mapfile -t REQUIREMENTS < <(python -c 'import json; print("\n".join(json.load(open("custom_components/truenas/manifest.json"))["requirements"]))')
+          EXTRA="${{ matrix.extra }}"
+          pip install "homeassistant==$HA_VERSION" "${REQUIREMENTS[@]}" ${EXTRA:+"$EXTRA"} -c "$RUNNER_TEMP/constraints.txt"
 
       - name: Import all integration modules
         run: |

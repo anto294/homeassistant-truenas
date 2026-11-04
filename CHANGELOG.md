@@ -7,6 +7,22 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- Home Assistant logged that the integration "calls
+  `device_registry.async_get_or_create` with a deprecated `via_device`
+  parameter" (stops working in Home Assistant 2027.8). Devices are now linked
+  to the TrueNAS System device by its device id on Home Assistant 2026.8 and
+  later, and as before on older releases.
+- The System device is now registered before any other TrueNAS device, so
+  Disks, VMs, Apps and the other devices are always shown under it, whatever
+  order Home Assistant sets the platforms up in.
+
+### Development
+
+- Tests check device info against the installed Home Assistant's own
+  device info keys and deprecations, on both CI Home Assistant versions.
+
 ## [1.5.2] - 2026-11-04
 
 ### Removed

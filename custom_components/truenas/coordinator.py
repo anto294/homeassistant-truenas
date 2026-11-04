@@ -304,6 +304,60 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     #   get_updatecheck
     # ---------------------------
     def get_updatecheck(self) -> None:
+        """Check whether a TrueNAS system update is available."""
+        if self.version_at_least(25, 10):
+            self._get_updatecheck_status()
+        else:
+            self._get_updatecheck_legacy()
+
+        if not self.api.connected():
+            return
+
+        if (
+            self.ds["system_info"]["update_version"] == "unknown"
+            and self.ds["system_info"]["version"]
+        ):
+            self.ds["system_info"]["update_version"] = self.ds["system_info"]["version"]
+
+        self.ds["system_info"]["update_available"] = (
+            self.ds["system_info"]["update_status"] == "AVAILABLE"
+        )
+
+    # ---------------------------
+    #   _get_updatecheck_status
+    # ---------------------------
+    def _get_updatecheck_status(self) -> None:
+        """Check for system updates with update.status (TrueNAS 25.10+).
+
+        update.check_available was removed in 25.10. update.status returns
+        {"code": "NORMAL"|"ERROR", "status": {"new_version": {"version": ...}}}
+        where new_version is null when the system is up to date.
+        """
+        self.ds["system_info"] = parse_api(
+            data=self.ds["system_info"],
+            source=self.api.query("update.status"),
+            vals=[
+                {"name": "update_code", "source": "code", "default": "unknown"},
+                {
+                    "name": "update_version",
+                    "source": "status/new_version/version",
+                    "default": "unknown",
+                },
+            ],
+        )
+
+        if self.ds["system_info"]["update_code"] == "ERROR":
+            self.ds["system_info"]["update_status"] = "ERROR"
+        elif self.ds["system_info"]["update_version"] != "unknown":
+            self.ds["system_info"]["update_status"] = "AVAILABLE"
+        else:
+            self.ds["system_info"]["update_status"] = "UNAVAILABLE"
+
+    # ---------------------------
+    #   _get_updatecheck_legacy
+    # ---------------------------
+    def _get_updatecheck_legacy(self) -> None:
+        """Check for system updates with update.check_available (before 25.10)."""
         self.ds["system_info"] = parse_api(
             data=self.ds["system_info"],
             source=self.api.query("update.check_available"),
@@ -319,19 +373,6 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                     "default": "unknown",
                 },
             ],
-        )
-
-        if not self.api.connected():
-            return
-
-        if (
-            self.ds["system_info"]["update_version"] == "unknown"
-            and self.ds["system_info"]["version"]
-        ):
-            self.ds["system_info"]["update_version"] = self.ds["system_info"]["version"]
-
-        self.ds["system_info"]["update_available"] = (
-            self.ds["system_info"]["update_status"] == "AVAILABLE"
         )
 
     # ---------------------------

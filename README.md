@@ -1,13 +1,174 @@
-# TrueNAS Integration
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/anto294/homeassistant-truenas?style=plastic)
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=plastic)](https://hacs.xyz/docs/faq/custom_repositories/)
-![Project Stage](https://img.shields.io/badge/project%20stage-development-yellow.svg?style=plastic)
-![GitHub all releases](https://img.shields.io/github/downloads/anto294/homeassistant-truenas/total?style=plastic)
+# TrueNAS for Home Assistant
 
-![GitHub commits since latest release](https://img.shields.io/github/commits-since/anto294/homeassistant-truenas/latest?style=plastic)
-![GitHub commit activity](https://img.shields.io/github/commit-activity/m/anto294/homeassistant-truenas?style=plastic)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/anto294/homeassistant-truenas/ci.yml?style=plastic)
+[![GitHub release](https://img.shields.io/github/v/release/anto294/homeassistant-truenas?style=plastic)](https://github.com/anto294/homeassistant-truenas/releases)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=plastic)](https://hacs.xyz/docs/faq/custom_repositories/)
+[![CI](https://img.shields.io/github/actions/workflow/status/anto294/homeassistant-truenas/ci.yml?style=plastic)](https://github.com/anto294/homeassistant-truenas/actions)
+![Downloads](https://img.shields.io/github/downloads/anto294/homeassistant-truenas/total?style=plastic)
 
+![TrueNAS](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/header.png)
+
+Monitor and control a TrueNAS SCALE system from Home Assistant: pools, datasets, disks, services, apps, virtual machines, containers, cloud sync, replication and snapshot tasks, and system updates.
+
+> [!NOTE]
+> **This is a fork** of [tomaae/homeassistant-truenas](https://github.com/tomaae/homeassistant-truenas) by Tomaae. It is distributed separately as a HACS custom repository and targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.10 and 27.0. Please report problems with this fork [here](https://github.com/anto294/homeassistant-truenas/issues), not upstream.
+
+## Contents
+
+- [Differences from upstream](#differences-from-upstream)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Entities](#entities)
+- [Actions](#actions)
+- [Supported TrueNAS versions](#supported-truenas-versions)
+- [Troubleshooting](#troubleshooting)
+- [Translations](#translations)
+- [Credits and license](#credits-and-license)
+
+## Differences from upstream
+
+- Reads the TrueNAS version on every update and calls the API methods of that release, so it keeps working after an in-place TrueNAS upgrade without reconfiguration.
+- Supports TrueNAS 25.10 (`vm.*`, `update.status`, `update.run`, `pool.snapshot.create`) and 27.0 (`container.*`).
+- Adds container entities and the `container_start` / `container_stop` actions on TrueNAS 27.0.
+- Keeps the last known VM, container and memory values when a single query fails or returns no samples, instead of making entities unavailable.
+- Handles `null` values that newer TrueNAS releases return for reporting data and app versions.
+
+## Requirements
+
+| Component | Minimum version |
+|---|---|
+| TrueNAS SCALE | 25.04 |
+| Home Assistant | 2024.11.0 |
+
+TrueNAS CORE and SCALE releases before 25.04 are not supported, because they do not provide the versioned websocket API this integration uses.
+
+## Installation
+
+### HACS (recommended)
+
+[![Open your Home Assistant instance and open this repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=anto294&repository=homeassistant-truenas&category=integration)
+
+Or add the repository manually:
+
+1. In Home Assistant, open **HACS**, then the three-dot menu → **Custom repositories**.
+2. Add `https://github.com/anto294/homeassistant-truenas` with type **Integration**.
+3. Search for **TrueNAS**, download it and restart Home Assistant.
+
+### Manual
+
+Download `truenas.zip` from the [latest release](https://github.com/anto294/homeassistant-truenas/releases/latest), extract it into `config/custom_components/truenas/` and restart Home Assistant.
+
+### Switching from the upstream integration
+
+This fork uses the same `truenas` domain as upstream, so only one of the two can be installed at a time.
+
+1. In HACS, remove the upstream **TrueNAS** integration. This deletes only its files.
+2. Add this repository and download it as described above.
+3. Restart Home Assistant.
+
+Your config entries, entities and their history are kept, because the domain and entity unique IDs are the same.
+
+## Configuration
+
+1. In the TrueNAS web UI, create an API key for Home Assistant (user menu → **API Keys** → **Add**).
+
+   ![Create API key](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/setup_1.png)
+
+2. In Home Assistant, go to **Settings → Devices & services → Add integration → TrueNAS** and fill in:
+
+   | Field | Description |
+   |---|---|
+   | Name | Friendly name for this TrueNAS system |
+   | Host | Hostname or IP address |
+   | API key | The key created in step 1 |
+   | Verify SSL | Turn off if TrueNAS uses a self-signed certificate |
+
+You can add the integration once per TrueNAS system. To change the host or API key later, use **Reconfigure** from the integration's menu.
+
+If TrueNAS does not appear in the list, clear your browser cache.
+
+## Entities
+
+Data is polled every 60 seconds; available updates are checked every 12 hours.
+
+| Device | Entity | Type | Notes |
+|---|---|---|---|
+| System | Uptime | sensor | Target for the reboot and shutdown actions |
+| System | CPU usage, CPU temperature, load (1/5/15 min) | sensor | |
+| System | Memory usage, ARC size | sensor | |
+| System | Network RX / TX | sensor | One pair per interface |
+| System | TrueNAS update | update | Install system updates from Home Assistant |
+| Pools | Healthy | binary sensor | One per pool, including `boot-pool` |
+| Pools | Free space | sensor | |
+| Datasets | Used space | sensor | One per dataset; target for the snapshot action |
+| Disks | Temperature | sensor | One per disk |
+| Services | Running | binary sensor | One per TrueNAS service |
+| Apps | Running | binary sensor | One per app |
+| Apps | App update | update | |
+| VMs | Running | binary sensor | One per virtual machine |
+| Containers | Running | binary sensor | TrueNAS 27.0 and later |
+| Cloud sync | Status | sensor | One per cloud sync task |
+| Replication | Status | sensor | One per replication task |
+| Snapshot tasks | Status | sensor | One per periodic snapshot task |
+
+Most entities expose extra details as attributes (for example pool scrub state, disk model and serial, dataset compression and quota, VM memory and vCPUs).
+
+![Pool health](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/pool_healthy.png)
+![Datasets](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/dataset.png)
+
+## Actions
+
+All actions target an entity of this integration.
+
+| Action | Target entity | Description |
+|---|---|---|
+| `truenas.system_reboot` | Uptime sensor | Reboot TrueNAS |
+| `truenas.system_shutdown` | Uptime sensor | Shut down TrueNAS |
+| `truenas.dataset_snapshot` | Dataset sensor | Create a snapshot named `custom-<ISO timestamp>` |
+| `truenas.service_start` / `_stop` / `_restart` / `_reload` | Service binary sensor | Control a TrueNAS service |
+| `truenas.app_start` / `app_stop` | App binary sensor | Start or stop an app |
+| `truenas.vm_start` / `vm_stop` | VM binary sensor | Start or stop a VM. `vm_start` accepts `overcommit: true` to start even without enough free memory |
+| `truenas.container_start` / `container_stop` | Container binary sensor | Start or stop a container (27.0 and later) |
+| `truenas.cloudsync_run` / `cloudsync_abort` | Cloud sync sensor | Run or abort a cloud sync task |
+
+Example:
+
+```yaml
+action: truenas.dataset_snapshot
+target:
+  entity_id: sensor.truenas_tank_media
+```
+
+## Supported TrueNAS versions
+
+The API methods used depend on the running release:
+
+| Feature | 25.04 | 25.10 | 27.0 |
+|---|---|---|---|
+| System update check | `update.check_available` | `update.status` | `update.status` |
+| System update install | `update.update` | `update.run` | `update.run` |
+| Virtual machines | `virt.instance.*` | `vm.*` | `vm.*` |
+| Containers | listed with VMs (`virt.instance.*`) | not available | `container.*` |
+| Dataset snapshot | `zfs.snapshot.create` | `pool.snapshot.create` | `pool.snapshot.create` |
+
+API references: [all versions](https://api.truenas.com/), [25.10](https://api.truenas.com/v25.10/), [27.0](https://api.truenas.com/v27.0/).
+
+TrueNAS nightly and development builds can change the API at any time; some features may stop working on them.
+
+## Troubleshooting
+
+Enable debug logging to see every API query and response:
+
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.truenas: debug
+```
+
+You can also download diagnostics from the integration's page (sensitive data is redacted) and attach them to an [issue](https://github.com/anto294/homeassistant-truenas/issues).
+
+## Translations
 
 ![English](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/us.png)
 ![Portuguese](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/pt.png)
@@ -16,161 +177,10 @@
 ![Russian](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/ru.png)
 ![Slovak](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/flags/sk.png)
 
-![Truenas Logo](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/header.png)
+English strings live in `custom_components/truenas/strings.json` and `custom_components/truenas/translations/en.json`. To add or improve a language, open a pull request that adds or updates the matching file in [`custom_components/truenas/translations/`](custom_components/truenas/translations/).
 
-Monitor and control your TrueNAS CORE/SCALE device from Home Assistant.
- * Monitor System (Cpu, Load, Memory, Temperature, Network, ARC/L2ARC, Uptime)
- * Monitor Disks
- * Monitor Pools (including boot-pool)
- * Monitor Datasets
- * Monitor Replication Tasks
- * Monitor Snapshot Tasks
- * Control and Monitor Services
- * Control and Monitor Virtual Machines
- * Control and Monitor Containers (TrueNAS 27.0 and later)
- * Control and Monitor Jails (TrueNAS CORE only)
- * Control and Monitor Cloudsync
- * Create a Dataset Snapshot
- * Update Sensor
- * Reboot and Shutdown TrueNAS system
- 
+## Credits and license
 
-# Features
-## Pools
-Monitor status for each TrueNAS pool.
+This project is a fork of [tomaae/homeassistant-truenas](https://github.com/tomaae/homeassistant-truenas), created by Tomaae and its contributors. Thanks to them for the original integration.
 
-![Pools Health](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/pool_healthy.png)
-![Pools Free Space](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/pool_free.png)
-
-## Datasets
-Monitor usage and attributes for each TrueNAS dataset.
-
-![Datasets](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/dataset.png)
-
-## Disks
-Monitor temperature and attributes for each TrueNAS disk.
-
-![Disks](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/disk.png)
-
-## Virtual Machines
-Control and monitor status and attributes for each TrueNAS Virtual Machines.
-Virtual Machines control is available through services.
-
-![Virtual Machines](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/vm.png)
-
-## Containers
-*TrueNAS 27.0 and later*
-
-Control and monitor status and attributes for each TrueNAS container.
-Container control is available through the `container_start` and `container_stop` services.
-
-## Jails
-*TrueNAS CORE only*
-
-Control and monitor status and attributes for each TrueNAS jail.
-Jail control is available through services.
-
-![Jails](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/jail.png)
-
-## Cloudsync
-Control and monitor status and attributes for each TrueNAS cloudsync task.
-Jail control is available through services.
-
-![Cloudsync](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/cloudsync.png)
-
-## Replication Tasks
-Monitor status and attributes for each TrueNAS replication task.
-
-![Replication Tasks](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/replication.png)
-
-## Snapshot Tasks
-Monitor status and attributes for each TrueNAS snapshot task.
-
-![Snapshot Tasks](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/snapshottask.png)
-
-## Dataset Snapshot
-Create a Dataset Snapshot using Homeassistant service.
-Snapshot name will be automatically generated using datetime iso format with microseconds and "custom" prefix. 
-
-![Snapshot UI](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/snapshot_ui.png)
-![Snapshot YAML](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/snapshot_yaml.png)
-
-## Services
-Control and monitor status and attributes for each TrueNAS service.
-Service control is available through services.
-
-![Services](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/service.png)
-
-## Reboot and Shutdown
-Reboot or Shutdown a TrueNAS system.
-Service control is available through services.
-Target system uptime sensor.
-
-![image](https://user-images.githubusercontent.com/36953052/221521930-f8f789e6-deec-4cc2-b11e-740caa056e44.png)
-
-# Install integration
-This integration is distributed through [HACS](https://hacs.xyz/) as a custom repository.
-
-[![Open your Home Assistant instance and open this repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=anto294&repository=homeassistant-truenas&category=integration)
-
-Or add it manually:
-1. In Home Assistant open HACS, then the three-dot menu -> "Custom repositories".
-2. Add `https://github.com/anto294/homeassistant-truenas` with type "Integration".
-3. Search for "TrueNAS" in HACS, download it and restart Home Assistant.
-
-This fork uses the same `truenas` domain as [tomaae/homeassistant-truenas](https://github.com/tomaae/homeassistant-truenas), so only one of the two can be installed at a time. If the upstream integration is already installed through HACS, remove it from HACS first, then download this one and restart Home Assistant. Removing it from HACS only deletes its files: your config entries and entities are kept, because the domain and entity unique IDs are the same.
-
-Minimum requirements:
-* TrueNAS 25.04 or later (the integration uses the versioned JSON-RPC websocket API introduced in 25.04)
-* Home Assistant 2024.11.0
-
-## Supported TrueNAS versions
-The integration reads the TrueNAS version on every update and uses the API methods of that release, so it keeps working after an in-place TrueNAS upgrade without reconfiguration.
-
-| Feature | 25.04 | 25.10 | 27.0 |
-|---|---|---|---|
-| System update check | `update.check_available` | `update.status` | `update.status` |
-| System update install | `update.update` | `update.run` | `update.run` |
-| Virtual Machines | `virt.instance.*` | `vm.*` | `vm.*` |
-| Containers | listed with VMs (`virt.instance.*`) | not available | `container.*` |
-| Dataset snapshot | `zfs.snapshot.create` | `pool.snapshot.create` | `pool.snapshot.create` |
-
-API references: [TrueNAS 25.10](https://api.truenas.com/v25.10/), [TrueNAS 27.0](https://api.truenas.com/v27.0/).
-
-## Using TrueNAS development branch
-If you are using development branch for TrueNAS, some features may stop working.
-
-## Setup integration
-1. Create an API key for Home Assistant on your TrueNAS system.
-
-![Setup step 1](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/setup_1.png)
-![Setup step 2](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/setup_2.png)
-![Setup step 3](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/setup_3.png)
-
-2. Setup this integration for your TrueNAS device in Home Assistant via `Configuration -> Integrations -> Add -> TrueNAS`.
-You can add this integration several times for different devices.
-
-NOTES: 
-- If you dont see "TrueNAS" integration, clear your browser cache.
-
-![Add Integration](https://raw.githubusercontent.com/anto294/homeassistant-truenas/master/docs/assets/images/ui/setup_integration.png)
-* "Name of the integration" - Friendly name for this router
-* "Host" - Use hostname or IP
-* "API key" - TrueNAS API key for Home Assistant 
-
-# Development
-
-## Translation
-English strings live in `custom_components/truenas/strings.json` and `custom_components/truenas/translations/en.json`. To add or improve a translation, open a pull request that adds or updates the matching file in `custom_components/truenas/translations/`.
-
-## Enabling debug
-To enable debug for TrueNAS integration, add following to your configuration.yaml:
-```
-logger:
-  default: info
-  logs:
-    custom_components.truenas: debug
-```
-
-# Credits
-This project is a fork of [tomaae/homeassistant-truenas](https://github.com/tomaae/homeassistant-truenas) by Tomaae, distributed under the Apache License 2.0.
+Distributed under the [Apache License 2.0](LICENSE).

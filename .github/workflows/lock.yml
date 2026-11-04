@@ -15,11 +15,12 @@ concurrency:
 jobs:
   lock:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: dessant/lock-threads@v5
+      - uses: dessant/lock-threads@v6
         with:
           github-token: ${{ github.token }}
-          exclude-any-issue-labels: 'planned, help-wanted'
+          exclude-any-issue-labels: 'planned, help wanted, pinned, security'
           exclude-any-pr-labels: 'wip'
           issue-inactive-days: "30"
           issue-lock-reason: ""

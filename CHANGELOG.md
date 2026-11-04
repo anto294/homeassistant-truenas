@@ -7,6 +7,17 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- Connecting and logging in to TrueNAS no longer runs on the Home
+  Assistant event loop. While TrueNAS was slow or unreachable, the whole
+  Home Assistant instance could stall until the connection timed out.
+- The target picker of every action now lists TrueNAS Link entities. Since
+  2.0.0 it offered the upstream integration's entities, or nothing.
+- With **Verify SSL** on, connections no longer always fail with
+  `certificate_verify_failed`. The integration now uses Home Assistant's
+  SSL contexts, which load the trusted CA certificates.
+
 ## [2.0.0] - 2026-11-04
 
 The integration is now called **TrueNAS Link** and uses its own domain,

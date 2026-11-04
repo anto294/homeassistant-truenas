@@ -37,7 +37,9 @@ async def async_setup_entry(
         "TrueNASClousyncSensor": TrueNASClousyncSensor,
         "TrueNASDatasetSensor": TrueNASDatasetSensor,
     }
-    await async_add_entities(hass, config_entry, dispatcher)
+    await async_add_entities(
+        hass, config_entry, dispatcher, SENSOR_TYPES, SENSOR_SERVICES
+    )
 
 
 # ---------------------------

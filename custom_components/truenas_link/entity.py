@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from logging import getLogger
 from typing import Any, Callable
 
@@ -85,12 +85,18 @@ def build_entity_id(domain: str, inst: str, group: Any, name: Any) -> str:
 #   async_add_entities
 # ---------------------------
 async def async_add_entities(
-    hass: HomeAssistant, config_entry: ConfigEntry, dispatcher: dict[str, Callable]
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    dispatcher: dict[str, Callable],
+    descriptions: Sequence[Any],
+    services: Sequence[Sequence[Any]],
 ):
-    """Add entities."""
+    """Add the platform's entities and register its entity services.
+
+    descriptions are the platform's entity descriptions (SENSOR_TYPES) and
+    services its [service, schema, method_name] entries (SENSOR_SERVICES).
+    """
     platform = ep.async_get_current_platform()
-    services = platform.platform.SENSOR_SERVICES
-    descriptions = platform.platform.SENSOR_TYPES
 
     for service in services:
         platform.async_register_entity_service(service[0], service[1], service[2])

@@ -145,17 +145,10 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                 {"name": "load_shortterm", "default": 0.0},
                 {"name": "load_midterm", "default": 0.0},
                 {"name": "load_longterm", "default": 0.0},
-                {"name": "cpu_interrupt", "default": 0.0},
-                {"name": "cpu_system", "default": 0.0},
-                {"name": "cpu_user", "default": 0.0},
-                {"name": "cpu_nice", "default": 0.0},
-                {"name": "cpu_idle", "default": 0.0},
                 {"name": "cpu_usage", "default": 0.0},
                 {"name": "cache_size-arc_value", "default": 0.0},
                 {"name": "memory-used_value", "default": 0.0},
                 {"name": "memory-free_value", "default": 0.0},
-                {"name": "memory-cached_value", "default": 0.0},
-                {"name": "memory-buffered_value", "default": 0.0},
                 {"name": "memory-total_value", "default": 0.0},
                 {"name": "memory-usage_percent", "default": 0},
                 {"name": "update_available", "type": "bool", "default": False},
@@ -519,14 +512,16 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                     continue
 
                 self._systemstats_process(tmp_arr, tmp_graph[i], "memory")
-                if self.ds["system_info"]["memory-total_value"] > 0:
+                tmp_total = float(self.ds["system_info"]["memory-total_value"])
+                if tmp_total > 0:
+                    # Used = total - available, the same figure as the usage %
+                    tmp_used = max(
+                        tmp_total - float(self.ds["system_info"]["memory-free_value"]),
+                        0.0,
+                    )
+                    self.ds["system_info"]["memory-used_value"] = round(tmp_used)
                     self.ds["system_info"]["memory-usage_percent"] = round(
-                        100
-                        * (
-                            float(self.ds["system_info"]["memory-total_value"])
-                            - float(self.ds["system_info"]["memory-free_value"])
-                        )
-                        / float(self.ds["system_info"]["memory-total_value"])
+                        100 * tmp_used / tmp_total
                     )
 
             # arcsize

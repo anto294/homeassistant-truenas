@@ -92,20 +92,16 @@ DEVICE_ATTRIBUTES_DISK = [
     "identifier",
 ]
 
-DEVICE_ATTRIBUTES_CPU = [
-    "cpu_softirq",
-    "cpu_system",
-    "cpu_user",
-    "cpu_nice",
-    "cpu_iowait",
-    "cpu_idle",
-]
+# The TrueNAS cpu graph (truenas_cpu_usage.cpu) only reports total usage per
+# core, with no system/user/nice/idle/iowait/softirq breakdown, so the CPU
+# sensor has no extra attributes.
+DEVICE_ATTRIBUTES_CPU = []
 
+# The memory graph (truenas_meminfo) only reports total and available; used is
+# derived from them. Cached/buffered memory is not available.
 DEVICE_ATTRIBUTES_MEMORY = [
     "memory-used_value",
     "memory-free_value",
-    "memory-cached_value",
-    "memory-buffered_value",
     "memory-total_value",
 ]
 

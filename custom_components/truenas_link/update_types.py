@@ -3,23 +3,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
 
 from homeassistant.components.update import UpdateEntityDescription
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class TrueNASUpdateEntityDescription(UpdateEntityDescription):
     """Class describing entities."""
 
-    ha_group: str | None = None
+    ha_group: str = ""
     title: str | None = None
-    data_path: str | None = None
+    data_path: str = ""
     data_attribute: str = "available"
-    data_name: str | None = None
-    data_uid: str | None = None
-    data_reference: str | None = None
-    data_attributes_list: List = field(default_factory=lambda: [])
+    data_name: str = ""
+    data_uid: str = ""
+    data_reference: str = ""
+    data_attributes_list: list[str] = field(default_factory=list)
     func: str | None = None
 
 

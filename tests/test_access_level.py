@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 from homeassistant.components.update import UpdateEntityFeature
 from homeassistant.exceptions import ServiceValidationError
 import pytest
-import voluptuous as vol
+import probatio as vol
 
 from custom_components.truenas_link import config_flow, entity as entity_module, update
 from custom_components.truenas_link.const import (

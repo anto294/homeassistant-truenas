@@ -1,6 +1,8 @@
 """Constants used by the TrueNAS integration."""
 
-import voluptuous as vol
+from typing import Any
+
+import probatio as vol
 
 from homeassistant.const import Platform
 from homeassistant.helpers import config_validation as cv
@@ -91,51 +93,53 @@ SCAN_RESILVERING = "resilvering"
 BOOT_POOL_NAMES = ("boot-pool", "freenas-boot")
 
 SERVICE_CLOUDSYNC_RUN = "cloudsync_run"
-SCHEMA_SERVICE_CLOUDSYNC_RUN = {}
+SCHEMA_SERVICE_CLOUDSYNC_RUN: dict[Any, Any] = {}
 
 SERVICE_CLOUDSYNC_ABORT = "cloudsync_abort"
-SCHEMA_SERVICE_CLOUDSYNC_ABORT = {}
+SCHEMA_SERVICE_CLOUDSYNC_ABORT: dict[Any, Any] = {}
 
 SERVICE_POOL_SCRUB_START = "pool_scrub_start"
-SCHEMA_SERVICE_POOL_SCRUB_START = {}
+SCHEMA_SERVICE_POOL_SCRUB_START: dict[Any, Any] = {}
 SERVICE_POOL_SCRUB_PAUSE = "pool_scrub_pause"
-SCHEMA_SERVICE_POOL_SCRUB_PAUSE = {}
+SCHEMA_SERVICE_POOL_SCRUB_PAUSE: dict[Any, Any] = {}
 SERVICE_POOL_SCRUB_STOP = "pool_scrub_stop"
-SCHEMA_SERVICE_POOL_SCRUB_STOP = {}
+SCHEMA_SERVICE_POOL_SCRUB_STOP: dict[Any, Any] = {}
 
 SERVICE_REPLICATION_RUN = "replication_run"
-SCHEMA_SERVICE_REPLICATION_RUN = {}
+SCHEMA_SERVICE_REPLICATION_RUN: dict[Any, Any] = {}
 
 SERVICE_DATASET_SNAPSHOT = "dataset_snapshot"
-SCHEMA_SERVICE_DATASET_SNAPSHOT = {}
+SCHEMA_SERVICE_DATASET_SNAPSHOT: dict[Any, Any] = {}
 
 SERVICE_SYSTEM_REBOOT = "system_reboot"
-SCHEMA_SERVICE_SYSTEM_REBOOT = {}
+SCHEMA_SERVICE_SYSTEM_REBOOT: dict[Any, Any] = {}
 
 SERVICE_SYSTEM_SHUTDOWN = "system_shutdown"
-SCHEMA_SERVICE_SYSTEM_SHUTDOWN = {}
+SCHEMA_SERVICE_SYSTEM_SHUTDOWN: dict[Any, Any] = {}
 
 SERVICE_SERVICE_START = "service_start"
-SCHEMA_SERVICE_SERVICE_START = {}
+SCHEMA_SERVICE_SERVICE_START: dict[Any, Any] = {}
 SERVICE_SERVICE_STOP = "service_stop"
-SCHEMA_SERVICE_SERVICE_STOP = {}
+SCHEMA_SERVICE_SERVICE_STOP: dict[Any, Any] = {}
 SERVICE_SERVICE_RESTART = "service_restart"
-SCHEMA_SERVICE_SERVICE_RESTART = {}
+SCHEMA_SERVICE_SERVICE_RESTART: dict[Any, Any] = {}
 SERVICE_SERVICE_RELOAD = "service_reload"
-SCHEMA_SERVICE_SERVICE_RELOAD = {}
+SCHEMA_SERVICE_SERVICE_RELOAD: dict[Any, Any] = {}
 
 SERVICE_VM_START = "vm_start"
 SERVICE_VM_START_OVERCOMMIT = "overcommit"
-SCHEMA_SERVICE_VM_START = {vol.Optional(SERVICE_VM_START_OVERCOMMIT): cv.boolean}
+SCHEMA_SERVICE_VM_START: dict[Any, Any] = {
+    vol.Optional(SERVICE_VM_START_OVERCOMMIT): cv.boolean
+}
 SERVICE_VM_STOP = "vm_stop"
-SCHEMA_SERVICE_VM_STOP = {}
+SCHEMA_SERVICE_VM_STOP: dict[Any, Any] = {}
 
 SERVICE_CONTAINER_START = "container_start"
-SCHEMA_SERVICE_CONTAINER_START = {}
+SCHEMA_SERVICE_CONTAINER_START: dict[Any, Any] = {}
 SERVICE_CONTAINER_STOP = "container_stop"
-SCHEMA_SERVICE_CONTAINER_STOP = {}
+SCHEMA_SERVICE_CONTAINER_STOP: dict[Any, Any] = {}
 
 SERVICE_APP_START = "app_start"
-SCHEMA_SERVICE_APP_START = {}
+SCHEMA_SERVICE_APP_START: dict[Any, Any] = {}
 SERVICE_APP_STOP = "app_stop"
-SCHEMA_SERVICE_APP_STOP = {}
+SCHEMA_SERVICE_APP_STOP: dict[Any, Any] = {}

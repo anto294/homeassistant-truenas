@@ -49,7 +49,7 @@ _VERSION_RE = re.compile(r"(\d+)\.(\d+)")
 # ---------------------------
 #   scan_status
 # ---------------------------
-def scan_status(pool: dict) -> str:
+def scan_status(pool: dict[str, Any]) -> str:
     """Return what the pool's scan is doing, from its parsed scan values."""
     if pool.get("scrub_state") != "SCANNING":
         return SCAN_IDLE
@@ -71,7 +71,7 @@ def topology_errors(topology: Any) -> dict[str, int]:
     """
     errors = {"read_errors": 0, "write_errors": 0, "checksum_errors": 0}
 
-    def add(vdevs: list) -> None:
+    def add(vdevs: list[Any]) -> None:
         for vdev in vdevs:
             if not isinstance(vdev, dict):
                 continue
@@ -98,7 +98,7 @@ type TrueNASConfigEntry = ConfigEntry[TrueNASCoordinator]
 # ---------------------------
 #   TrueNASControllerData
 # ---------------------------
-class TrueNASCoordinator(DataUpdateCoordinator[None]):
+class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """TrueNASCoordinator Class."""
 
     def __init__(self, hass: HomeAssistant, config_entry: TrueNASConfigEntry):
@@ -119,7 +119,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         self.host = config_entry.data[CONF_HOST]
         self.read_only = is_read_only(config_entry.data)
 
-        self.ds = {
+        self.ds: dict[str, dict[Any, Any]] = {
             "interface": {},
             "disk": {},
             "pool": {},
@@ -153,7 +153,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         self._stale_item_polls: dict[str, dict[Any, int]] = {}
         self.stale_entity_polls: dict[str, int] = {}
 
-        self._systemstats_errored = []
+        self._systemstats_errored: list[tuple[str, str | None]] = []
         # Device registry id of the "System" device, set by async_setup_entry
         self.system_device_id: str | None = None
         self.datasets_hass_device_id = None
@@ -173,7 +173,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     # ---------------------------
     #   _async_update_data
     # ---------------------------
-    async def _async_update_data(self):
+    async def _async_update_data(self) -> dict[str, Any]:
         """Update TrueNAS data."""
         self.answered = set()
         if not self.api.connected():
@@ -656,7 +656,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             # CPU load
             if tmp_graph[i]["name"] == "load":
                 # TrueNAS renames load1/load5/load15 to these
-                tmp_arr = ("shortterm", "midterm", "longterm")
+                tmp_arr: tuple[str, ...] = ("shortterm", "midterm", "longterm")
                 self._systemstats_process(tmp_arr, tmp_graph[i], "load")
 
             # CPU usage
@@ -730,7 +730,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     #   _systemstats_graph_key
     # ---------------------------
     @staticmethod
-    def _systemstats_graph_key(graph: dict) -> tuple:
+    def _systemstats_graph_key(graph: dict[str, Any]) -> tuple[str, str | None]:
         """Return the (name, identifier) pair that identifies a requested graph.
 
         Interfaces share the graph name "interface", so the identifier is
@@ -742,7 +742,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     #   _systemstats_mean
     # ---------------------------
     @staticmethod
-    def _systemstats_mean(graph: dict) -> dict:
+    def _systemstats_mean(graph: dict[str, Any]) -> dict[str, Any]:
         """Return the "mean" aggregation of a reporting graph, or {}.
 
         Since 27.0 reporting.netdata_get_data may return "aggregations": null
@@ -759,7 +759,9 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     # ---------------------------
     #   _systemstats_process
     # ---------------------------
-    def _systemstats_process(self, arr, graph, t) -> None:
+    def _systemstats_process(
+        self, arr: tuple[str, ...], graph: dict[str, Any], t: str
+    ) -> None:
         """Store the mean values of the requested legend entries of a graph.
 
         `arr` is a tuple of exact legend names.
@@ -1014,7 +1016,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             return
 
         names = {pool["name"] for pool in pools if pool.get("name")}
-        self.pool_names = names | {boot.get("name")}
+        self.pool_names = names | {str(boot.get("name"))}
         if pools:
             self.present["pool"] = {pool["guid"] for pool in pools if pool.get("guid")}
             self.present["pool"].add(boot.get("name"))

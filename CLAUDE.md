@@ -42,6 +42,7 @@ Check a method's name, parameters and return shape in these docs before adding o
 ## Conventions
 
 - Format with **black** (CI runs `black . --check`). Run `black .` before committing.
+- Types: CI runs `mypy -p custom_components.truenas_link`, strict, configured in `setup.cfg`. A `type: ignore` needs a comment that says why.
 - Lint: CI runs `flake8` with `max-line-length=127`. `setup.cfg` sets 220 for local use.
 - Every function and class gets a docstring, and section comments use this banner style:
   ```python

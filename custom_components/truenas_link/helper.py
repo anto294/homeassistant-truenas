@@ -36,7 +36,7 @@ def format_attribute(attr: str) -> str:
 # ---------------------------
 def is_read_only(entry_data: Mapping[str, Any]) -> bool:
     """Return whether a config entry's data selects the read-only access level."""
-    return (
+    return bool(
         entry_data.get(CONF_ACCESS_LEVEL, LEGACY_ACCESS_LEVEL) == ACCESS_LEVEL_READ_ONLY
     )
 

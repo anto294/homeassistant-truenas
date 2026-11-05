@@ -3,23 +3,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
 
 from homeassistant.components.switch import SwitchEntityDescription
-from homeassistant.helpers.entity import EntityCategory
+from homeassistant.const import EntityCategory
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class TrueNASSwitchEntityDescription(SwitchEntityDescription):
     """Class describing entities."""
 
-    ha_group: str | None = None
-    data_path: str | None = None
-    data_attribute: str | None = None
-    data_name: str | None = None
-    data_uid: str | None = None
-    data_reference: str | None = None
-    data_attributes_list: List = field(default_factory=lambda: [])
+    ha_group: str = ""
+    data_path: str = ""
+    data_attribute: str = ""
+    data_name: str = ""
+    data_uid: str = ""
+    data_reference: str = ""
+    data_attributes_list: list[str] = field(default_factory=list)
     func: str = "TrueNASCronJobSwitch"
 
 

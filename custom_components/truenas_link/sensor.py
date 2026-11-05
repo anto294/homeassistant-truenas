@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
@@ -61,9 +62,10 @@ class TrueNASSensor(TrueNASEntity, SensorEntity):
     def __init__(
         self,
         coordinator: TrueNASCoordinator,
-        entity_description,
-        uid: str | None = None,
-    ):
+        entity_description: Any,
+        uid: Any = None,
+    ) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, entity_description, uid)
         self._attr_suggested_unit_of_measurement = (
             self.entity_description.suggested_unit_of_measurement
@@ -72,7 +74,10 @@ class TrueNASSensor(TrueNASEntity, SensorEntity):
     @property
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
-        return self._data[self.entity_description.data_attribute]
+        value: StateType | date | datetime | Decimal = self._data[
+            self.entity_description.data_attribute
+        ]
+        return value
 
 
 # ---------------------------
@@ -125,7 +130,7 @@ class TrueNASPoolScanSensor(TrueNASSensor):
             # Without a threshold of 0, START does nothing and reports no
             # error if the last scrub is less than 35 days old
             method = "zpool.scrub.run"
-            params = [{"pool_name": name, "action": action, "threshold": 0}]
+            params: list[Any] = [{"pool_name": name, "action": action, "threshold": 0}]
         else:
             method = "pool.scrub.scrub"
             params = [name, legacy_action]

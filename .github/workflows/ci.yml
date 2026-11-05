@@ -132,3 +132,8 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -v
+
+      - name: Check types with mypy (strict)
+        run: |
+          python -m pip install mypy
+          python -m mypy -p custom_components.truenas_link

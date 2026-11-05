@@ -108,3 +108,30 @@ def test_wrong_key_during_setup_leaves_no_connection(run_in_hass):
         assert server.open_sockets == 0
 
     run_in_hass(scenario)
+
+
+def test_form_shows_a_known_error_for_an_unknown_failure(run_in_hass):
+    """The form gets a code with a message, not the exception's text."""
+
+    async def scenario(hass, server):
+        def fail(*_args, **_kwargs):
+            raise OSError("unexpected <failure>")
+
+        flow = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        with patch("custom_components.truenas_link.api.connect", fail):
+            result = await hass.config_entries.flow.async_configure(
+                flow["flow_id"],
+                {
+                    "name": "TrueNAS",
+                    "host": "nas",
+                    "api_key": "good",
+                    "access_level": "admin",
+                    "verify_ssl": False,
+                },
+            )
+
+        assert result["errors"] == {"host": "cannot_connect"}
+
+    run_in_hass(scenario)

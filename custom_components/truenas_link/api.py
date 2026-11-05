@@ -11,6 +11,22 @@ from websockets.sync.client import connect, ClientConnection
 _LOGGER = getLogger(__name__)
 
 
+# Text in a connection error, and the error code it stands for. Codes are keys
+# of "config.error" in strings.json. The first match wins.
+CONNECT_ERRORS = (
+    ("CERTIFICATE_VERIFY_FAILED", "certificate_verify_failed"),
+    ("The plain HTTP request was sent to HTTPS port", "http_used"),
+    ("TLSV1_UNRECOGNIZED_NAME", "tlsv1_not_supported"),
+    ("No WebSocket UPGRADE", "websocket_not_supported"),
+    ("No address associated with hostname", "unknown_hostname"),
+    ("Connection refused", "connection_refused"),
+    ("No route to host", "invalid_hostname"),
+    ("Name or service not known", "invalid_hostname"),
+    ("404", "api_not_found"),
+)
+ERROR_CANNOT_CONNECT = "cannot_connect"
+
+
 # ---------------------------
 #   TrueNASError
 # ---------------------------
@@ -85,34 +101,7 @@ class TrueNASAPI(object):
                     ping_interval=20,
                 )
             except Exception as e:
-                if "CERTIFICATE_VERIFY_FAILED" in str(e.args):
-                    self._error = "certificate_verify_failed"
-
-                if "The plain HTTP request was sent to HTTPS port" in str(e.args):
-                    self._error = "http_used"
-
-                if "TLSV1_UNRECOGNIZED_NAME" in str(e.args):
-                    self._error = "tlsv1_not_supported"
-
-                if "No WebSocket UPGRADE" in str(e.args):
-                    self._error = "websocket_not_supported"
-
-                if "No address associated with hostname" in e.args:
-                    self._error = "unknown_hostname"
-
-                if "Connection refused" in e.args:
-                    self._error = "connection_refused"
-
-                if "No route to host" in e.args or "Name or service not known" in str(
-                    e
-                ):
-                    self._error = "invalid_hostname"
-
-                if "timed out while waiting for handshake response" in e.args:
-                    self._error = "handshake_timeout"
-
-                if "404" in str(e):
-                    self._error = "api_not_found"
+                self._error = self._connect_error_code(e)
 
                 if not self._error_logged:
                     _LOGGER.error("TrueNAS %s failed to connect (%s)", self._host, e)
@@ -139,12 +128,30 @@ class TrueNASAPI(object):
                 if not self._error_logged:
                     _LOGGER.error("TrueNAS %s failed to login (%s)", self._host, e)
 
+                self._error = ERROR_CANNOT_CONNECT
                 self.disconnect()
                 self._error_logged = True
                 return False
 
             self._error_logged = False
             return self._connected
+
+    # ---------------------------
+    #   _connect_error_code
+    # ---------------------------
+    @staticmethod
+    def _connect_error_code(error: Exception) -> str:
+        """Return the error code for an exception raised while connecting."""
+        # Its text depends on the websockets release and the step that timed out
+        if isinstance(error, TimeoutError):
+            return "handshake_timeout"
+
+        text = str(error)
+        for marker, code in CONNECT_ERRORS:
+            if marker in text:
+                return code
+
+        return ERROR_CANNOT_CONNECT
 
     # ---------------------------
     #   disconnect
@@ -221,7 +228,8 @@ class TrueNASAPI(object):
                     e,
                 )
                 self.disconnect()
-                self._error = str(e)
+                # The reason is in the log. This is a code the forms can show.
+                self._error = ERROR_CANNOT_CONNECT
 
             return None
 
@@ -234,7 +242,7 @@ class TrueNASAPI(object):
             self.connect()
 
         if not self.connected():
-            raise TrueNASConnectionError(self._error or "not connected")
+            raise TrueNASConnectionError(self._error or ERROR_CANNOT_CONNECT)
 
         with self.lock:
             try:

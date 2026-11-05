@@ -108,6 +108,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             self.get_systeminfo,
             self.get_systemstats,
             self.get_alerts,
+            self.get_rebootinfo,
             self.get_service,
             self.get_disk,
             self.get_dataset,
@@ -408,6 +409,23 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             alert.get("level") in CRITICAL_ALERT_LEVELS for alert in active
         )
         system_info["alert_messages"] = messages
+
+    # ---------------------------
+    #   get_rebootinfo
+    # ---------------------------
+    def get_rebootinfo(self) -> None:
+        """Get whether TrueNAS needs a reboot, and why."""
+        info = self.api.query("system.reboot.info")
+        if not isinstance(info, dict):
+            # Keep the last values. Without any, the entity is not created.
+            return
+
+        reasons = [
+            reason.get("reason", "unknown")
+            for reason in info.get("reboot_required_reasons") or []
+        ]
+        self.ds["system_info"]["reboot_required"] = bool(reasons)
+        self.ds["system_info"]["reboot_required_reasons"] = reasons
 
     # ---------------------------
     #   get_systemstats

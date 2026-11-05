@@ -5,7 +5,8 @@ from __future__ import annotations
 
 from logging import getLogger
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.service import async_register_platform_entity_service
 from homeassistant.helpers.typing import ConfigType
@@ -67,7 +68,7 @@ async def _async_set_missing_unique_id(
     if config_entry.unique_id is not None:
         return
 
-    system_id = await hass.async_add_executor_job(coordinator.api.read_system_id)
+    system_id = await coordinator.api.read_system_id()
     if system_id is None:
         return
 
@@ -97,8 +98,16 @@ async def async_setup_entry(
         await coordinator.async_config_entry_first_refresh()
     except Exception:
         # A setup retry starts over with a new coordinator and connection
-        await hass.async_add_executor_job(coordinator.api.disconnect)
+        await coordinator.api.disconnect()
         raise
+
+    async def async_close_connection(_event: Event) -> None:
+        """Close the connection when Home Assistant stops, as entries stay loaded."""
+        await coordinator.api.disconnect()
+
+    config_entry.async_on_unload(
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_close_connection)
+    )
 
     await _async_set_missing_unique_id(hass, config_entry, coordinator)
 
@@ -146,6 +155,6 @@ async def async_unload_entry(
     if unload_ok := await hass.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     ):
-        await hass.async_add_executor_job(config_entry.runtime_data.api.disconnect)
+        await config_entry.runtime_data.api.disconnect()
 
     return unload_ok

@@ -58,6 +58,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- Polling and actions no longer use a thread of Home Assistant's pool: the
+  connection to TrueNAS is now asynchronous. Behavior stays the same, and cancelling
+  an action, such as an automation restarting, closes the connection, so its late
+  answer cannot be taken for the answer to the next request.
 - Every entity went unavailable if reading the boot pool failed once.
 - Datasets no longer vanish from the data when their query fails, which made their
   entities fail on the next update.

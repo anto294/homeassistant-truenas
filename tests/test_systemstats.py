@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from custom_components.truenas_link.coordinator import TrueNASCoordinator
 
 from .test_api import _reply
@@ -56,7 +58,7 @@ def _coordinator(api):
     """Build a coordinator around `api` without a Home Assistant instance."""
     coordinator = TrueNASCoordinator.__new__(TrueNASCoordinator)
     coordinator.host = "truenas.lan"
-    coordinator.api = api
+    coordinator.api = api.real
     coordinator.present = {}
     coordinator.answered = set()
     coordinator.pool_names = set()
@@ -74,7 +76,7 @@ def test_systemstats_populates_every_sensor(connected_api):
     api, ws = connected_api(_reply(result=REPORTING_GRAPHS))
     coordinator = _coordinator(api)
 
-    coordinator.get_systemstats()
+    asyncio.run(coordinator.get_systemstats())
 
     system_info = coordinator.ds["system_info"]
     assert ws.requests[0]["method"] == "reporting.netdata_get_data"
@@ -100,7 +102,7 @@ def test_arcsize_without_samples_reports_zero(connected_api):
     coordinator = _coordinator(api)
     coordinator.ds["system_info"]["cache_size-arc_value"] = 123.0
 
-    coordinator.get_systemstats()
+    asyncio.run(coordinator.get_systemstats())
 
     assert coordinator.ds["system_info"]["cache_size-arc_value"] == 0.0
 
@@ -116,7 +118,7 @@ def test_request_parameters(connected_api):
     api, ws = connected_api(_reply(result=REPORTING_GRAPHS))
     coordinator = _coordinator(api)
 
-    coordinator.get_systemstats()
+    asyncio.run(coordinator.get_systemstats())
 
     graphs, query = ws.requests[0]["params"]
     assert {"name": "interface", "identifier": "eno1"} in graphs
@@ -146,7 +148,7 @@ def test_failing_graph_is_isolated_and_skipped(connected_api, caplog):
     api, ws = connected_api(responder)
     coordinator = _coordinator(api)
 
-    coordinator.get_systemstats()
+    asyncio.run(coordinator.get_systemstats())
 
     # Batch, then one request per graph, each shaped [[graph], query]
     assert len(ws.requests) == 1 + 6
@@ -163,7 +165,7 @@ def test_failing_graph_is_isolated_and_skipped(connected_api, caplog):
 
     # Next refresh: one batch request without the failing graph
     ws.requests.clear()
-    coordinator.get_systemstats()
+    asyncio.run(coordinator.get_systemstats())
     assert len(ws.requests) == 1
     assert {"name": "cputemp"} not in ws.requests[0]["params"][0]
 
@@ -177,7 +179,7 @@ def test_connection_loss_does_not_mark_graphs_as_failed(connected_api):
     api, ws = connected_api(responder)
     coordinator = _coordinator(api)
 
-    coordinator.get_systemstats()
+    asyncio.run(coordinator.get_systemstats())
 
     assert len(ws.requests) == 1
     assert coordinator._systemstats_errored == []
@@ -194,7 +196,7 @@ def test_cpu_and_memory_attributes_are_filled(connected_api):
     api, _ = connected_api(_reply(result=REPORTING_GRAPHS))
     coordinator = _coordinator(api)
 
-    coordinator.get_systemstats()
+    asyncio.run(coordinator.get_systemstats())
 
     system_info = coordinator.ds["system_info"]
     for attribute in DEVICE_ATTRIBUTES_CPU + DEVICE_ATTRIBUTES_MEMORY:

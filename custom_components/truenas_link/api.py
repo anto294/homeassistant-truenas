@@ -1,12 +1,12 @@
 """TrueNAS API."""
 
+import asyncio
 from logging import DEBUG, getLogger
-from threading import Lock
 from typing import Any
 
 import json
 from homeassistant.util.ssl import client_context, get_default_no_verify_context
-from websockets.sync.client import connect, ClientConnection
+from websockets.asyncio.client import ClientConnection, connect
 
 from .helper import redact_secrets
 
@@ -32,8 +32,8 @@ ERROR_CANNOT_CONNECT = "cannot_connect"
 # the connection is up, not that TrueNAS will answer. Job methods answer at once,
 # but service.start, stop, restart and reload answer when they are done, and
 # TrueNAS gives those up to 120 seconds by default, so this has to be above that.
-# After a timeout the connection must be closed: every request has id 0, so a late
-# answer would otherwise be read as the answer to the next request.
+# After a timeout or a cancellation the connection must be closed: every request has
+# id 0, so a late answer would otherwise be read as the answer to the next request.
 RESPONSE_TIMEOUT = 150
 
 
@@ -81,13 +81,13 @@ class TrueNASAPI(object):
         self._api_key = api_key
         self._ssl_verify = verify_ssl
         self._url = f"wss://{self._host}/api/current"
-        # Home Assistant's shared contexts: the verifying one loads the CA
-        # bundle. They are cached and shared, so never modify them.
+        # Home Assistant's shared contexts, created when it starts, so getting one
+        # does not block. They are shared, so never modify them.
         self._ssl_context = (
             client_context() if verify_ssl else get_default_no_verify_context()
         )
 
-        self.lock = Lock()
+        self.lock = asyncio.Lock()
         self._ws: ClientConnection | None = None
         self._connected = False
         self._error = ""
@@ -100,15 +100,15 @@ class TrueNASAPI(object):
     # ---------------------------
     #   connect
     # ---------------------------
-    def connect(self) -> bool:
+    async def connect(self) -> bool:
         """Return connected boolean."""
-        with self.lock:
-            # Each connection has threads of its own, so never lose track of
-            # one by overwriting it
-            self.disconnect()
+        async with self.lock:
+            # Each connection has tasks of its own, so never lose track of one by
+            # overwriting it
+            await self.disconnect()
             self._error = ""
             try:
-                self._ws = connect(
+                self._ws = await connect(
                     self._url,
                     ssl=self._ssl_context,
                     max_size=16777216,
@@ -130,20 +130,23 @@ class TrueNASAPI(object):
                     "id": 0,
                     "params": [self._api_key],
                 }
-                self._ws.send(json.dumps(payload))
-                message = self._ws.recv(timeout=RESPONSE_TIMEOUT)
+                await self._ws.send(json.dumps(payload))
+                message = await self._receive()
                 data = json.loads(message)
                 self._connected = data["result"]
                 if not self._connected:
                     self._error = "invalid_key"
-                    self.disconnect()
+                    await self.disconnect()
 
+            except asyncio.CancelledError:
+                self._abort()
+                raise
             except Exception as e:
                 if not self._error_logged:
                     _LOGGER.error("TrueNAS %s failed to login (%s)", self._host, e)
 
                 self._error = ERROR_CANNOT_CONNECT
-                self.disconnect()
+                await self.disconnect()
                 self._error_logged = True
                 return False
 
@@ -170,18 +173,40 @@ class TrueNASAPI(object):
     # ---------------------------
     #   disconnect
     # ---------------------------
-    def disconnect(self) -> bool:
-        """Close the connection, if any, and return connected boolean."""
+    async def disconnect(self) -> bool:
+        """Close the connection, if any, and return connected boolean.
+
+        It does not take the lock, so an unload does not have to wait for a request
+        that hangs: closing is what ends it.
+        """
         ws, self._ws = self._ws, None
         self._connected = False
         if ws:
             try:
-                ws.close()
+                await ws.close()
             except Exception as e:
                 # The connection is gone either way
                 _LOGGER.debug("TrueNAS %s failed to disconnect (%s)", self._host, e)
 
         return self._connected
+
+    # ---------------------------
+    #   _abort
+    # ---------------------------
+    def _abort(self) -> None:
+        """Drop the connection at once, for a cancelled task that cannot wait."""
+        ws, self._ws = self._ws, None
+        self._connected = False
+        if ws:
+            ws.transport.abort()
+
+    # ---------------------------
+    #   _receive
+    # ---------------------------
+    async def _receive(self) -> str | bytes:
+        """Return the next message, or raise TimeoutError if none comes in time."""
+        async with asyncio.timeout(RESPONSE_TIMEOUT):
+            return await self._ws.recv()
 
     # ---------------------------
     #   connected
@@ -193,23 +218,23 @@ class TrueNASAPI(object):
     # ---------------------------
     #   connection_test
     # ---------------------------
-    def connection_test(self) -> tuple:
+    async def connection_test(self) -> tuple:
         """Return whether a connection and a query work, and the error code."""
         try:
-            self.connect()
+            await self.connect()
             if self.connected():
-                self.system_id = self.read_system_id()
+                self.system_id = await self.read_system_id()
                 # Last, because each query replaces the error code
-                self.query("system.info")
+                await self.query("system.info")
 
             return self._connected, self._error
         finally:
-            self.disconnect()
+            await self.disconnect()
 
     # ---------------------------
     #   read_system_id
     # ---------------------------
-    def read_system_id(self) -> str | None:
+    async def read_system_id(self) -> str | None:
         """Return the UUID that identifies this TrueNAS system, None if unknown.
 
         system.global.id is a value of the system's configuration, so it stays the
@@ -217,13 +242,15 @@ class TrueNASAPI(object):
         a serial number, which can be empty or repeated on virtual machines. It
         needs READONLY_ADMIN, and both controllers of an HA system share it.
         """
-        system_id = self.query("system.global.id")
+        system_id = await self.query("system.global.id")
         return system_id if isinstance(system_id, str) and system_id else None
 
     # ---------------------------
     #   query
     # ---------------------------
-    def query(self, service: str, params: dict[str, Any] | None = {}) -> list | None:
+    async def query(
+        self, service: str, params: dict[str, Any] | None = {}
+    ) -> list | None:
         """Retrieve data from TrueNAS, returning None if that fails.
 
         A successful call can also return None, so code that needs to know
@@ -236,10 +263,10 @@ class TrueNASAPI(object):
         if not self.connected():
             return None
 
-        with self.lock:
+        async with self.lock:
             self._error = ""
             try:
-                result = self._exchange(service, params)
+                result = await self._exchange(service, params)
             except TrueNASMalformedResponseError as e:
                 self._log_failed_method(service, str(e))
                 self._error = "malformed_result"
@@ -252,7 +279,7 @@ class TrueNASAPI(object):
                     service,
                     e,
                 )
-                self.disconnect()
+                await self.disconnect()
                 # The reason is in the log. This is a code the forms can show.
                 self._error = ERROR_CANNOT_CONNECT
             else:
@@ -286,25 +313,27 @@ class TrueNASAPI(object):
     # ---------------------------
     #   call
     # ---------------------------
-    def call(self, service: str, params: dict[str, Any] | list | None = {}) -> Any:
+    async def call(
+        self, service: str, params: dict[str, Any] | list | None = {}
+    ) -> Any:
         """Return the result of a call, raising a TrueNASError if it fails."""
         if not self.connected():
-            self.connect()
+            await self.connect()
 
         if not self.connected():
             raise TrueNASConnectionError(self._error or ERROR_CANNOT_CONNECT)
 
-        with self.lock:
+        async with self.lock:
             try:
-                return self._exchange(service, params)
+                return await self._exchange(service, params)
             except TrueNASConnectionError:
-                self.disconnect()
+                await self.disconnect()
                 raise
 
     # ---------------------------
     #   _exchange
     # ---------------------------
-    def _exchange(self, service: str, params: Any) -> Any:
+    async def _exchange(self, service: str, params: Any) -> Any:
         """Send a request and return the result, raising a TrueNASError if it fails."""
         debug = _LOGGER.isEnabledFor(DEBUG)
         if debug:
@@ -324,14 +353,23 @@ class TrueNASAPI(object):
             payload["params"] = params
 
         try:
-            self._ws.send(json.dumps(payload))
+            await self._ws.send(json.dumps(payload))
+        except asyncio.CancelledError:
+            self._abort()
+            raise
         except Exception as e:
             raise TrueNASConnectionError(str(e)) from e
 
         try:
-            message = self._ws.recv(timeout=RESPONSE_TIMEOUT)
+            message = await self._receive()
             is_object = message.startswith("{")
             response = json.loads(message) if is_object else None
+        except asyncio.CancelledError:
+            self._abort()
+            raise
+        except TimeoutError as e:
+            reason = f"no answer in {RESPONSE_TIMEOUT} seconds"
+            raise TrueNASConnectionError(reason, request_sent=True) from e
         except Exception as e:
             raise TrueNASConnectionError(str(e), request_sent=True) from e
 

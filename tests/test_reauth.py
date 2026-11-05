@@ -23,7 +23,7 @@ def _reauth_flows(hass):
 async def _lose_connection(hass, entry):
     """Drop the connection, as a restart of TrueNAS or the network would."""
     api = entry.runtime_data.api
-    await hass.async_add_executor_job(api.disconnect)
+    await api.disconnect()
 
 
 def test_revoked_key_starts_reauthentication(run_in_hass):

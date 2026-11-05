@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from custom_components.truenas_link.coordinator import TrueNASCoordinator
 
 from .test_api import UPDATE_STATUS_UP_TO_DATE, _reply
@@ -11,7 +13,7 @@ def _coordinator(api, version="25.10.1"):
     """Build a coordinator around `api` without a Home Assistant instance."""
     coordinator = TrueNASCoordinator.__new__(TrueNASCoordinator)
     coordinator.host = "truenas.lan"
-    coordinator.api = api
+    coordinator.api = api.real
     coordinator.present = {}
     coordinator.answered = set()
     coordinator.pool_names = set()
@@ -27,7 +29,7 @@ def test_update_status_up_to_date_is_unavailable(connected_api):
     api, ws = connected_api(_reply(result=UPDATE_STATUS_UP_TO_DATE))
     coordinator = _coordinator(api)
 
-    coordinator._get_updatecheck_status()
+    asyncio.run(coordinator._get_updatecheck_status())
 
     assert coordinator.ds["system_info"]["update_status"] == "UNAVAILABLE"
     assert api.connected()
@@ -39,7 +41,7 @@ def test_update_check_up_to_date_keeps_connection(connected_api):
     api, _ = connected_api(_reply(result=UPDATE_STATUS_UP_TO_DATE))
     coordinator = _coordinator(api)
 
-    coordinator.get_updatecheck()
+    asyncio.run(coordinator.get_updatecheck())
 
     system_info = coordinator.ds["system_info"]
     assert system_info["update_available"] is False
@@ -60,7 +62,7 @@ def test_update_status_new_version_is_available(connected_api):
     )
     coordinator = _coordinator(api)
 
-    coordinator.get_updatecheck()
+    asyncio.run(coordinator.get_updatecheck())
 
     system_info = coordinator.ds["system_info"]
     assert system_info["update_status"] == "AVAILABLE"

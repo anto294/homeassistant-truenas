@@ -47,16 +47,12 @@ def _entity(cls, data, answer, app_state="RUNNING"):
     entity = cls.__new__(cls)
     entity._data = data
     entity.coordinator = SimpleNamespace(
-        api=SimpleNamespace(call=MagicMock(side_effect=call)),
+        api=SimpleNamespace(call=AsyncMock(side_effect=call)),
         version_at_least=lambda *_: True,
         async_refresh=AsyncMock(),
         data={"app": {"plex": {"state": app_state}}},
     )
 
-    async def run_job(func, *args):
-        return func(*args)
-
-    entity.hass = SimpleNamespace(async_add_executor_job=run_job)
     return entity
 
 

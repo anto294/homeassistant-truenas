@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from custom_components.truenas_link.binary_sensor_types import SENSOR_TYPES
 from custom_components.truenas_link.coordinator import TrueNASCoordinator
 
@@ -12,7 +14,7 @@ def _coordinator(api):
     """Build a coordinator around `api` without a Home Assistant instance."""
     coordinator = TrueNASCoordinator.__new__(TrueNASCoordinator)
     coordinator.host = "truenas.lan"
-    coordinator.api = api
+    coordinator.api = api.real
     coordinator.ds = {"system_info": {"hostname": "nas"}}
     return coordinator
 
@@ -43,7 +45,7 @@ def test_alerts_count_only_active_ones(connected_api):
     api, ws = connected_api(_reply(result=alerts))
     coordinator = _coordinator(api)
 
-    coordinator.get_alerts()
+    asyncio.run(coordinator.get_alerts())
 
     assert ws.requests[0]["method"] == "alert.list"
     system_info = coordinator.ds["system_info"]
@@ -58,7 +60,7 @@ def test_critical_levels_turn_the_problem_sensor_on(connected_api):
         api, _ = connected_api(_reply(result=[_alert(level)]))
         coordinator = _coordinator(api)
 
-        coordinator.get_alerts()
+        asyncio.run(coordinator.get_alerts())
 
         assert coordinator.ds["system_info"]["alerts_critical"] is True
 
@@ -73,7 +75,7 @@ def test_alert_messages_are_plain_text_and_bounded(connected_api):
     api, _ = connected_api(_reply(result=alerts))
     coordinator = _coordinator(api)
 
-    coordinator.get_alerts()
+    asyncio.run(coordinator.get_alerts())
 
     system_info = coordinator.ds["system_info"]
     assert system_info["alerts_active"] == 42
@@ -97,7 +99,7 @@ def test_failed_alert_query_keeps_values_and_creates_no_entity(connected_api):
     api, _ = connected_api(refused)
     coordinator = _coordinator(api)
 
-    coordinator.get_alerts()
+    asyncio.run(coordinator.get_alerts())
 
     assert "alerts_active" not in coordinator.ds["system_info"]
     assert api.connected()
@@ -112,7 +114,7 @@ def test_reboot_required_reports_the_reasons(connected_api):
     api, ws = connected_api(_reply(result=info))
     coordinator = _coordinator(api)
 
-    coordinator.get_rebootinfo()
+    asyncio.run(coordinator.get_rebootinfo())
 
     assert ws.requests[0]["method"] == "system.reboot.info"
     assert coordinator.ds["system_info"]["reboot_required"] is True
@@ -126,7 +128,7 @@ def test_no_reboot_reasons_means_no_reboot_required(connected_api):
     )
     coordinator = _coordinator(api)
 
-    coordinator.get_rebootinfo()
+    asyncio.run(coordinator.get_rebootinfo())
 
     assert coordinator.ds["system_info"]["reboot_required"] is False
 

@@ -235,20 +235,20 @@ def test_lost_connection_while_querying_graphs_one_by_one(run_in_hass):
         calls = []
         real_query = coordinator.api.query
 
-        def query(method, params={}):
+        async def query(method, params={}):
             if method != "reporting.netdata_get_data":
-                return real_query(method, params)
+                return await real_query(method, params)
 
             calls.append(params)
             if len(calls) == 1:
                 coordinator.api._failed_methods[method] = "x"
                 return None
 
-            coordinator.api.disconnect()
+            await coordinator.api.disconnect()
             return None
 
         coordinator.api.query = query
-        await coordinator.hass.async_add_executor_job(coordinator.get_systemstats)
+        await coordinator.get_systemstats()
 
         assert coordinator._systemstats_errored == []
 
@@ -270,7 +270,7 @@ def test_stats_with_nothing_left_to_ask_for(run_in_hass):
         ]
         before = len(server.sockets[-1].requests)
 
-        await coordinator.hass.async_add_executor_job(coordinator.get_systemstats)
+        await coordinator.get_systemstats()
 
         assert len(server.sockets[-1].requests) == before
 

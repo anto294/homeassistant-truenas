@@ -27,7 +27,7 @@ def _coordinator(api, read_only=False):
     """Build a coordinator around `api` without a Home Assistant instance."""
     coordinator = TrueNASCoordinator.__new__(TrueNASCoordinator)
     coordinator.host = "truenas.lan"
-    coordinator.api = api
+    coordinator.api = api.real
     coordinator.present = {}
     coordinator.answered = set()
     coordinator.pool_names = set()
@@ -41,7 +41,7 @@ def test_query_never_asks_for_command_or_user(connected_api):
     api, ws = connected_api(_reply(result=[JOB]))
     coordinator = _coordinator(api)
 
-    coordinator.get_cronjob()
+    asyncio.run(coordinator.get_cronjob())
 
     request = ws.requests[0]
     assert request["method"] == "cronjob.query"
@@ -63,7 +63,7 @@ def test_job_without_description_gets_a_name(connected_api):
     api, _ = connected_api(_reply(result=[{**JOB, "description": ""}]))
     coordinator = _coordinator(api)
 
-    coordinator.get_cronjob()
+    asyncio.run(coordinator.get_cronjob())
 
     assert coordinator.ds["cronjob"][3]["cron_name"] == "Cron job 3"
 
@@ -73,7 +73,7 @@ def test_read_only_entry_does_not_query_cron_jobs(connected_api):
     api, ws = connected_api(_reply(result=[JOB]))
     coordinator = _coordinator(api, read_only=True)
 
-    coordinator.get_cronjob()
+    asyncio.run(coordinator.get_cronjob())
 
     assert ws.requests == []
     assert coordinator.ds["cronjob"] == {}
@@ -92,13 +92,9 @@ def _switch(enabled=True):
     switch = TrueNASCronJobSwitch.__new__(TrueNASCronJobSwitch)
     switch._data = {"id": 3, "enabled": enabled}
     switch.coordinator = SimpleNamespace(
-        api=SimpleNamespace(call=MagicMock()), async_refresh=AsyncMock()
+        api=SimpleNamespace(call=AsyncMock()), async_refresh=AsyncMock()
     )
 
-    async def run_job(func, *args):
-        return func(*args)
-
-    switch.hass = SimpleNamespace(async_add_executor_job=run_job)
     return switch
 
 

@@ -17,15 +17,11 @@ def _sensor(status="idle", name="tank", version=(25, 10)):
     sensor = TrueNASPoolScanSensor.__new__(TrueNASPoolScanSensor)
     sensor._data = {"name": name, "scan_status": status}
     sensor.coordinator = SimpleNamespace(
-        api=SimpleNamespace(call=MagicMock()),
+        api=SimpleNamespace(call=AsyncMock()),
         version_at_least=lambda major, minor=0: version >= (major, minor),
         async_refresh=AsyncMock(),
     )
 
-    async def run_job(func, *args):
-        return func(*args)
-
-    sensor.hass = SimpleNamespace(async_add_executor_job=run_job)
     return sensor
 
 

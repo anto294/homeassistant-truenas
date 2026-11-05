@@ -5,7 +5,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/anto294/homeassistant-truenas/ci.yml?style=plastic)](https://github.com/anto294/homeassistant-truenas/actions)
 ![Downloads](https://img.shields.io/github/downloads/anto294/homeassistant-truenas/total?style=plastic)
 
-Monitor and control a TrueNAS SCALE system from Home Assistant: pools, datasets, disks, services, apps, virtual machines, containers, cloud sync, replication and snapshot tasks, and system updates.
+[TrueNAS](https://www.truenas.com/) is an operating system for network-attached storage, built on OpenZFS. This integration lets you monitor and control a TrueNAS SCALE system from Home Assistant: pools, datasets, disks, services, apps, virtual machines, containers, cloud sync, replication and snapshot tasks, and system updates.
 
 Targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.10 and 27.0. It keeps working after an in-place TrueNAS upgrade without reconfiguration.
 
@@ -22,6 +22,7 @@ Targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.
 - [Security](#security)
 - [Supported TrueNAS versions](#supported-truenas-versions)
 - [Troubleshooting](#troubleshooting)
+- [Removal](#removal)
 - [Translations](#translations)
 - [Migrating from version 1.x or from the upstream integration](#migrating-from-version-1x-or-from-the-upstream-integration)
 - [Differences from upstream](#differences-from-upstream)
@@ -119,7 +120,11 @@ Most entities expose extra details as attributes (for example pool scrub state, 
 
 ## Actions
 
-All actions target an entity of this integration and need the Administrator access level.
+All actions target an entity of this integration, given as `target`, and need the Administrator access level. On a read-only entity they give an error and send nothing to TrueNAS. If the entity's entry is not loaded, for example because TrueNAS is unreachable at startup, the action does nothing and Home Assistant logs that the entity is not available.
+
+An action also gives an error if TrueNAS refuses it, cannot be reached, or if it does not apply, such as starting a running VM. In an automation, use `continue_on_error: true` on a step that may fail without stopping the rest. Actions that start a job only report failures in starting it.
+
+`vm_start`'s `overcommit` is the only parameter. The other actions take none.
 
 | Action | Target entity | Description |
 |---|---|---|
@@ -196,6 +201,15 @@ logger:
 ```
 
 You can also download diagnostics from the integration's page (sensitive data is redacted) and attach them to an [issue](https://github.com/anto294/homeassistant-truenas/issues).
+
+## Removal
+
+1. In **Settings → Devices & services → TrueNAS Link**, open the entry's three-dot menu and select **Delete**. Repeat for each entry. This also removes its devices and entities.
+2. In HACS, open **TrueNAS Link**, then three-dot menu → **Remove**. After a manual installation, delete `config/custom_components/truenas_link/` instead.
+3. Restart Home Assistant.
+4. In the TrueNAS web UI, revoke the API key you created for Home Assistant (user menu → **API Keys**). Home Assistant no longer uses it, but it stays valid until you delete it.
+
+Remove automations, scripts and dashboards that use these entities or actions yourself. Long-term statistics stay until you delete them in **Developer tools → Statistics**.
 
 ## Translations
 

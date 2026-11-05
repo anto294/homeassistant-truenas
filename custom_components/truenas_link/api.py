@@ -12,6 +12,33 @@ _LOGGER = getLogger(__name__)
 
 
 # ---------------------------
+#   TrueNASError
+# ---------------------------
+class TrueNASError(Exception):
+    """A call to TrueNAS did not succeed."""
+
+
+class TrueNASConnectionError(TrueNASError):
+    """TrueNAS could not be reached, or the connection broke during a call.
+
+    If request_sent is set, TrueNAS may have received and acted on the request.
+    """
+
+    def __init__(self, reason: str, request_sent: bool = False) -> None:
+        """Initialize the error."""
+        super().__init__(reason)
+        self.request_sent = request_sent
+
+
+class TrueNASRequestError(TrueNASError):
+    """TrueNAS answered a call with an error."""
+
+
+class TrueNASMalformedResponseError(TrueNASRequestError):
+    """TrueNAS answered a call with neither a result nor an error."""
+
+
+# ---------------------------
 #   TrueNASAPI
 # ---------------------------
 class TrueNASAPI(object):
@@ -169,60 +196,24 @@ class TrueNASAPI(object):
     #   query
     # ---------------------------
     def query(self, service: str, params: dict[str, Any] | None = {}) -> list | None:
-        """Retrieve data from TrueNAS."""
+        """Retrieve data from TrueNAS, returning None if that fails.
+
+        A successful call can also return None, so code that needs to know
+        whether a call worked uses call() instead.
+        """
         if not self.connected():
             self.connect()
 
         with self.lock:
             self._error = ""
             try:
-                _LOGGER.debug(
-                    "TrueNAS %s query: %s, %s",
-                    self._host,
-                    service,
-                    params,
-                )
-                payload = {
-                    "method": service,
-                    "jsonrpc": "2.0",
-                    "id": 0,
-                    "params": [],
-                }
-                if params != {}:
-                    if type(params) is not list:
-                        params = [params]
-                    payload["params"] = params
-
-                self._ws.send(json.dumps(payload))
-                message = self._ws.recv()
-                if message.startswith("{"):
-                    response = json.loads(message)
-                    # JSON-RPC 2.0: a failed call carries a top-level "error"
-                    # object and no "result". Keys inside "result" belong to
-                    # the method's own return value (update.status, for
-                    # example, always returns "error": null) and must not be
-                    # read as a protocol error.
-                    if response.get("error") is not None:
-                        self._log_rpc_error(service, response["error"])
-                        return None
-
-                    if "result" not in response:
-                        _LOGGER.error(
-                            "TrueNAS %s query (%s) returned neither result nor error",
-                            self._host,
-                            service,
-                        )
-                        self._error = "malformed_result"
-                        return None
-
-                    data = response["result"]
-                else:
-                    data = message
-
-                _LOGGER.debug(
-                    "TrueNAS %s query (%s) response: %s", self._host, service, data
-                )
-            except Exception as e:
+                return self._exchange(service, params)
+            except TrueNASMalformedResponseError as e:
+                _LOGGER.error("TrueNAS %s query (%s) %s", self._host, service, e)
+                self._error = "malformed_result"
+            except TrueNASRequestError as e:
+                _LOGGER.error("TrueNAS %s query (%s) error: %s", self._host, service, e)
+            except TrueNASConnectionError as e:
                 _LOGGER.warning(
                     'TrueNAS %s unable to fetch data "%s" (%s)',
                     self._host,
@@ -231,15 +222,78 @@ class TrueNASAPI(object):
                 )
                 self.disconnect()
                 self._error = str(e)
-                return None
 
-            return data
+            return None
 
     # ---------------------------
-    #   _log_rpc_error
+    #   call
     # ---------------------------
-    def _log_rpc_error(self, service: str, error: Any) -> None:
-        """Log a JSON-RPC error object, preferring TrueNAS' detailed reason."""
+    def call(self, service: str, params: dict[str, Any] | list | None = {}) -> Any:
+        """Return the result of a call, raising a TrueNASError if it fails."""
+        if not self.connected():
+            self.connect()
+
+        if not self.connected():
+            raise TrueNASConnectionError(self._error or "not connected")
+
+        with self.lock:
+            try:
+                return self._exchange(service, params)
+            except TrueNASConnectionError:
+                self.disconnect()
+                raise
+
+    # ---------------------------
+    #   _exchange
+    # ---------------------------
+    def _exchange(self, service: str, params: Any) -> Any:
+        """Send a request and return the result, raising a TrueNASError if it fails."""
+        _LOGGER.debug("TrueNAS %s query: %s, %s", self._host, service, params)
+        payload = {
+            "method": service,
+            "jsonrpc": "2.0",
+            "id": 0,
+            "params": [],
+        }
+        if params != {}:
+            if type(params) is not list:
+                params = [params]
+            payload["params"] = params
+
+        try:
+            self._ws.send(json.dumps(payload))
+        except Exception as e:
+            raise TrueNASConnectionError(str(e)) from e
+
+        try:
+            message = self._ws.recv()
+            is_object = message.startswith("{")
+            response = json.loads(message) if is_object else None
+        except Exception as e:
+            raise TrueNASConnectionError(str(e), request_sent=True) from e
+
+        if not is_object:
+            data = message
+        # JSON-RPC 2.0: a failed call carries a top-level "error" object and no
+        # "result". Keys inside "result" belong to the method's own return
+        # value (update.status, for example, always returns "error": null) and
+        # must not be read as a protocol error.
+        elif response.get("error") is not None:
+            raise TrueNASRequestError(self._rpc_error_reason(response["error"]))
+        elif "result" not in response:
+            raise TrueNASMalformedResponseError("returned neither result nor error")
+        else:
+            data = response["result"]
+
+        _LOGGER.debug("TrueNAS %s query (%s) response: %s", self._host, service, data)
+        return data
+
+    # ---------------------------
+    #   _rpc_error_reason
+    # ---------------------------
+    @staticmethod
+    def _rpc_error_reason(error: Any) -> str:
+        """Return a JSON-RPC error's text, preferring TrueNAS' detailed reason."""
         reason = None
         if isinstance(error, dict):
             details = error.get("data")
@@ -249,12 +303,7 @@ class TrueNASAPI(object):
             if not reason:
                 reason = error.get("message")
 
-        _LOGGER.error(
-            "TrueNAS %s query (%s) error: %s",
-            self._host,
-            service,
-            reason or error,
-        )
+        return str(reason or error)
 
     @property
     def error(self):

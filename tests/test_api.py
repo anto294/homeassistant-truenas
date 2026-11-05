@@ -8,8 +8,14 @@ import ssl
 from unittest.mock import patch
 
 from homeassistant.util.ssl import client_context, get_default_no_verify_context
+import pytest
 
-from custom_components.truenas_link.api import TrueNASAPI
+from custom_components.truenas_link.api import (
+    TrueNASAPI,
+    TrueNASConnectionError,
+    TrueNASMalformedResponseError,
+    TrueNASRequestError,
+)
 
 from .conftest import FakeWebSocket
 
@@ -211,3 +217,76 @@ def test_connection_test_keeps_the_error_code():
         assert api.connection_test() == (False, "invalid_key")
 
     assert ws.closed
+
+
+def test_call_returns_a_null_result(connected_api):
+    """A successful call that returns null is not an error."""
+    api, _ = connected_api(_reply(result=None))
+
+    assert api.call("system.shutdown", ["reason"]) is None
+
+
+def test_call_raises_when_truenas_refuses(connected_api):
+    """A JSON-RPC error raises with TrueNAS' reason, and keeps the connection."""
+    api, ws = connected_api(
+        _reply(error={"code": -32001, "data": {"reason": "[EBUSY] pool is busy"}})
+    )
+
+    with pytest.raises(TrueNASRequestError, match="pool is busy"):
+        api.call("pool.scrub.scrub", ["tank", "START"])
+
+    assert api.connected()
+    assert not ws.closed
+
+
+def test_call_raises_on_a_malformed_response(connected_api):
+    """A response with neither result nor error raises."""
+    api, _ = connected_api(_reply(include_result=False))
+
+    with pytest.raises(TrueNASMalformedResponseError):
+        api.call("system.info")
+
+
+def test_call_raises_when_it_cannot_connect():
+    """Without a connection, nothing has been sent."""
+    api, connect = _api_with(FakeWebSocket(_login(False)))
+
+    with connect:
+        with pytest.raises(TrueNASConnectionError, match="invalid_key") as err:
+            api.call("system.reboot", ["reason"])
+
+    assert not err.value.request_sent
+
+
+def test_call_tells_if_the_connection_broke_before_sending(connected_api):
+    """A failed send means TrueNAS has not received the request."""
+    api, ws = connected_api(_reply(result=None))
+    ws.closed = True
+
+    with pytest.raises(TrueNASConnectionError) as err:
+        api.call("system.reboot", ["reason"])
+
+    assert not err.value.request_sent
+    assert not api.connected()
+
+
+def test_call_tells_if_the_connection_broke_after_sending(connected_api):
+    """A failed recv means TrueNAS may have acted on the request."""
+    api, ws = connected_api(_reply(result=None))
+    ws.recv = lambda: (_ for _ in ()).throw(EOFError("connection closed"))
+
+    with pytest.raises(TrueNASConnectionError) as err:
+        api.call("system.reboot", ["reason"])
+
+    assert err.value.request_sent
+    assert not api.connected()
+    assert ws.closed
+
+
+def test_query_still_returns_none_on_every_failure(connected_api):
+    """Polling keeps its behavior: query() never raises."""
+    api, ws = connected_api(_reply(result=None))
+    ws.recv = lambda: (_ for _ in ()).throw(EOFError("connection closed"))
+
+    assert api.query("system.info") is None
+    assert not api.connected()

@@ -6,6 +6,7 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 import pytest
 
 from custom_components.truenas_link.sensor import TrueNASReplicationSensor
@@ -16,7 +17,7 @@ def _sensor(task):
     sensor = TrueNASReplicationSensor.__new__(TrueNASReplicationSensor)
     sensor._data = {"id": 7, "name": "offsite"}
     sensor.coordinator = SimpleNamespace(
-        api=SimpleNamespace(query=MagicMock(return_value=task)),
+        api=SimpleNamespace(call=MagicMock(return_value=task)),
         async_refresh=AsyncMock(),
     )
 
@@ -34,7 +35,7 @@ def test_run_starts_an_idle_task(task):
 
     asyncio.run(sensor.start())
 
-    sensor.coordinator.api.query.assert_called_with("replication.run", [7])
+    sensor.coordinator.api.call.assert_called_with("replication.run", [7])
 
 
 @pytest.mark.parametrize("state", ["WAITING", "RUNNING"])
@@ -42,19 +43,17 @@ def test_run_does_not_start_a_running_task(state):
     """A task that is already running is left alone."""
     sensor = _sensor({"job": {"state": state}})
 
-    asyncio.run(sensor.start())
+    with pytest.raises(ServiceValidationError):
+        asyncio.run(sensor.start())
 
-    sensor.coordinator.api.query.assert_called_once_with(
-        "replication.get_instance", [7]
-    )
+    sensor.coordinator.api.call.assert_called_once_with("replication.get_instance", [7])
 
 
 def test_run_gives_up_if_the_task_cannot_be_read():
-    """A failed query does not start anything."""
+    """An answer without a task does not start anything."""
     sensor = _sensor(None)
 
-    asyncio.run(sensor.start())
+    with pytest.raises(HomeAssistantError):
+        asyncio.run(sensor.start())
 
-    sensor.coordinator.api.query.assert_called_once_with(
-        "replication.get_instance", [7]
-    )
+    sensor.coordinator.api.call.assert_called_once_with("replication.get_instance", [7])

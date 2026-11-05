@@ -56,6 +56,24 @@
     "exceptions": {
         "read_only_action": {
             "message": "{entity} belongs to a TrueNAS entry with read-only access. To use its actions, set the access level to Administrator with Reconfigure."
+        },
+        "action_unreachable": {
+            "message": "Could not reach TrueNAS to run {method}."
+        },
+        "action_rejected": {
+            "message": "TrueNAS refused {method}: {reason}"
+        },
+        "action_failed": {
+            "message": "TrueNAS could not complete {method}."
+        },
+        "action_invalid_response": {
+            "message": "TrueNAS returned data that cannot be used for {name}."
+        },
+        "invalid_state": {
+            "message": "{name} is {state}, so {action} does not apply."
+        },
+        "scrub_boot_pool": {
+            "message": "Scrub actions are not available for the boot pool {name}."
         }
     }
 }

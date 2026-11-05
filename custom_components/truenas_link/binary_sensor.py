@@ -1,7 +1,6 @@
 """TrueNAS binary sensor platform."""
 
 from __future__ import annotations
-from logging import getLogger
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -12,9 +11,13 @@ from .binary_sensor_types import (
     SENSOR_SERVICES,
     SENSOR_TYPES,
 )
-from .entity import TrueNASEntity, async_add_entities
+from .entity import (
+    TrueNASEntity,
+    async_add_entities,
+    invalid_response_error,
+    invalid_state_error,
+)
 
-_LOGGER = getLogger(__name__)
 # Seconds a virt instance gets to shut down cleanly (TrueNAS 25.04)
 VIRT_STOP_TIMEOUT = 60
 
@@ -77,86 +80,54 @@ class TrueNASVMBinarySensor(TrueNASBinarySensor):
     # ---------------------------
     #   _get_state
     # ---------------------------
-    async def _get_state(self) -> str | None:
-        """Return the current VM state ("RUNNING", "STOPPED", ...) or None."""
+    async def _get_state(self) -> str:
+        """Return the current VM state ("RUNNING", "STOPPED", ...)."""
         if self._use_libvirt:
             if not self._data.get("vm_id"):
                 # Entry left over from the 25.04 virt.instance API, not yet
                 # refreshed by vm.query, so its libvirt id is unknown.
-                _LOGGER.error(
-                    "VM %s (%s) has no libvirt id yet",
-                    self._data["name"],
-                    self._data["id"],
-                )
-                return None
+                raise invalid_response_error(self._data["name"])
 
-            tmp_vm = await self.hass.async_add_executor_job(
-                self.coordinator.api.query,
-                "vm.get_instance",
-                [self._data["vm_id"]],
-            )
+            tmp_vm = await self._async_call("vm.get_instance", [self._data["vm_id"]])
             status = tmp_vm.get("status") if isinstance(tmp_vm, dict) else None
             state = status.get("state") if isinstance(status, dict) else None
         else:
-            tmp_vm = await self.hass.async_add_executor_job(
-                self.coordinator.api.query,
-                "virt.instance.get_instance",
-                [self._data["id"]],
+            tmp_vm = await self._async_call(
+                "virt.instance.get_instance", [self._data["id"]]
             )
             state = tmp_vm.get("status") if isinstance(tmp_vm, dict) else None
 
         if state is None:
-            _LOGGER.error("VM %s (%s) invalid", self._data["name"], self._data["id"])
+            raise invalid_response_error(self._data["name"])
 
         return state
 
     async def start(self, overcommit: bool = False):
         """Start a VM."""
         state = await self._get_state()
-        if state is None:
-            return
-
         if state != "STOPPED":
-            _LOGGER.warning(
-                "VM %s (%s) is not down", self._data["name"], self._data["id"]
-            )
-            return
+            raise invalid_state_error(self._data["name"], state, "start")
 
         if self._use_libvirt:
-            await self.hass.async_add_executor_job(
-                self.coordinator.api.query,
-                "vm.start",
-                [self._data["vm_id"], {"overcommit": overcommit}],
+            await self._async_call(
+                "vm.start", [self._data["vm_id"], {"overcommit": overcommit}]
             )
         else:
-            await self.hass.async_add_executor_job(
-                self.coordinator.api.query,
-                "virt.instance.start",
-                [self._data["id"]],
-            )
+            await self._async_call("virt.instance.start", [self._data["id"]])
 
     async def stop(self):
         """Stop a VM."""
         state = await self._get_state()
-        if state is None:
-            return
-
         if state != "RUNNING":
-            _LOGGER.warning(
-                "VM %s (%s) is not up", self._data["name"], self._data["id"]
-            )
-            return
+            raise invalid_state_error(self._data["name"], state, "stop")
 
         if self._use_libvirt:
             # Graceful ACPI shutdown, powered off if it exceeds shutdown_timeout
-            await self.hass.async_add_executor_job(
-                self.coordinator.api.query,
-                "vm.stop",
-                [self._data["vm_id"], {"force_after_timeout": True}],
+            await self._async_call(
+                "vm.stop", [self._data["vm_id"], {"force_after_timeout": True}]
             )
         else:
-            await self.hass.async_add_executor_job(
-                self.coordinator.api.query,
+            await self._async_call(
                 "virt.instance.stop",
                 # Clean shutdown. TrueNAS 25.04 has no fallback to a forced
                 # stop: if the timeout passes, the instance keeps running.
@@ -173,57 +144,36 @@ class TrueNASContainerBinarySensor(TrueNASBinarySensor):
     # ---------------------------
     #   _get_state
     # ---------------------------
-    async def _get_state(self) -> str | None:
-        """Return the current container state ("RUNNING", "STOPPED", ...) or None."""
-        tmp_container = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "container.get_instance",
-            [self._data["container_id"]],
+    async def _get_state(self) -> str:
+        """Return the current container state ("RUNNING", "STOPPED", ...)."""
+        tmp_container = await self._async_call(
+            "container.get_instance", [self._data["container_id"]]
         )
         status = (
             tmp_container.get("status") if isinstance(tmp_container, dict) else None
         )
         state = status.get("state") if isinstance(status, dict) else None
         if state is None:
-            _LOGGER.error(
-                "Container %s (%s) invalid", self._data["name"], self._data["id"]
-            )
+            raise invalid_response_error(self._data["name"])
 
         return state
 
     async def start(self):
         """Start a container."""
         state = await self._get_state()
-        if state is None:
-            return
-
         if state != "STOPPED":
-            _LOGGER.warning(
-                "Container %s (%s) is not down", self._data["name"], self._data["id"]
-            )
-            return
+            raise invalid_state_error(self._data["name"], state, "start")
 
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "container.start",
-            [self._data["container_id"]],
-        )
+        await self._async_call("container.start", [self._data["container_id"]])
 
     async def stop(self):
         """Stop a container."""
         state = await self._get_state()
-        if state is None:
-            return
-
         if state != "RUNNING":
-            _LOGGER.warning(
-                "Container %s (%s) is not up", self._data["name"], self._data["id"]
-            )
-            return
+            raise invalid_state_error(self._data["name"], state, "stop")
 
         # Clean shutdown, killed if it exceeds the container's shutdown_timeout
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
+        await self._async_call(
             "container.stop",
             [self._data["container_id"], {"force_after_timeout": True}],
         )
@@ -235,124 +185,48 @@ class TrueNASContainerBinarySensor(TrueNASBinarySensor):
 class TrueNASServiceBinarySensor(TrueNASBinarySensor):
     """Define a TrueNAS Service Binary Sensor."""
 
+    async def _get_state(self) -> str:
+        """Return the current state of the service."""
+        service = await self._async_call("service.get_instance", [self._data["id"]])
+        if not isinstance(service, dict) or "state" not in service:
+            raise invalid_response_error(self._data["service"])
+
+        return service["state"]
+
+    async def _run(self, action: str) -> None:
+        """Run a service.* method, which returns false if it fails."""
+        await self._async_call(
+            f"service.{action}", [self._data["service"]], false_is_failure=True
+        )
+        await self.coordinator.async_refresh()
+
+    async def _run_if_not_stopped(self, action: str) -> None:
+        """Run a method that only applies to a service that is not stopped."""
+        state = await self._get_state()
+        if state == "STOPPED":
+            raise invalid_state_error(self._data["service"], state, action)
+
+        await self._run(action)
+
     async def start(self):
         """Start a Service."""
-        tmp_service = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "service.get_instance",
-            [self._data["id"]],
-        )
+        state = await self._get_state()
+        if state != "STOPPED":
+            raise invalid_state_error(self._data["service"], state, "start")
 
-        if "state" not in tmp_service:
-            _LOGGER.error(
-                "Service %s (%s) invalid", self._data["service"], self._data["id"]
-            )
-            return
-
-        if tmp_service["state"] != "STOPPED":
-            _LOGGER.warning(
-                "Service %s (%s) is not stopped",
-                self._data["service"],
-                self._data["id"],
-            )
-            return
-
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "service.start",
-            [self._data["service"]],
-        )
-
-        await self.coordinator.async_refresh()
+        await self._run("start")
 
     async def stop(self):
         """Stop a Service."""
-        tmp_service = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "service.get_instance",
-            [self._data["id"]],
-        )
-
-        if "state" not in tmp_service:
-            _LOGGER.error(
-                "Service %s (%s) invalid", self._data["service"], self._data["id"]
-            )
-            return
-
-        if tmp_service["state"] == "STOPPED":
-            _LOGGER.warning(
-                "Service %s (%s) is not running",
-                self._data["service"],
-                self._data["id"],
-            )
-            return
-
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "service.stop",
-            [self._data["service"]],
-        )
-        await self.coordinator.async_refresh()
+        await self._run_if_not_stopped("stop")
 
     async def restart(self):
         """Restart a Service."""
-        tmp_service = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "service.get_instance",
-            [self._data["id"]],
-        )
-
-        if "state" not in tmp_service:
-            _LOGGER.error(
-                "Service %s (%s) invalid", self._data["service"], self._data["id"]
-            )
-            return
-
-        if tmp_service["state"] == "STOPPED":
-            _LOGGER.warning(
-                "Service %s (%s) is not running",
-                self._data["service"],
-                self._data["id"],
-            )
-            return
-
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "service.restart",
-            [self._data["service"]],
-        )
-
-        await self.coordinator.async_refresh()
+        await self._run_if_not_stopped("restart")
 
     async def reload(self):
         """Reload a Service."""
-        tmp_service = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "service.get_instance",
-            [self._data["id"]],
-        )
-
-        if "state" not in tmp_service:
-            _LOGGER.error(
-                "Service %s (%s) invalid", self._data["service"], self._data["id"]
-            )
-            return
-
-        if tmp_service["state"] == "STOPPED":
-            _LOGGER.warning(
-                "Service %s (%s) is not running",
-                self._data["service"],
-                self._data["id"],
-            )
-            return
-
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "service.reload",
-            [self._data["service"]],
-        )
-
-        await self.coordinator.async_refresh()
+        await self._run_if_not_stopped("reload")
 
 
 # ---------------------------
@@ -361,50 +235,26 @@ class TrueNASServiceBinarySensor(TrueNASBinarySensor):
 class TrueNASAppBinarySensor(TrueNASBinarySensor):
     """Define a TrueNAS Applications Binary Sensor."""
 
+    async def _get_state(self) -> str:
+        """Return the current state of the app."""
+        app = await self._async_call("app.get_instance", [self._data["id"]])
+        if not isinstance(app, dict) or "state" not in app:
+            raise invalid_response_error(self._data["name"])
+
+        return app["state"]
+
     async def start(self):
         """Start an App."""
-        tmp_app = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "app.get_instance",
-            [self._data["id"]],
-        )
+        state = await self._get_state()
+        if state == "RUNNING":
+            raise invalid_state_error(self._data["name"], state, "start")
 
-        if tmp_app is None or "state" not in tmp_app:
-            _LOGGER.error("App %s (%s) invalid", self._data["name"], self._data["id"])
-            return
-
-        if tmp_app["state"] == "RUNNING":
-            _LOGGER.warning(
-                "App %s (%s) is not down", self._data["name"], self._data["id"]
-            )
-            return
-
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "app.start",
-            [self._data["id"]],
-        )
+        await self._async_call("app.start", [self._data["id"]])
 
     async def stop(self):
         """Stop an App."""
-        tmp_app = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "app.get_instance",
-            [self._data["id"]],
-        )
+        state = await self._get_state()
+        if state != "RUNNING":
+            raise invalid_state_error(self._data["name"], state, "stop")
 
-        if tmp_app is None or "state" not in tmp_app:
-            _LOGGER.error("App %s (%s) invalid", self._data["name"], self._data["id"])
-            return
-
-        if tmp_app["state"] != "RUNNING":
-            _LOGGER.warning(
-                "App %s (%s) is not up", self._data["name"], self._data["id"]
-            )
-            return
-
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "app.stop",
-            [self._data["id"]],
-        )
+        await self._async_call("app.stop", [self._data["id"]])

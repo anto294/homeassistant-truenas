@@ -30,6 +30,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - TrueNAS Link is now in the HACS default repositories: search for it in
   HACS, without adding a custom repository. The README is updated to match.
+- Actions now fail with a clear error when TrueNAS refuses them, cannot be
+  reached, or reports that the operation failed, instead of only writing to
+  the log or doing nothing. An action that does not apply, such as starting a
+  running VM or a scrub during a resilver, is also an error now: an automation
+  that relies on it being ignored should use `continue_on_error`. A reboot or
+  shutdown does not count as failed if the NAS closes the connection while
+  going down.
 
 ### Fixed
 
@@ -47,6 +54,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Connections to TrueNAS were left open, each with its own threads, after a
   rejected login, the connection test of the setup and Reconfigure forms, a
   failed setup, and an unload or reload.
+- `cloudsync_run` and `cloudsync_abort` crashed with a `TypeError` when the
+  task could not be read, or had never run.
+- A failed update install no longer leaves an empty job id behind.
 
 ### Development
 

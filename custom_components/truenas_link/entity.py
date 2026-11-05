@@ -334,6 +334,10 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
         """Stop function."""
         raise NotImplementedError()
 
+    async def pause(self):
+        """Pause function."""
+        raise NotImplementedError()
+
     async def restart(self):
         """Restart function."""
         raise NotImplementedError()

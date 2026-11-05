@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .const import BOOT_POOL_NAMES, SCAN_IDLE, SCAN_PAUSED, SCAN_SCRUBBING
 from .coordinator import TrueNASCoordinator
 from .entity import TrueNASEntity, async_add_entities
 from .sensor_types import (
@@ -36,6 +37,7 @@ async def async_setup_entry(
         "TrueNASUptimeSensor": TrueNASUptimeSensor,
         "TrueNASClousyncSensor": TrueNASClousyncSensor,
         "TrueNASDatasetSensor": TrueNASDatasetSensor,
+        "TrueNASPoolScanSensor": TrueNASPoolScanSensor,
     }
     await async_add_entities(
         hass, config_entry, dispatcher, SENSOR_TYPES, SENSOR_SERVICES
@@ -99,6 +101,61 @@ class TrueNASUptimeSensor(TrueNASSensor):
             "system.shutdown",
             ["Home Assistant Integration"],
         )
+
+
+# ---------------------------
+#   TrueNASPoolScanSensor
+# ---------------------------
+class TrueNASPoolScanSensor(TrueNASSensor):
+    """Define a TrueNAS pool scan sensor, the target of the scrub actions."""
+
+    async def _scrub(
+        self, allowed: tuple[str, ...], action: str, legacy_action: str
+    ) -> None:
+        """Send a scrub action, if the pool's scan state allows it.
+
+        This also keeps a resilver out of reach, which must never be stopped
+        from here, and a second scrub from being started.
+        """
+        name = self._data["name"]
+        if name in BOOT_POOL_NAMES:
+            _LOGGER.warning("Scrub actions are not available for %s", name)
+            return
+
+        if self._data["scan_status"] not in allowed:
+            _LOGGER.warning(
+                "Pool %s is %s, cannot %s scrub",
+                name,
+                self._data["scan_status"],
+                action.lower(),
+            )
+            return
+
+        if self.coordinator.version_at_least(27, 0):
+            # Without a threshold of 0, START does nothing and reports no
+            # error if the last scrub is less than 35 days old
+            method = "zpool.scrub.run"
+            params = [{"pool_name": name, "action": action, "threshold": 0}]
+        else:
+            method = "pool.scrub.scrub"
+            params = [name, legacy_action]
+
+        await self.hass.async_add_executor_job(
+            self.coordinator.api.query, method, params
+        )
+        await self.coordinator.async_refresh()
+
+    async def start(self) -> None:
+        """Start a scrub, or resume a paused one."""
+        await self._scrub((SCAN_IDLE, SCAN_PAUSED), "START", "START")
+
+    async def pause(self) -> None:
+        """Pause a running scrub."""
+        await self._scrub((SCAN_SCRUBBING,), "PAUSE", "PAUSE")
+
+    async def stop(self) -> None:
+        """Stop a running or paused scrub."""
+        await self._scrub((SCAN_SCRUBBING, SCAN_PAUSED), "CANCEL", "STOP")
 
 
 # ---------------------------

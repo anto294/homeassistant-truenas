@@ -87,5 +87,71 @@
         "scrub_boot_pool": {
             "message": "Scrub actions are not available for the boot pool {name}."
         }
+    },
+    "entity": {
+        "sensor": {
+            "system_uptime": {
+                "name": "Uptime"
+            },
+            "system_cpu_temperature": {
+                "name": "Temperature"
+            },
+            "system_load_shortterm": {
+                "name": "CPU load shortterm"
+            },
+            "system_load_midterm": {
+                "name": "CPU load midterm"
+            },
+            "system_load_longterm": {
+                "name": "CPU load longterm"
+            },
+            "system_cpu_usage": {
+                "name": "CPU usage"
+            },
+            "system_memory_usage": {
+                "name": "Memory usage"
+            },
+            "system_cache_size-arc_value": {
+                "name": "ARC size"
+            },
+            "system_alerts": {
+                "name": "Alerts"
+            },
+            "pool_free": {
+                "name": "{name} free"
+            },
+            "pool_scan": {
+                "name": "{name} scan",
+                "state": {
+                    "idle": "Idle",
+                    "scrubbing": "Scrubbing",
+                    "paused": "Paused",
+                    "resilvering": "Resilvering"
+                }
+            },
+            "pool_last_scrub": {
+                "name": "{name} last scrub"
+            },
+            "pool_errors": {
+                "name": "{name} errors"
+            },
+            "traffic_rx": {
+                "name": "{name} RX"
+            },
+            "traffic_tx": {
+                "name": "{name} TX"
+            }
+        },
+        "binary_sensor": {
+            "system_alerts_critical": {
+                "name": "Critical alerts"
+            },
+            "system_reboot_required": {
+                "name": "Reboot required"
+            },
+            "pool_healthy": {
+                "name": "{name} healthy"
+            }
+        }
     }
 }

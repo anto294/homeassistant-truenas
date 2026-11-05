@@ -273,6 +273,10 @@ def test_every_exception_key_is_translated(path):
     """Each translation_key the code raises has a message in each language."""
     used = set()
     for source in COMPONENT.glob("*.py"):
+        # There, translation_key names an entity
+        if source.name.endswith("_types.py"):
+            continue
+
         used |= set(re.findall(r'translation_key="(\w+)"', source.read_text()))
 
     assert used

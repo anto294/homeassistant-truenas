@@ -308,9 +308,12 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
             if dev_group in self._data:
                 dev_group = self._data[dev_group]
 
+        # From the English names in the descriptions, never the translated name
+        # that the entity shows: entity ids must not depend on the language
         self.entity_id = build_entity_id(
-            self._platform_domain, self._inst, dev_group, self.name
+            self._platform_domain, self._inst, dev_group, self._english_name()
         )
+        self._update_name()
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -319,6 +322,7 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
             self._data = section
         elif self._uid in section:
             self._data = section[self._uid]
+            self._update_name()
 
         # Otherwise the item is gone: keep its last values for the entity's name,
         # until its removal. available says that they are out of date.
@@ -338,16 +342,30 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
             path
         ] and not self.coordinator.is_missing(path, self._uid)
 
-    @property
-    def name(self) -> str:
-        """Return the name for this entity."""
+    def _english_name(self) -> str:
+        """Return the name that entity ids are built from."""
+        suffix = self.entity_description.name
         if not self._uid:
-            return f"{self.entity_description.name}"
+            return f"{suffix}"
 
-        if self.entity_description.name:
-            return f"{self._data[self.entity_description.data_name]} {self.entity_description.name}"
+        item = self._data[self.entity_description.data_name]
+        return f"{item} {suffix}" if suffix else f"{item}"
 
-        return f"{self._data[self.entity_description.data_name]}"
+    def _update_name(self) -> None:
+        """Set the name of an item's entity, which holds the item's own name.
+
+        Those with a name of their own in the description get it translated, with
+        the item as a placeholder. A pool or interface cannot be renamed, so that
+        is set once. Other items are named as they are on TrueNAS, which can change.
+        """
+        if not self._uid:
+            return
+
+        item = str(self._data[self.entity_description.data_name])
+        if not self.entity_description.name:
+            self._attr_name = item
+        elif not hasattr(self, "_attr_translation_placeholders"):
+            self._attr_translation_placeholders = {"name": item}
 
     @property
     def unique_id(self) -> str:

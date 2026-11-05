@@ -34,11 +34,13 @@ def _load() -> dict:
     return json.loads(SNAPSHOT.read_text()) if SNAPSHOT.exists() else {}
 
 
+@pytest.mark.parametrize("language", ["en", "it"])
 @pytest.mark.parametrize(("name", "version"), CASES)
-def test_entity_ids_and_unique_ids_do_not_change(run_in_hass, name, version):
-    """Each entity keeps the id and unique id it was saved with."""
+def test_entity_ids_and_unique_ids_do_not_change(run_in_hass, name, version, language):
+    """Each entity keeps the id and unique id it was saved with, in any language."""
 
     async def scenario(hass, server):
+        hass.config.language = language
         server.results = answers(version)
         entry = await async_add_entry(hass, name=name)
         registry = er.async_get(hass)

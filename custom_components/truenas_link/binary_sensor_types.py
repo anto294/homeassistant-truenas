@@ -83,8 +83,6 @@ DEVICE_ATTRIBUTES_APP = [
 class TrueNASBinarySensorEntityDescription(BinarySensorEntityDescription):
     """Class describing entities."""
 
-    icon_enabled: str | None = None
-    icon_disabled: str | None = None
     ha_group: str | None = None
     ha_connection: str | None = None
     ha_connection_value: str | None = None
@@ -102,6 +100,7 @@ class TrueNASBinarySensorEntityDescription(BinarySensorEntityDescription):
 SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
     TrueNASBinarySensorEntityDescription(
         key="system_alerts_critical",
+        translation_key="system_alerts_critical",
         name="Critical alerts",
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_category=None,
@@ -116,9 +115,8 @@ SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
     ),
     TrueNASBinarySensorEntityDescription(
         key="system_reboot_required",
+        translation_key="system_reboot_required",
         name="Reboot required",
-        icon_enabled="mdi:restart-alert",
-        icon_disabled="mdi:restart",
         device_class=None,
         entity_category=None,
         ha_group="System",
@@ -132,9 +130,8 @@ SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
     ),
     TrueNASBinarySensorEntityDescription(
         key="pool_healthy",
+        translation_key="pool_healthy",
         name="healthy",
-        icon_enabled="mdi:database",
-        icon_disabled="mdi:database-off",
         device_class=None,
         entity_category=None,
         ha_group="System",
@@ -147,9 +144,8 @@ SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
     ),
     TrueNASBinarySensorEntityDescription(
         key="vm",
+        translation_key="vm",
         name="",
-        icon_enabled="mdi:server",
-        icon_disabled="mdi:server-off",
         device_class=None,
         entity_category=None,
         ha_group="VMs",
@@ -163,9 +159,8 @@ SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
     ),
     TrueNASBinarySensorEntityDescription(
         key="container",
+        translation_key="container",
         name="",
-        icon_enabled="mdi:package-variant",
-        icon_disabled="mdi:package-variant-remove",
         device_class=None,
         entity_category=None,
         ha_group="Containers",
@@ -179,9 +174,8 @@ SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
     ),
     TrueNASBinarySensorEntityDescription(
         key="service",
+        translation_key="service",
         name="",
-        icon_enabled="mdi:cog",
-        icon_disabled="mdi:cog-off",
         device_class=None,
         entity_category=None,
         ha_group="Services",
@@ -195,9 +189,8 @@ SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
     ),
     TrueNASBinarySensorEntityDescription(
         key="app",
+        translation_key="app",
         name="",
-        icon_enabled="mdi:server",
-        icon_disabled="mdi:server-off",
         device_class=None,
         entity_category=None,
         ha_group="Apps",

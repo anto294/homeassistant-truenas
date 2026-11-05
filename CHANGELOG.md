@@ -32,6 +32,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- Every entity went unavailable if reading the boot pool failed once.
 - The link to TrueNAS on the System device now uses HTTPS, the only protocol the
   integration uses to reach it.
 - A method that TrueNAS refuses no longer writes an error to the log on every

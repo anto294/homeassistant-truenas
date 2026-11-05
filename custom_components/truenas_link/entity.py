@@ -63,7 +63,7 @@ def system_device_info(coordinator: TrueNASCoordinator) -> DeviceInfo:
         model=f"{system_info['system_product']}",
         manufacturer=f"{system_info['system_manufacturer']}",
         sw_version=f"{system_info['version']}",
-        configuration_url=f"http://{coordinator.config_entry.data[CONF_HOST]}",
+        configuration_url=f"https://{coordinator.config_entry.data[CONF_HOST]}",
     )
 
 

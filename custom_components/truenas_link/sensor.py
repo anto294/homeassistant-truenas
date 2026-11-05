@@ -61,6 +61,8 @@ async def async_setup_entry(
 class TrueNASSensor(TrueNASEntity, SensorEntity):
     """Define an TrueNAS sensor."""
 
+    _platform_domain = "sensor"
+
     def __init__(
         self,
         coordinator: TrueNASCoordinator,

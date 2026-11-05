@@ -28,6 +28,9 @@ def _coordinator(api, read_only=False):
     coordinator = TrueNASCoordinator.__new__(TrueNASCoordinator)
     coordinator.host = "truenas.lan"
     coordinator.api = api
+    coordinator.present = {}
+    coordinator.answered = set()
+    coordinator.pool_names = set()
     coordinator.read_only = read_only
     coordinator.ds = {"cronjob": {}}
     return coordinator

@@ -30,6 +30,12 @@ DEFAULT_ACCESS_LEVEL = ACCESS_LEVEL_READ_ONLY
 # Entries created before the option existed have always had every action
 LEGACY_ACCESS_LEVEL = ACCESS_LEVEL_ADMIN
 
+# Successful polls an item must be gone before its entities are removed, about an
+# hour. Until then its entities are unavailable. Removing an entity loses its
+# customizations, while waiting costs little, and things do go away for a while: a
+# disk that is being replaced or a pool that is still importing after a reboot.
+STALE_AFTER_POLLS = 60
+
 TO_REDACT = {
     "username",
     "password",

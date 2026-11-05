@@ -54,6 +54,8 @@ async def async_setup_entry(
 class TrueNASBinarySensor(TrueNASEntity, BinarySensorEntity):
     """Define an TrueNAS Binary Sensor."""
 
+    _platform_domain = "binary_sensor"
+
     @property
     def is_on(self) -> bool:
         """Return true if device is on."""

@@ -225,6 +225,7 @@ If you prefer, you can instead keep the upstream integration and run both side b
 - Supports TrueNAS 25.10 (`vm.*`, `update.status`, `update.run`, `pool.snapshot.create`) and 27.0 (`container.*`).
 - Adds container entities and the `container_start` / `container_stop` actions on TrueNAS 27.0.
 - Keeps the last known VM, container and memory values when a single query fails or returns no samples, instead of making entities unavailable.
+- Adds entities for new datasets, VMs, apps and other items without a reload. An item that TrueNAS stops listing becomes unavailable, and its entities are removed after about an hour (60 successful updates). A failed query or an empty list never counts: Docker restarting or a pool that is not imported yet removes nothing. To remove what an empty list leaves behind, delete the device from its page in Home Assistant.
 - Handles `null` values that newer TrueNAS releases return for reporting data and app versions.
 
 ## Credits and license

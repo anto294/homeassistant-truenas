@@ -5,12 +5,13 @@ from __future__ import annotations
 
 from logging import getLogger
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
 from .entity import system_device_info
+from .stale import async_can_remove_device, async_remove_stale_entities
 
 _LOGGER = getLogger(__name__)
 
@@ -78,7 +79,26 @@ async def async_setup_entry(
 
     config_entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+
+    @callback
+    def async_update_entities() -> None:
+        """Remove the entities of what has been gone from TrueNAS for a while."""
+        async_remove_stale_entities(hass, config_entry)
+
+    config_entry.async_on_unload(coordinator.async_add_listener(async_update_entities))
     return True
+
+
+# ---------------------------
+#   async_remove_config_entry_device
+# ---------------------------
+async def async_remove_config_entry_device(
+    hass: HomeAssistant,
+    config_entry: TrueNASConfigEntry,
+    device_entry: dr.DeviceEntry,
+) -> bool:
+    """Let the user delete a device whose items are no longer on TrueNAS."""
+    return async_can_remove_device(hass, config_entry, device_entry)
 
 
 # ---------------------------

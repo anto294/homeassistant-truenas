@@ -24,6 +24,9 @@ from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 
 from .const import (
@@ -53,6 +56,11 @@ def _access_level_selector() -> SelectSelector:
     )
 
 
+def _api_key_selector() -> TextSelector:
+    """Return the field for an API key, which masks what it shows."""
+    return TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+
+
 def _base_schema(truenas_config: Mapping[str, Any]) -> vol.Schema:
     """Generate base schema."""
     base_schema = {
@@ -62,7 +70,9 @@ def _base_schema(truenas_config: Mapping[str, Any]) -> vol.Schema:
         vol.Required(
             CONF_HOST, default=truenas_config.get(CONF_HOST) or DEFAULT_HOST
         ): str,
-        vol.Required(CONF_API_KEY, default=truenas_config.get(CONF_API_KEY) or ""): str,
+        vol.Required(
+            CONF_API_KEY, default=truenas_config.get(CONF_API_KEY) or ""
+        ): _api_key_selector(),
         vol.Required(
             CONF_ACCESS_LEVEL,
             default=truenas_config.get(CONF_ACCESS_LEVEL) or DEFAULT_ACCESS_LEVEL,
@@ -77,13 +87,22 @@ def _base_schema(truenas_config: Mapping[str, Any]) -> vol.Schema:
     return vol.Schema(base_schema)
 
 
-def _reconfigure_schema(truenas_config: Mapping[str, Any]) -> vol.Schema:
-    """Generate base schema."""
+def _reconfigure_schema(
+    truenas_config: Mapping[str, Any], entered_api_key: str | None = None
+) -> vol.Schema:
+    """Generate the Reconfigure schema.
+
+    The form never gets the stored API key, because a schema's values are sent to
+    the browser even if the field masks them. It only gets entered_api_key: what
+    the user typed before an error. An empty field keeps the stored key.
+    """
     base_schema = {
         vol.Required(
             CONF_HOST, default=truenas_config.get(CONF_HOST) or DEFAULT_HOST
         ): str,
-        vol.Required(CONF_API_KEY, default=truenas_config.get(CONF_API_KEY) or ""): str,
+        vol.Optional(
+            CONF_API_KEY, description={"suggested_value": entered_api_key}
+        ): _api_key_selector(),
         vol.Required(
             CONF_ACCESS_LEVEL,
             default=truenas_config.get(CONF_ACCESS_LEVEL) or LEGACY_ACCESS_LEVEL,
@@ -174,17 +193,23 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        truenas_config = self.truenas_config
         reconfigure_entry = self._get_reconfigure_entry()
         errors = {}
 
         if user_input is not None:
-            truenas_config.update(user_input)
+            # Only this submission counts: a key that was typed before an error
+            # and then cleared must not come back
+            self.truenas_config = dict(user_input)
+            if not self.truenas_config.get(CONF_API_KEY):
+                self.truenas_config.pop(CONF_API_KEY, None)
 
+        truenas_config = self.truenas_config
+
+        if user_input is not None:
             # Test connection
             errorcode = await self._async_connection_error(
                 truenas_config[CONF_HOST],
-                truenas_config[CONF_API_KEY],
+                truenas_config.get(CONF_API_KEY, reconfigure_entry.data[CONF_API_KEY]),
                 truenas_config[CONF_VERIFY_SSL],
             )
             if errorcode is not None:
@@ -202,7 +227,8 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="reconfigure",
             # After an error, keep what was entered
             data_schema=_reconfigure_schema(
-                {**reconfigure_entry.data, **truenas_config}
+                {**reconfigure_entry.data, **truenas_config},
+                truenas_config.get(CONF_API_KEY),
             ),
             errors=errors,
         )
@@ -235,7 +261,7 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=vol.Schema({vol.Required(CONF_API_KEY): str}),
+            data_schema=vol.Schema({vol.Required(CONF_API_KEY): _api_key_selector()}),
             description_placeholders={"name": reauth_entry.title},
             errors=errors,
         )

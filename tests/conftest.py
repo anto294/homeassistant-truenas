@@ -167,15 +167,12 @@ async def _async_start_hass() -> HomeAssistant:
     """Return a real Home Assistant core that can load this integration."""
     hass = HomeAssistant(tempfile.mkdtemp())
     hass.config.skip_pip = True
-    # Older cores do not have these two async_setup functions
-    if hasattr(frame, "async_setup"):
-        frame.async_setup(hass)
+    frame.async_setup(hass)
     loader.async_setup(hass)
     translation.async_setup(hass)
     hass.config_entries = config_entries.ConfigEntries(hass, {})
     await hass.config_entries.async_initialize()
-    if hasattr(device_registry, "async_setup"):
-        device_registry.async_setup(hass)
+    device_registry.async_setup(hass)
     for registry in (
         area_registry,
         floor_registry,

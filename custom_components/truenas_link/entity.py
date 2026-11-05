@@ -26,17 +26,6 @@ from .helper import format_attribute, is_read_only
 _LOGGER = getLogger(__name__)
 
 
-# Home Assistant 2026.8 added "via_device_id" (the parent's device registry
-# id) to DeviceInfo. 2026.9 dropped "via_device" (the parent's identifier
-# tuple) from DeviceInfo and deprecated it, to be removed in 2027.8. Older
-# releases, back to the minimum 2024.11, only know "via_device" and reject
-# a device info with "via_device_id" as invalid. Detect the key instead of
-# comparing versions.
-VIA_DEVICE_ID_SUPPORTED = "via_device_id" in (
-    DeviceInfo.__required_keys__ | DeviceInfo.__optional_keys__
-)
-
-
 # ---------------------------
 #   system_device_info
 # ---------------------------
@@ -378,24 +367,15 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
         if self.entity_description.ha_group == "System":
             return system_device_info(self.coordinator)
 
-        # Plain name/model/manufacturer: the default_* variants are
-        # deprecated (removed in HA 2027.9), and mixing them with these
-        # keys is an invalid device info on HA 2024.11.
         info = DeviceInfo(
             connections={(DOMAIN, f"{self._inst}_{self.entity_description.ha_group}")},
             name=self.entity_description.ha_group,
             model=f"{self.coordinator.data['system_info']['system_product']}",
             manufacturer=f"{self.coordinator.data['system_info']['system_manufacturer']}",
         )
-        if VIA_DEVICE_ID_SUPPORTED:
-            # Registered in async_setup_entry before any platform is set up
-            if self.coordinator.system_device_id:
-                info["via_device_id"] = self.coordinator.system_device_id
-        else:
-            info["via_device"] = (
-                DOMAIN,
-                f"{self._inst}_{self.coordinator.data['system_info']['hostname']}",
-            )
+        # Registered in async_setup_entry before any platform is set up
+        if self.coordinator.system_device_id:
+            info["via_device_id"] = self.coordinator.system_device_id
 
         return info
 

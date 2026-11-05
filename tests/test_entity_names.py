@@ -96,8 +96,7 @@ def test_names_in_english_do_not_change(run_in_hass):
         assert _friendly(hass, "sensor.truenas_system_tank_free") == "System tank free"
         assert _friendly(hass, "sensor.truenas_datasets_tank") == "Datasets tank"
         assert _friendly(hass, "binary_sensor.truenas_vms_win11") == "VMs win11"
-        # Home Assistant 2024.11 keeps a space after the device name
-        assert _friendly(hass, "update.truenas_system").strip() == "System"
+        assert _friendly(hass, "update.truenas_system") == "System"
 
     run_in_hass(scenario)
 

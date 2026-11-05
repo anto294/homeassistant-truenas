@@ -28,6 +28,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Changed
 
+- **TrueNAS Link now requires Home Assistant 2026.11 or later.** On an older
+  version, stay on 2.0.1 until you can update Home Assistant. Note that 2.0.1's
+  Reconfigure stops working on Home Assistant 2026.12.
 - **Entity names are now translated**, for now in English and Italian, so they may
   look different in your language. Entity IDs do not change, in any language.
   Names you gave to entities yourself stay. Icons moved to `icons.json`, so the

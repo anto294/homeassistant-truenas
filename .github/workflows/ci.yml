@@ -87,12 +87,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - homeassistant: "2024.11.0"
-            python: "3.12"
-            # Old cores leave some transitive dependencies unpinned; josepy
-            # 2.x removed ComparableX509, which the acme release used by
-            # hass-nabucasa 0.83 still imports.
-            extra: "josepy<2"
+          - homeassistant: "2026.11.0"
+            python: "3.14"
+            extra: ""
           - homeassistant: "latest"
             python: "3.14"
             extra: ""

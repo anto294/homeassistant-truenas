@@ -54,7 +54,7 @@ Check a method's name, parameters and return shape in these docs before adding o
 - `manifest.json` keeps `"version": "0.0.0"`. The release workflow (`.github/update_version.py`) sets the real version.
 - HACS installs from the `truenas_link.zip` asset that `release.yml` attaches to each published GitHub release (`zip_release` in `hacs.json`). Publish a full GitHub release, not just a tag; mark betas as pre-releases. Tags are `vX.Y.Z` or `vX.Y.ZbN` (the release workflow rejects anything else). Every user-facing change gets an entry under `## [Unreleased]` in `CHANGELOG.md` (Keep a Changelog format); the release notes are that version's section, passed with `gh release create --notes-file`. README.md is the page HACS shows (no `info.md`).
 - Keep `hacs.json` `homeassistant` at the oldest core that has every HA API the code uses.
-- Minimum HA version: see `hacs.json` (`homeassistant`) and `Pipfile` (dev dependency).
+- Minimum HA version: 2026.11.0, Python 3.14. See `hacs.json` (`homeassistant`) and `Pipfile` (dev dependency). Do not lower it, and do not add code for older cores.
 
 ## Development commands
 

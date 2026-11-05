@@ -109,38 +109,12 @@ def test_child_device_info_is_valid_for_installed_ha(ha_group):
     assert info["connections"] == {("truenas_link", f"TrueNAS_{ha_group}")}
 
 
-def test_child_links_parent_the_way_installed_ha_expects():
-    """via_device_id where HA supports it (2026.8+), via_device before that."""
+def test_child_links_its_parent_by_device_id():
+    """via_device_id is the parent's device registry id."""
     info = _entity("VMs").device_info
-
-    if "via_device_id" in dr.DeviceInfo.__optional_keys__:
-        assert entity_module.VIA_DEVICE_ID_SUPPORTED
-        assert info["via_device_id"] == SYSTEM_DEVICE_ID
-        assert "via_device" not in info
-    else:
-        assert not entity_module.VIA_DEVICE_ID_SUPPORTED
-        assert info["via_device"] == ("truenas_link", "TrueNAS_nas")
-        assert "via_device_id" not in info
-
-
-def test_child_uses_via_device_id_when_supported(monkeypatch):
-    """With via_device_id support the parent is linked by its device id."""
-    monkeypatch.setattr(entity_module, "VIA_DEVICE_ID_SUPPORTED", True)
-
-    info = _entity("Disks").device_info
 
     assert info["via_device_id"] == SYSTEM_DEVICE_ID
     assert "via_device" not in info
-
-
-def test_child_uses_via_device_on_older_ha(monkeypatch):
-    """Without via_device_id support the parent identifier tuple is used."""
-    monkeypatch.setattr(entity_module, "VIA_DEVICE_ID_SUPPORTED", False)
-
-    info = _entity("Disks").device_info
-
-    assert info["via_device"] == ("truenas_link", "TrueNAS_nas")
-    assert "via_device_id" not in info
 
 
 def test_system_device_info_is_unchanged():

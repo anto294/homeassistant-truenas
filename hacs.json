@@ -1,6 +1,6 @@
 {
     "name": "TrueNAS Link",
-    "homeassistant": "2024.11.0",
+    "homeassistant": "2026.11.0",
     "zip_release": true,
     "filename": "truenas_link.zip"
 }

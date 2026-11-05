@@ -32,7 +32,7 @@ Targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.
 | Component | Minimum version |
 |---|---|
 | TrueNAS SCALE | 25.04 |
-| Home Assistant | 2024.11.0 |
+| Home Assistant | 2026.11.0 |
 
 TrueNAS CORE and SCALE releases before 25.04 are not supported, because they do not provide the versioned websocket API this integration uses.
 

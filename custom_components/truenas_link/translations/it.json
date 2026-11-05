@@ -42,7 +42,7 @@
             "handshake_timeout": "Connessione non riuscita, tempo scaduto in attesa della risposta all'handshake.",
             "api_not_found": "Connessione non riuscita, API non trovata.",
             "malformed_result": "La risposta dell'API non è valida.",
-            "certificate_verify_failed": "Verifica del certificato non riuscita.",
+            "certificate_verify_failed": "Verifica del certificato non riuscita. Se TrueNAS usa un certificato autofirmato, disattiva Verifica il certificato SSL.",
             "http_used": "È stata inviata una richiesta HTTP semplice alla porta HTTPS. Reverse proxy?",
             "tlsv1_not_supported": "TLSv1 non supportato. Reverse proxy?",
             "websocket_not_supported": "WebSocket non supportato. Reverse proxy?",

@@ -69,7 +69,8 @@ def _base_schema(truenas_config: Mapping[str, Any]) -> vol.Schema:
         ): _access_level_selector(),
         vol.Required(
             CONF_VERIFY_SSL,
-            default=truenas_config.get(CONF_VERIFY_SSL) or DEFAULT_SSL_VERIFY,
+            # Not "or": a stored False has to stay False
+            default=truenas_config.get(CONF_VERIFY_SSL, DEFAULT_SSL_VERIFY),
         ): bool,
     }
 
@@ -89,7 +90,8 @@ def _reconfigure_schema(truenas_config: Mapping[str, Any]) -> vol.Schema:
         ): _access_level_selector(),
         vol.Required(
             CONF_VERIFY_SSL,
-            default=truenas_config.get(CONF_VERIFY_SSL) or DEFAULT_SSL_VERIFY,
+            # Not "or": a stored False has to stay False
+            default=truenas_config.get(CONF_VERIFY_SSL, DEFAULT_SSL_VERIFY),
         ): bool,
     }
 
@@ -198,7 +200,10 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=_reconfigure_schema(reconfigure_entry.data),
+            # After an error, keep what was entered
+            data_schema=_reconfigure_schema(
+                {**reconfigure_entry.data, **truenas_config}
+            ),
             errors=errors,
         )
 

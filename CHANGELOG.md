@@ -31,6 +31,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Changed
 
+- **Verify SSL is now on by default for new entries.** If TrueNAS uses a
+  self-signed certificate, turn it off in the form, and the error message now
+  says so. Existing entries keep their setting.
 - TrueNAS Link is now in the HACS default repositories: search for it in
   HACS, without adding a custom repository. The README is updated to match.
 - Actions now fail with a clear error when TrueNAS refuses them, cannot be
@@ -51,6 +54,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   found custom_components/truenas/manifest.json". The steps now say to
   remove TrueNAS Link in HACS (three-dot menu → **Remove**, which also
   deletes `config/custom_components/truenas/`) and download it again.
+- Reconfigure forgot what was entered when the connection test failed, and
+  showed the stored values again.
 - Reconfigure would have failed from Home Assistant 2026.12, which no longer accepts an update listener together with a config
   flow that reloads. The integration has no options flow, so the listener is
   gone, and an entry can no longer reload twice after Reconfigure.

@@ -7,6 +7,7 @@ from unittest.mock import patch
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntryState
 import pytest
+import voluptuous as vol
 
 from custom_components.truenas_link.const import DOMAIN
 
@@ -250,6 +251,182 @@ def test_setup_form_keeps_false_after_an_error(run_in_hass):
         assert result["errors"] == {"host": "invalid_key"}
         data = result["data_schema"]({**FORM_KEYS, "name": "TrueNAS"})
         assert data["verify_ssl"] is False
+
+    run_in_hass(scenario)
+
+
+STORED_KEY = "stored-fake-key"
+NEW_KEY = "new-fake-key"
+RECONFIGURE_FIELDS = {"host": "nas", "access_level": "admin", "verify_ssl": False}
+
+
+def _form(result):
+    """Return what a form's fields tell the browser: type, default and suggestion."""
+    fields = {}
+    for marker, validator in result["data_schema"].schema.items():
+        config = getattr(validator, "config", {})
+        fields[str(marker)] = {
+            "type": config.get("type"),
+            "required": isinstance(marker, vol.Required),
+            "default": marker.default() if callable(marker.default) else None,
+            "suggested": (marker.description or {}).get("suggested_value"),
+        }
+
+    return fields
+
+
+def _assert_masked(field):
+    """Check that the frontend shows a field as a password."""
+    assert field["type"] == "password"
+
+
+def _fake_keys(server):
+    """Make the fake TrueNAS accept the keys of these tests."""
+    server.valid_keys = {STORED_KEY, NEW_KEY}
+
+
+def test_setup_form_masks_the_api_key(run_in_hass):
+    """The setup form shows the key as a password, also after an error."""
+
+    async def scenario(hass, _server):
+        flow = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        _assert_masked(_form(flow)["api_key"])
+
+        result = await hass.config_entries.flow.async_configure(
+            flow["flow_id"],
+            {
+                **FORM_KEYS,
+                "name": "TrueNAS",
+                "api_key": "wrong",
+                "access_level": "admin",
+                "verify_ssl": False,
+            },
+        )
+        _assert_masked(_form(result)["api_key"])
+
+    run_in_hass(scenario)
+
+
+def test_reauth_form_masks_the_api_key(run_in_hass):
+    """The reauthentication form shows the key as a password, and starts empty."""
+
+    async def scenario(hass, server):
+        _fake_keys(server)
+        entry = await async_add_entry(hass, api_key=STORED_KEY)
+
+        flow = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_REAUTH,
+                "entry_id": entry.entry_id,
+            },
+            data=entry.data,
+        )
+
+        assert flow["step_id"] == "reauth_confirm"
+        _assert_masked(_form(flow)["api_key"])
+        assert STORED_KEY not in str(_form(flow))
+
+    run_in_hass(scenario)
+
+
+def test_reconfigure_form_never_gets_the_stored_key(run_in_hass):
+    """The stored key is not sent to the browser, even masked."""
+
+    async def scenario(hass, server):
+        _fake_keys(server)
+        entry = await async_add_entry(hass, api_key=STORED_KEY)
+
+        flow = await _reconfigure_flow(hass, entry)
+
+        field = _form(flow)["api_key"]
+        _assert_masked(field)
+        assert not field["required"]
+        assert STORED_KEY not in str(_form(flow))
+
+        # Nor after an error that has nothing to do with the key
+        server.valid_keys = set()
+        result = await hass.config_entries.flow.async_configure(
+            flow["flow_id"], RECONFIGURE_FIELDS
+        )
+        assert result["errors"] == {"host": "invalid_key"}
+        assert STORED_KEY not in str(_form(result))
+
+    run_in_hass(scenario)
+
+
+@pytest.mark.parametrize("empty", [{}, {"api_key": ""}], ids=["missing", "blank"])
+def test_reconfigure_with_an_empty_key_keeps_the_stored_one(run_in_hass, empty):
+    """The connection test uses the stored key, and the entry keeps it."""
+
+    async def scenario(hass, server):
+        _fake_keys(server)
+        entry = await async_add_entry(hass, api_key=STORED_KEY)
+        flow = await _reconfigure_flow(hass, entry)
+        # Only the stored key can pass the test
+        server.valid_keys = {STORED_KEY}
+
+        result = await hass.config_entries.flow.async_configure(
+            flow["flow_id"], {**RECONFIGURE_FIELDS, **empty, "host": "nas2"}
+        )
+        await hass.async_block_till_done()
+
+        assert result["reason"] == "reconfigure_successful"
+        assert entry.data["api_key"] == STORED_KEY
+        assert entry.data["host"] == "nas2"
+
+    run_in_hass(scenario)
+
+
+def test_reconfigure_with_a_new_key_replaces_the_stored_one(run_in_hass):
+    """A key that was entered is tested and saved."""
+
+    async def scenario(hass, server):
+        _fake_keys(server)
+        entry = await async_add_entry(hass, api_key=STORED_KEY)
+        flow = await _reconfigure_flow(hass, entry)
+        # Only the new key can pass the test
+        server.valid_keys = {NEW_KEY}
+
+        result = await hass.config_entries.flow.async_configure(
+            flow["flow_id"], {**RECONFIGURE_FIELDS, "api_key": NEW_KEY}
+        )
+        await hass.async_block_till_done()
+
+        assert result["reason"] == "reconfigure_successful"
+        assert entry.data["api_key"] == NEW_KEY
+
+    run_in_hass(scenario)
+
+
+def test_reconfigure_keeps_an_entered_key_only_until_it_is_cleared(run_in_hass):
+    """After an error the typed key stays in the form, and clearing it counts."""
+
+    async def scenario(hass, server):
+        _fake_keys(server)
+        entry = await async_add_entry(hass, api_key=STORED_KEY)
+        flow = await _reconfigure_flow(hass, entry)
+        server.valid_keys = {STORED_KEY}
+
+        result = await hass.config_entries.flow.async_configure(
+            flow["flow_id"], {**RECONFIGURE_FIELDS, "api_key": NEW_KEY}
+        )
+        assert result["errors"] == {"host": "invalid_key"}
+        field = _form(result)["api_key"]
+        _assert_masked(field)
+        assert field["suggested"] == NEW_KEY
+        assert entry.data["api_key"] == STORED_KEY
+
+        # Without it, the stored key is the one to test and to keep
+        result = await hass.config_entries.flow.async_configure(
+            flow["flow_id"], RECONFIGURE_FIELDS
+        )
+        await hass.async_block_till_done()
+
+        assert result["reason"] == "reconfigure_successful"
+        assert entry.data["api_key"] == STORED_KEY
 
     run_in_hass(scenario)
 

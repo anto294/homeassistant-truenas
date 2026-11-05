@@ -23,6 +23,7 @@
                     "verify_ssl": "Verify SSL certificate"
                 },
                 "data_description": {
+                    "api_key": "Leave empty to keep the current key.",
                     "access_level": "Read-only removes the actions, the install buttons and the cron job switches, and keeps every sensor. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too."
                 }
             },

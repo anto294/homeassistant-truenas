@@ -61,7 +61,7 @@ Download `truenas_link.zip` from the [latest release](https://github.com/anto294
    | Access level | **Read-only** (default) or **Administrator** (see [Access level](#access-level)) |
    | Verify SSL | On by default. Turn off if TrueNAS uses a self-signed certificate |
 
-You can add the integration once per TrueNAS system. To change the host, API key or access level later, use **Reconfigure** from the integration's menu.
+You can add the integration once per TrueNAS system. To change the host, API key or access level later, use **Reconfigure** from the integration's menu. Reconfigure does not show the stored API key: leave the field empty to keep it.
 
 If TrueNAS Link does not appear in the list, clear your browser cache.
 

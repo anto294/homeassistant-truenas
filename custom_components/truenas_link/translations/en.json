@@ -11,6 +11,10 @@
                     "verify_ssl": "Verify SSL certificate"
                 },
                 "data_description": {
+                    "name": "Used in entity IDs. It cannot be changed later, and each entry needs its own.",
+                    "host": "Address of TrueNAS, with the port if it is not 443. The integration connects over HTTPS.",
+                    "api_key": "Create it in the TrueNAS web UI: user menu → API Keys → Add.",
+                    "verify_ssl": "Check the certificate of TrueNAS. Turn it off for a self-signed certificate: someone on your network could then intercept the key.",
                     "access_level": "Read-only refuses actions, removes the install buttons and the cron job switches, and keeps every sensor. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too."
                 }
             },
@@ -23,8 +27,10 @@
                     "verify_ssl": "Verify SSL certificate"
                 },
                 "data_description": {
+                    "host": "Address of TrueNAS, with the port if it is not 443. The integration connects over HTTPS.",
                     "api_key": "Leave empty to keep the current key.",
-                    "access_level": "Read-only refuses actions, removes the install buttons and the cron job switches, and keeps every sensor. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too."
+                    "access_level": "Read-only refuses actions, removes the install buttons and the cron job switches, and keeps every sensor. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too.",
+                    "verify_ssl": "Check the certificate of TrueNAS. Turn it off for a self-signed certificate: someone on your network could then intercept the key."
                 }
             },
             "reauth_confirm": {
@@ -32,6 +38,9 @@
                 "description": "TrueNAS rejected the API key of {name}. Enter a new one.",
                 "data": {
                     "api_key": "API key"
+                },
+                "data_description": {
+                    "api_key": "The new key for this TrueNAS system. Create it in the TrueNAS web UI: user menu → API Keys → Add."
                 }
             }
         },

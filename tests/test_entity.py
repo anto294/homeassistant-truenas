@@ -89,7 +89,9 @@ def _coordinator():
             }
         },
         config_entry=SimpleNamespace(
-            entry_id="entry", data={"host": "truenas.lan", "name": "TrueNAS"}
+            entry_id="entry",
+            data={"host": "truenas.lan"},
+            options={"name": "TrueNAS"},
         ),
         system_device_id=SYSTEM_DEVICE_ID,
     )

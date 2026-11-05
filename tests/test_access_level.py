@@ -33,13 +33,13 @@ FORM = {
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
-        ({}, False),  # entries created before the option existed
+        ({}, True),  # lost: never more than a new entry gets
         ({CONF_ACCESS_LEVEL: ACCESS_LEVEL_ADMIN}, False),
         ({CONF_ACCESS_LEVEL: ACCESS_LEVEL_READ_ONLY}, True),
     ],
 )
 def test_is_read_only(data, expected):
-    """Only an explicit read-only choice restricts the entry."""
+    """Only an explicit Administrator choice lifts the restriction."""
     assert is_read_only(data) is expected
 
 
@@ -54,21 +54,6 @@ def test_setup_form_defaults_to_read_only_and_accepts_administrator():
         schema({**FORM, CONF_ACCESS_LEVEL: "root"})
 
 
-@pytest.mark.parametrize(
-    ("stored", "shown"),
-    [
-        ({}, ACCESS_LEVEL_ADMIN),
-        ({CONF_ACCESS_LEVEL: ACCESS_LEVEL_READ_ONLY}, ACCESS_LEVEL_READ_ONLY),
-    ],
-)
-def test_reconfigure_form_starts_from_the_stored_level(stored, shown):
-    """Reconfigure shows the entry's current level."""
-    schema = config_flow._reconfigure_schema(stored)
-    form = {key: FORM[key] for key in ("host", "api_key", "verify_ssl")}
-
-    assert schema(form)[CONF_ACCESS_LEVEL] == shown
-
-
 def _flow(monkeypatch):
     """Return a config flow whose connection test succeeds."""
     flow = config_flow.TrueNASConfigFlow()
@@ -80,36 +65,19 @@ def _flow(monkeypatch):
     return flow
 
 
-def test_setup_stores_the_chosen_level(monkeypatch):
-    """The level picked in the setup form ends up in the entry data."""
+def test_setup_stores_the_chosen_level_in_the_options(monkeypatch):
+    """Only what is needed to connect goes in the entry data."""
     flow = _flow(monkeypatch)
     flow.async_create_entry = MagicMock()
     user_input = {**FORM, CONF_ACCESS_LEVEL: ACCESS_LEVEL_READ_ONLY}
 
     asyncio.run(flow.async_step_user(user_input))
 
-    flow.async_create_entry.assert_called_once_with(title="TrueNAS", data=user_input)
-
-
-def test_reconfigure_stores_the_chosen_level(monkeypatch):
-    """The level picked in Reconfigure replaces the stored one."""
-    flow = _flow(monkeypatch)
-    entry = SimpleNamespace(
-        data={**FORM, CONF_ACCESS_LEVEL: ACCESS_LEVEL_ADMIN}, unique_id=None
+    flow.async_create_entry.assert_called_once_with(
+        title="TrueNAS",
+        data={"host": "truenas.lan", "api_key": "key", "verify_ssl": False},
+        options={"name": "TrueNAS", CONF_ACCESS_LEVEL: ACCESS_LEVEL_READ_ONLY},
     )
-    flow._get_reconfigure_entry = lambda: entry
-    flow.async_update_reload_and_abort = MagicMock()
-    user_input = {
-        "host": "truenas.lan",
-        "api_key": "key",
-        "verify_ssl": False,
-        CONF_ACCESS_LEVEL: ACCESS_LEVEL_READ_ONLY,
-    }
-
-    asyncio.run(flow.async_step_reconfigure(user_input))
-
-    updates = flow.async_update_reload_and_abort.call_args.kwargs["data_updates"]
-    assert updates[CONF_ACCESS_LEVEL] == ACCESS_LEVEL_READ_ONLY
 
 
 def _coordinator(read_only):
@@ -120,7 +88,7 @@ def _coordinator(read_only):
             "system_info": {"version": "25.10.1"},
             "app": {"plex": {"id": "plex", "name": "Plex"}},
         },
-        config_entry=SimpleNamespace(data={"name": "TrueNAS"}),
+        config_entry=SimpleNamespace(options={"name": "TrueNAS"}),
     )
 
 

@@ -8,7 +8,7 @@ from typing import Any
 from .const import (
     ACCESS_LEVEL_READ_ONLY,
     CONF_ACCESS_LEVEL,
-    LEGACY_ACCESS_LEVEL,
+    DEFAULT_ACCESS_LEVEL,
     TO_REDACT,
 )
 
@@ -34,11 +34,14 @@ def format_attribute(attr: str) -> str:
 # ---------------------------
 #   is_read_only
 # ---------------------------
-def is_read_only(entry_data: Mapping[str, Any]) -> bool:
-    """Return whether a config entry's data selects the read-only access level."""
-    return bool(
-        entry_data.get(CONF_ACCESS_LEVEL, LEGACY_ACCESS_LEVEL) == ACCESS_LEVEL_READ_ONLY
-    )
+def is_read_only(entry_options: Mapping[str, Any]) -> bool:
+    """Return whether a config entry's options select the read-only access level.
+
+    Every entry has the option, since the migration to version 2. If it were lost,
+    this must not grant more than a new entry gets.
+    """
+    level = entry_options.get(CONF_ACCESS_LEVEL, DEFAULT_ACCESS_LEVEL)
+    return bool(level == ACCESS_LEVEL_READ_ONLY)
 
 
 # ---------------------------

@@ -36,7 +36,6 @@ def test_reconfigure_reloads_the_entry_once(run_in_hass):
             {
                 "host": "nas2",
                 "api_key": "good",
-                "access_level": "read_only",
                 "verify_ssl": False,
             },
         )
@@ -47,7 +46,7 @@ def test_reconfigure_reloads_the_entry_once(run_in_hass):
         assert entry.state is ConfigEntryState.LOADED
         reloaded = entry.runtime_data
         assert reloaded is not coordinator
-        assert reloaded.read_only
+        assert not reloaded.read_only
         # One connection for the flow's test and one for a single reload
         assert len(server.sockets) == connections + 2
 
@@ -195,7 +194,6 @@ def test_reconfigure_form_keeps_a_stored_false_after_an_error(run_in_hass):
             {
                 "host": "nas",
                 "api_key": "wrong",
-                "access_level": "admin",
                 "verify_ssl": False,
             },
         )
@@ -218,7 +216,6 @@ def test_reconfigure_form_keeps_what_was_entered_after_an_error(run_in_hass):
             {
                 "host": "other",
                 "api_key": "wrong",
-                "access_level": "admin",
                 "verify_ssl": False,
             },
         )
@@ -257,7 +254,7 @@ def test_setup_form_keeps_false_after_an_error(run_in_hass):
 
 STORED_KEY = "stored-fake-key"
 NEW_KEY = "new-fake-key"
-RECONFIGURE_FIELDS = {"host": "nas", "access_level": "admin", "verify_ssl": False}
+RECONFIGURE_FIELDS = {"host": "nas", "verify_ssl": False}
 
 
 def _form(result):

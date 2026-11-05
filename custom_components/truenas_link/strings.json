@@ -23,13 +23,11 @@
                 "data": {
                     "host": "Host",
                     "api_key": "API key",
-                    "access_level": "Access level",
                     "verify_ssl": "Verify SSL certificate"
                 },
                 "data_description": {
                     "host": "Address of TrueNAS, with the port if it is not 443. The integration connects over HTTPS.",
                     "api_key": "Leave empty to keep the current key.",
-                    "access_level": "Read-only refuses actions, removes the install buttons and the cron job switches, and keeps every sensor. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too.",
                     "verify_ssl": "Check the certificate of TrueNAS. Turn it off for a self-signed certificate: someone on your network could then intercept the key."
                 }
             },
@@ -66,6 +64,19 @@
             "unique_id_mismatch": "This is a different TrueNAS system. To add it, use Add entry instead."
         }
     },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Choose what Home Assistant may do on this TrueNAS system.",
+                "data": {
+                    "access_level": "Access level"
+                },
+                "data_description": {
+                    "access_level": "Read-only refuses actions, removes the install buttons and the cron job switches, and keeps every sensor. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too."
+                }
+            }
+        }
+    },
     "selector": {
         "access_level": {
             "options": {
@@ -76,7 +87,7 @@
     },
     "exceptions": {
         "read_only_action": {
-            "message": "{entity} belongs to a TrueNAS entry with read-only access. To use its actions, set the access level to Administrator with Reconfigure."
+            "message": "{entity} belongs to a TrueNAS entry with read-only access. To use its actions, set the access level to Administrator with Configure."
         },
         "wrong_action_target": {
             "message": "The action {action} cannot be used on {entity}. Nothing was sent to TrueNAS."

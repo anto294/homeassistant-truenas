@@ -5,14 +5,14 @@ from __future__ import annotations
 
 from logging import getLogger
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+from homeassistant.const import CONF_NAME, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.service import async_register_platform_entity_service
 from homeassistant.helpers.typing import ConfigType
 
 from . import binary_sensor_types, sensor_types
-from .const import DOMAIN, PLATFORMS
+from .const import CONF_ACCESS_LEVEL, DOMAIN, LEGACY_ACCESS_LEVEL, PLATFORMS
 from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
 from .entity import entity_service_handler, system_device_info
 from .stale import async_can_remove_device, async_remove_stale_entities
@@ -52,6 +52,33 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 # ---------------------------
+#   async_migrate_entry
+# ---------------------------
+async def async_migrate_entry(
+    hass: HomeAssistant, config_entry: TrueNASConfigEntry
+) -> bool:
+    """Move what is not needed to connect from the entry's data to its options.
+
+    The new version is also a safeguard. An older release finds no access level in
+    the data and treats that as Administrator, but Home Assistant does not load an
+    entry with a version above the integration's: going back gives an error, instead
+    of a read-only entry that accepts actions.
+    """
+    if config_entry.version == 1:
+        data = dict(config_entry.data)
+        options = {
+            **config_entry.options,
+            CONF_NAME: data.pop(CONF_NAME),
+            CONF_ACCESS_LEVEL: data.pop(CONF_ACCESS_LEVEL, LEGACY_ACCESS_LEVEL),
+        }
+        hass.config_entries.async_update_entry(
+            config_entry, data=data, options=options, version=2
+        )
+
+    return True
+
+
+# ---------------------------
 #   _async_set_missing_unique_id
 # ---------------------------
 async def _async_set_missing_unique_id(
@@ -61,9 +88,8 @@ async def _async_set_missing_unique_id(
 ) -> None:
     """Give an entry made before entries had a unique id its system's id.
 
-    This needs no migration, so going back to an older version still works: an
-    older version ignores the id. Without the id, or with another entry already
-    holding it, the entry keeps working as before.
+    Without the id, or with another entry already holding it, the entry keeps
+    working as before.
     """
     if config_entry.unique_id is not None:
         return

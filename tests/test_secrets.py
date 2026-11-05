@@ -214,7 +214,7 @@ def test_diagnostics_hide_what_identifies_the_system(run_in_hass):
 
         for secret in ("my-nas", "my-serial", "aa:bb:cc:dd:ee:ff", "my-host", "good"):
             assert secret not in text
-        assert result["entry"]["data"]["name"] == "TrueNAS"
+        assert result["entry"]["options"]["name"] == "TrueNAS"
         assert result["data"]["system_info"]["version"] == "25.10.1"
         assert result["data"]["interface"]["eth0"]["name"] == "eth0"
         # The data in use keeps its values

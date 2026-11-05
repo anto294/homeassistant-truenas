@@ -42,11 +42,10 @@
         },
         "error": {
             "certificate_verify_failed": "Falló la verificación del certificado. Si TrueNAS usa un certificado autofirmado, desactive Verificar certificado SSL.",
-            "http_used": "La solicitud HTTP se envió al puerto HTTPS. ¿Proxy inverso?",
-            "tlsv1_not_supported": "TLSv1 no es compatible. ¿Proxy inverso?",
+            "tls_unrecognized_name": "Error de TLS, el servidor no reconoce este nombre de host. ¿Proxy inverso?",
             "websocket_not_supported": "WebSocket no es compatible. ¿Proxy inverso?",
             "invalid_key": "Error de inicio de sesión, clave API no válida.",
-            "invalid_hostname": "Conexión fallida, nombre de host no válido.",
+            "host_unreachable": "Error de conexión, no se puede llegar a TrueNAS. Compruebe el host y la red.",
             "unknown_hostname": "Nombre de host desconocido, compruebe el DNS.",
             "connection_refused": "Conexión fallida, conexión rechazada.",
             "handshake_timeout": "Conexión fallida, se agotó el tiempo de espera de la respuesta.",

@@ -20,6 +20,14 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   Marketplace, which replaced HACS in Home Assistant 2026.11, and warns that installing a
   TrueNAS update reboots the NAS.
 
+### Fixed
+
+- The setup and Reconfigure forms now give the right error. A refused connection gave a
+  generic message, and with a port such as 8404 even "API not found", because the
+  errors were recognized by text that never appeared in them or that held the address.
+  A name that does not resolve, a host that cannot be reached and a server that is not
+  a websocket now each get their own message.
+
 ## [2.1.0b2] - 2026-11-05
 
 ### Security

@@ -444,7 +444,7 @@ def test_nothing_runs_in_an_executor(run_in_hass):
     run_in_hass(scenario)
 
 
-def _tls_server(tmp_path):
+def _tls_server(tmp_path, *, sni_callback=None, process_request=None):
     """Return a server with a self-signed certificate, as TrueNAS has by default."""
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "localhost")])
@@ -470,13 +470,14 @@ def _tls_server(tmp_path):
     )
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(path)
+    context.sni_callback = sni_callback
 
     def handler(websocket):
         for message in websocket:
             request = json.loads(message)
             websocket.send(json.dumps({"id": request["id"], "result": True}))
 
-    return serve(handler, "127.0.0.1", 0, ssl=context)
+    return serve(handler, "127.0.0.1", 0, ssl=context, process_request=process_request)
 
 
 @pytest.mark.parametrize(

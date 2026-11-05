@@ -42,11 +42,10 @@
         },
         "error": {
             "certificate_verify_failed": "Overenie certifikátu zlyhalo. Ak TrueNAS používa certifikát podpísaný sebou samým, vypnite Overiť certifikát SSL.",
-            "http_used": "Požiadavka HTTP bola odoslaná na port HTTPS. Reverzný proxy?",
-            "tlsv1_not_supported": "TLSv1 nie je podporovaný. Reverzný proxy?",
+            "tls_unrecognized_name": "TLS zlyhalo, server nepozná tento názov hostiteľa. Reverzný proxy?",
             "websocket_not_supported": "WebSocket nie je podporovaný. Reverzný proxy?",
             "invalid_key": "Prihlásenie zlyhalo, neplatný kľúč API.",
-            "invalid_hostname": "Pripojenie zlyhalo, neplatný názov hostiteľa.",
+            "host_unreachable": "Pripojenie zlyhalo, TrueNAS je nedostupný. Skontrolujte hostiteľa a sieť.",
             "unknown_hostname": "Neznámy názov hostiteľa, skontrolujte DNS.",
             "connection_refused": "Pripojenie zlyhalo, pripojenie bolo odmietnuté.",
             "handshake_timeout": "Pripojenie zlyhalo, čas čakania na odpoveď vypršal.",

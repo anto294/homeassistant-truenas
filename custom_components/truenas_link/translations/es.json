@@ -78,6 +78,9 @@
         "read_only_action": {
             "message": "{entity} pertenece a una entrada de TrueNAS con acceso de solo lectura. Para usar sus acciones, cambie el nivel de acceso a Administrador con Reconfigurar."
         },
+        "wrong_action_target": {
+            "message": "La acción {action} no se puede usar en {entity}. No se ha enviado nada a TrueNAS."
+        },
         "action_unreachable": {
             "message": "No se pudo contactar con TrueNAS para ejecutar {method}."
         },

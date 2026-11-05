@@ -276,7 +276,9 @@ def test_action_on_an_entity_it_does_not_apply_to(run_in_hass, action, entity_id
     async def scenario(hass, server):
         await _setup(hass, server, "25.10")
 
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(ServiceValidationError) as err:
             await _call(hass, action, entity_id)
+
+        assert err.value.translation_key == "wrong_action_target"
 
     run_in_hass(scenario)

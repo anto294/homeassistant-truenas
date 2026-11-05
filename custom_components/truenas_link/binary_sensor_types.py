@@ -202,15 +202,47 @@ SENSOR_TYPES: tuple[TrueNASBinarySensorEntityDescription, ...] = (
     ),
 )
 
+# Action, its schema, the entity method it runs, and the only entity class it may
+# run on: another class can have a method of that name that does something else
 SENSOR_SERVICES: list[list[Any]] = [
-    [SERVICE_VM_START, SCHEMA_SERVICE_VM_START, "start"],
-    [SERVICE_VM_STOP, SCHEMA_SERVICE_VM_STOP, "stop"],
-    [SERVICE_CONTAINER_START, SCHEMA_SERVICE_CONTAINER_START, "start"],
-    [SERVICE_CONTAINER_STOP, SCHEMA_SERVICE_CONTAINER_STOP, "stop"],
-    [SERVICE_SERVICE_START, SCHEMA_SERVICE_SERVICE_START, "start"],
-    [SERVICE_SERVICE_STOP, SCHEMA_SERVICE_SERVICE_STOP, "stop"],
-    [SERVICE_SERVICE_RESTART, SCHEMA_SERVICE_SERVICE_RESTART, "restart"],
-    [SERVICE_SERVICE_RELOAD, SCHEMA_SERVICE_SERVICE_RELOAD, "reload"],
-    [SERVICE_APP_START, SCHEMA_SERVICE_APP_START, "start"],
-    [SERVICE_APP_STOP, SCHEMA_SERVICE_APP_STOP, "stop"],
+    [SERVICE_VM_START, SCHEMA_SERVICE_VM_START, "start", "TrueNASVMBinarySensor"],
+    [SERVICE_VM_STOP, SCHEMA_SERVICE_VM_STOP, "stop", "TrueNASVMBinarySensor"],
+    [
+        SERVICE_CONTAINER_START,
+        SCHEMA_SERVICE_CONTAINER_START,
+        "start",
+        "TrueNASContainerBinarySensor",
+    ],
+    [
+        SERVICE_CONTAINER_STOP,
+        SCHEMA_SERVICE_CONTAINER_STOP,
+        "stop",
+        "TrueNASContainerBinarySensor",
+    ],
+    [
+        SERVICE_SERVICE_START,
+        SCHEMA_SERVICE_SERVICE_START,
+        "start",
+        "TrueNASServiceBinarySensor",
+    ],
+    [
+        SERVICE_SERVICE_STOP,
+        SCHEMA_SERVICE_SERVICE_STOP,
+        "stop",
+        "TrueNASServiceBinarySensor",
+    ],
+    [
+        SERVICE_SERVICE_RESTART,
+        SCHEMA_SERVICE_SERVICE_RESTART,
+        "restart",
+        "TrueNASServiceBinarySensor",
+    ],
+    [
+        SERVICE_SERVICE_RELOAD,
+        SCHEMA_SERVICE_SERVICE_RELOAD,
+        "reload",
+        "TrueNASServiceBinarySensor",
+    ],
+    [SERVICE_APP_START, SCHEMA_SERVICE_APP_START, "start", "TrueNASAppBinarySensor"],
+    [SERVICE_APP_STOP, SCHEMA_SERVICE_APP_STOP, "stop", "TrueNASAppBinarySensor"],
 ]

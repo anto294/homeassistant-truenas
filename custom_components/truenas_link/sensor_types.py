@@ -524,14 +524,61 @@ SENSOR_TYPES: tuple[TrueNASSensorEntityDescription, ...] = (
     ),
 )
 
+# Action, its schema, the entity method it runs, and the only entity class it may
+# run on: another class can have a method of that name that does something else
 SENSOR_SERVICES: list[list[Any]] = [
-    [SERVICE_CLOUDSYNC_RUN, SCHEMA_SERVICE_CLOUDSYNC_RUN, "start"],
-    [SERVICE_CLOUDSYNC_ABORT, SCHEMA_SERVICE_CLOUDSYNC_ABORT, "stop"],
-    [SERVICE_DATASET_SNAPSHOT, SCHEMA_SERVICE_DATASET_SNAPSHOT, "snapshot"],
-    [SERVICE_REPLICATION_RUN, SCHEMA_SERVICE_REPLICATION_RUN, "start"],
-    [SERVICE_POOL_SCRUB_START, SCHEMA_SERVICE_POOL_SCRUB_START, "start"],
-    [SERVICE_POOL_SCRUB_PAUSE, SCHEMA_SERVICE_POOL_SCRUB_PAUSE, "pause"],
-    [SERVICE_POOL_SCRUB_STOP, SCHEMA_SERVICE_POOL_SCRUB_STOP, "stop"],
-    [SERVICE_SYSTEM_REBOOT, SCHEMA_SERVICE_SYSTEM_REBOOT, "restart"],
-    [SERVICE_SYSTEM_SHUTDOWN, SCHEMA_SERVICE_SYSTEM_SHUTDOWN, "stop"],
+    [
+        SERVICE_CLOUDSYNC_RUN,
+        SCHEMA_SERVICE_CLOUDSYNC_RUN,
+        "start",
+        "TrueNASClousyncSensor",
+    ],
+    [
+        SERVICE_CLOUDSYNC_ABORT,
+        SCHEMA_SERVICE_CLOUDSYNC_ABORT,
+        "stop",
+        "TrueNASClousyncSensor",
+    ],
+    [
+        SERVICE_DATASET_SNAPSHOT,
+        SCHEMA_SERVICE_DATASET_SNAPSHOT,
+        "snapshot",
+        "TrueNASDatasetSensor",
+    ],
+    [
+        SERVICE_REPLICATION_RUN,
+        SCHEMA_SERVICE_REPLICATION_RUN,
+        "start",
+        "TrueNASReplicationSensor",
+    ],
+    [
+        SERVICE_POOL_SCRUB_START,
+        SCHEMA_SERVICE_POOL_SCRUB_START,
+        "start",
+        "TrueNASPoolScanSensor",
+    ],
+    [
+        SERVICE_POOL_SCRUB_PAUSE,
+        SCHEMA_SERVICE_POOL_SCRUB_PAUSE,
+        "pause",
+        "TrueNASPoolScanSensor",
+    ],
+    [
+        SERVICE_POOL_SCRUB_STOP,
+        SCHEMA_SERVICE_POOL_SCRUB_STOP,
+        "stop",
+        "TrueNASPoolScanSensor",
+    ],
+    [
+        SERVICE_SYSTEM_REBOOT,
+        SCHEMA_SERVICE_SYSTEM_REBOOT,
+        "restart",
+        "TrueNASUptimeSensor",
+    ],
+    [
+        SERVICE_SYSTEM_SHUTDOWN,
+        SCHEMA_SERVICE_SYSTEM_SHUTDOWN,
+        "stop",
+        "TrueNASUptimeSensor",
+    ],
 ]

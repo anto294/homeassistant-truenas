@@ -139,6 +139,36 @@ def test_every_action_is_refused_on_a_read_only_entry(run_in_hass, action):
     run_in_hass(scenario)
 
 
+@pytest.mark.parametrize(
+    ("action", "target"),
+    [
+        (action, target)
+        for action, _ in sorted(TARGETS.items())
+        for target in sorted(set(TARGETS.values()))
+        if target != TARGETS[action]
+        and target.split(".")[0] == TARGETS[action].split(".")[0]
+    ],
+)
+def test_action_is_refused_on_an_entity_of_another_class(run_in_hass, action, target):
+    """Methods share names: cloudsync_abort on the uptime sensor would shut down."""
+
+    async def scenario(hass, server):
+        server.results = answers("27.0")
+        await async_add_entry(hass)
+        assert hass.states.get(target) is not None
+        sent = _requests(server)
+
+        with pytest.raises(ServiceValidationError) as err:
+            await hass.services.async_call(
+                DOMAIN, action, {"entity_id": target}, blocking=True
+            )
+
+        assert err.value.translation_key == "wrong_action_target"
+        assert _requests(server) == sent
+
+    run_in_hass(scenario)
+
+
 def test_read_only_entry_is_refused_next_to_an_administrator_entry(run_in_hass):
     """Each entity follows its own entry, on the same action."""
 

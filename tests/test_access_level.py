@@ -150,11 +150,17 @@ def test_update_entities_only_install_with_administrator_access(
 def test_action_runs_the_entity_method_without_targeting_fields():
     """Administrator entities get the action's own fields, not the target."""
     entity = SimpleNamespace(
-        coordinator=SimpleNamespace(read_only=False), start=AsyncMock()
+        coordinator=SimpleNamespace(read_only=False),
+        entity_description=SimpleNamespace(func="TrueNASAppBinarySensor"),
+        start=AsyncMock(),
     )
     call = SimpleNamespace(data={"entity_id": ["binary_sensor.vm"], "overcommit": True})
 
-    asyncio.run(entity_module.entity_service_handler("start")(entity, call))
+    asyncio.run(
+        entity_module.entity_service_handler("start", "TrueNASAppBinarySensor")(
+            entity, call
+        )
+    )
 
     entity.start.assert_awaited_once_with(overcommit=True)
 
@@ -169,6 +175,10 @@ def test_action_on_a_read_only_entity_is_refused():
     call = SimpleNamespace(data={"entity_id": ["binary_sensor.vm"]})
 
     with pytest.raises(ServiceValidationError):
-        asyncio.run(entity_module.entity_service_handler("start")(entity, call))
+        asyncio.run(
+            entity_module.entity_service_handler("start", "TrueNASAppBinarySensor")(
+                entity, call
+            )
+        )
 
     entity.start.assert_not_awaited()

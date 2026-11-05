@@ -14,14 +14,14 @@ Check a method's name, parameters and return shape in these docs before adding o
 
 - **`api.py`**: `TrueNASAPI` is a **synchronous** JSON-RPC 2.0 client over websocket (`websockets.sync.client`) that connects to `wss://<host>/api/current` and logs in with `auth.login_with_api_key`. `query(method, params)` returns `result`, or `None` on an exception, and disconnects when that happens. It never reconnects: a poll connects once at its start, so a lost connection always ends the poll in `UpdateFailed`. Every answer is awaited for at most `RESPONSE_TIMEOUT` seconds, and a timeout always closes the connection, because all requests use `id` 0 and a late answer would be read as the next request's. A new call that TrueNAS can keep waiting for longer must stay below that value. A `threading.Lock` serializes calls. Connection errors map to string codes in `self._error`, and those codes match the keys in `strings.json` / `translations/*.json`.
 - **`coordinator.py`**: `TrueNASCoordinator(DataUpdateCoordinator)` polls every 60s. `_async_update_data` runs each `get_*` method through `hass.async_add_executor_job`, because the API is blocking. The update check runs every 12h. All state is stored in `self.ds[<section>]` (`system_info`, `interface`, `disk`, `pool`, `dataset`, `service`, `vm`, `cloudsync`, `replication`, `snapshottask`, `app`, `container`, `cronjob`).
-- **`apiparser.py`**: `parse_api(data, source, key, vals, ensure_vals, val_proc, only, skip)` normalizes API responses into `self.ds`. `source` paths use `/` to select nested fields (for example, `"progress/percent"`). `type: "bool"` uses `from_entry_bool`. Prefer `parse_api` over hand-written dict access.
+- **`apiparser.py`**: `parse_api(data, source, key, vals, ensure_vals)` normalizes API responses into `self.ds`. `source` paths use `/` to select nested fields (for example, `"progress/percent"`). `type: "bool"` uses `from_entry_bool`. Prefer `parse_api` over hand-written dict access.
 - **Entities**: these are declarative. `sensor_types.py`, `binary_sensor_types.py`, `update_types.py` and `switch_types.py` define `*EntityDescription` dataclasses with these fields:
   - `data_path`: key in `ds`
   - `data_attribute`: value
   - `data_reference`: uid field for per-item entities
   - `data_name`
   - `data_attributes_list`: extra attributes
-  - `ha_group`: device. `"data__<field>"` takes the value from the data.
+  - `ha_group`: device
   - `func`: class name in the platform's dispatcher
 - **`entity.py`**: `async_add_entities` creates entities from the descriptions and registers the `SENSOR_SERVICES` entity services, given as `[service, schema, method_name]`. `TrueNASEntity` builds `unique_id` as `<name>-<key>[-<uid>]`. Don't change this format, because existing users' entities would break.
 - **Items that come and go**: `entity.py` adds an entity for each new item from a coordinator listener. Every `get_*` wraps its query in `_seen`, so a failed query (None) leaves `present` as it was. `stale.py` removes entities after `STALE_AFTER_POLLS` successful polls without the item. A failed query, an empty list, and a dataset whose pool is gone never count. `async_remove_config_entry_device` is the manual way out. A new section must use `_seen` too.

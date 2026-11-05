@@ -84,8 +84,6 @@ class TrueNASBinarySensorEntityDescription(BinarySensorEntityDescription):
     """Class describing entities."""
 
     ha_group: str | None = None
-    ha_connection: str | None = None
-    ha_connection_value: str | None = None
     data_path: str | None = None
     # Only for entities without data_reference: created if this value exists
     data_attribute: str | None = None

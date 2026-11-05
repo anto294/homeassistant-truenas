@@ -68,9 +68,7 @@ def _entity(ha_group, data=None):
     from custom_components.truenas_link.entity import TrueNASEntity
 
     entity = TrueNASEntity.__new__(TrueNASEntity)
-    entity.entity_description = SimpleNamespace(
-        ha_group=ha_group, ha_connection=None, ha_connection_value=None
-    )
+    entity.entity_description = SimpleNamespace(ha_group=ha_group)
     entity._inst = "TrueNAS"
     entity._data = data or {}
     entity.coordinator = _coordinator()

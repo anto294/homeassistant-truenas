@@ -19,6 +19,7 @@ Targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.
 - [Configuration](#configuration)
 - [Entities](#entities)
 - [Actions](#actions)
+- [Security](#security)
 - [Supported TrueNAS versions](#supported-truenas-versions)
 - [Troubleshooting](#troubleshooting)
 - [Translations](#translations)
@@ -66,16 +67,22 @@ If TrueNAS Link does not appear in the list, clear your browser cache.
 
 ### Access level
 
-| Level | Entities | Actions | Installing updates | API key |
-|---|---|---|---|---|
-| Read-only (default) | All | No | No | A key whose user has the `READONLY_ADMIN` role |
-| Administrator | All | Yes | Yes | A key with full access |
+| Level | Sensors | Actions | Installing updates | Cron job switches | API key |
+|---|---|---|---|---|---|
+| Read-only (default) | All | No | No | No | A key whose user has the `READONLY_ADMIN` role |
+| Administrator | All | Yes | Yes | Yes | A key with full access |
 
 New entries start as Read-only, so actions are always a deliberate choice. Entries created before this option stay on Administrator.
 
-Read-only does not hide any entity, because every sensor only reads data. Update entities still show that an update is available, but without an install button. The actions are removed from Home Assistant, unless another TrueNAS entry has Administrator access. In that case, calling one on a read-only entity gives an error.
+With Read-only, whatever cannot work is gone:
 
-The level is what the integration does with the key, not what the key is allowed to do. To have TrueNAS enforce read-only access as well, use a key with the `READONLY_ADMIN` role. If you select Administrator with such a key, the actions and install buttons appear but TrueNAS refuses them, and the error is written to the Home Assistant log.
+- Cron job switches are not created, and switching an entry to Read-only removes them and the **Cron jobs** device.
+- Actions are removed from Home Assistant, unless another TrueNAS entry has Administrator access. In that case, calling one on a read-only entity gives an error.
+- Update entities stay, because they still show that an update is available, but they have no install button.
+
+All sensors and binary sensors stay, because they only read data.
+
+See [Security](#security) for what the level does and does not protect against.
 
 ## Entities
 
@@ -88,8 +95,14 @@ Data is polled every 60 seconds; available updates are checked every 12 hours.
 | System | Memory usage, ARC size | sensor | |
 | System | Network RX / TX | sensor | One pair per interface |
 | System | TrueNAS update | update | Install system updates from Home Assistant |
+| System | Alerts | sensor | Active TrueNAS alerts; the messages are an attribute |
+| System | Critical alerts | binary sensor | On for an alert of level CRITICAL or above |
+| System | Reboot required | binary sensor | The reasons are an attribute |
 | Pools | Healthy | binary sensor | One per pool, including `boot-pool` |
 | Pools | Free space | sensor | |
+| Pools | Scan | sensor | `idle`, `scrubbing`, `paused` or `resilvering`; target for the scrub actions |
+| Pools | Last scrub | sensor | When the last scrub finished. Unknown after a Home Assistant restart until a finished scrub is the pool's latest scan again |
+| Pools | Errors | sensor | ZFS read, write and checksum errors of the pool's disks |
 | Datasets | Used space | sensor | One per dataset; target for the snapshot action |
 | Disks | Temperature | sensor | One per disk |
 | Services | Running | binary sensor | One per TrueNAS service |
@@ -98,14 +111,15 @@ Data is polled every 60 seconds; available updates are checked every 12 hours.
 | VMs | Running | binary sensor | One per virtual machine |
 | Containers | Running | binary sensor | TrueNAS 27.0 and later |
 | Cloud sync | Status | sensor | One per cloud sync task |
-| Replication | Status | sensor | One per replication task |
+| Replication | Status | sensor | One per replication task; target for the run action |
 | Snapshot tasks | Status | sensor | One per periodic snapshot task |
+| Cron jobs | Enabled | switch | One per cron job. Disabled by default, Administrator only |
 
 Most entities expose extra details as attributes (for example pool scrub state, disk model and serial, dataset compression and quota, VM memory and vCPUs).
 
 ## Actions
 
-All actions target an entity of this integration.
+All actions target an entity of this integration and need the Administrator access level.
 
 | Action | Target entity | Description |
 |---|---|---|
@@ -117,6 +131,8 @@ All actions target an entity of this integration.
 | `truenas_link.vm_start` / `vm_stop` | VM binary sensor | Start or stop a VM. `vm_start` accepts `overcommit: true` to start even without enough free memory |
 | `truenas_link.container_start` / `container_stop` | Container binary sensor | Start or stop a container (27.0 and later) |
 | `truenas_link.cloudsync_run` / `cloudsync_abort` | Cloud sync sensor | Run or abort a cloud sync task |
+| `truenas_link.replication_run` | Replication sensor | Run a replication task |
+| `truenas_link.pool_scrub_start` / `pool_scrub_pause` / `pool_scrub_stop` | Pool scan sensor | Start or resume, pause, or stop a scrub. Not available for the boot pool |
 
 Example:
 
@@ -125,6 +141,31 @@ action: truenas_link.dataset_snapshot
 target:
   entity_id: sensor.truenas_tank_media
 ```
+
+## Security
+
+An API key is powerful, and Home Assistant is one more place that can use it. This integration is designed so that a mistake in a dashboard or an automation stays small.
+
+**How it limits the risk**
+
+- **Read-only by default.** New entries cannot change anything on TrueNAS until you choose Administrator.
+- **Actions instead of switches.** Shutting down the NAS or stopping a VM is an action you have to call on purpose. Voice assistants and commands such as "turn off the living room" cannot reach it.
+- **Cron job switches are limited.** They are disabled by default, and as config entities they are not exposed to voice assistants or switched by area and device targets. They can only enable or disable a job.
+- **No free-form input.** No action accepts a command, a user or an API method. There is no action to run a cron job, and the integration never reads the command or user of a cron job.
+- **Clean stops first.** VMs and containers get time to shut down. On TrueNAS 25.10 and later, they are forced off only after their shutdown timeout. On 25.04, a VM that does not shut down within 60 seconds keeps running.
+- **A resilver cannot be interrupted.** Scrub actions are refused while a pool is resilvering.
+
+**What it does not protect against**
+
+- **The access level is a limit in this integration, not on the key.** Only a key with the `READONLY_ADMIN` role makes TrueNAS itself refuse changes, so use one if you do not need actions. Anyone who can read your Home Assistant configuration can read the key.
+- **Narrow roles do not make a key harmless.** `POOL_WRITE`, needed for scrubs, is also the role of `pool.export`. `SYSTEM_CRON_WRITE`, needed for cron job switches, also allows changing and running cron jobs, which can run commands on the NAS. `system.shutdown` needs `FULL_ADMIN`. Treat any key that can do more than read as an administrator's key.
+- **Verify SSL is off by default**, because TrueNAS often uses a self-signed certificate. Without it, someone on your network could intercept the connection and the key. Turn it on if your certificate is valid, especially with an Administrator key.
+
+**Before you automate power actions**
+
+- If Home Assistant runs in a VM or app on this NAS, shutting down the NAS or stopping that VM also stops Home Assistant, and it cannot bring them back. The integration cannot detect this.
+- Nothing here can turn on a NAS that is off, because its API is not running. Use the [Wake on LAN](https://www.home-assistant.io/integrations/wake_on_lan/) integration, if your hardware supports it.
+- Disabling a cron job is silent. If it runs your backups, nothing tells you they stopped.
 
 ## Supported TrueNAS versions
 
@@ -137,6 +178,7 @@ The API methods used depend on the running release:
 | Virtual machines | `virt.instance.*` | `vm.*` | `vm.*` |
 | Containers | listed with VMs (`virt.instance.*`) | not available | `container.*` |
 | Dataset snapshot | `zfs.snapshot.create` | `pool.snapshot.create` | `pool.snapshot.create` |
+| Scrub actions | `pool.scrub.scrub` | `pool.scrub.scrub` | `zpool.scrub.run` |
 
 API references: [all versions](https://api.truenas.com/), [25.10](https://api.truenas.com/v25.10/), [27.0](https://api.truenas.com/v27.0/).
 

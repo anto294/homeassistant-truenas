@@ -916,7 +916,8 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                 self.ds["pool"][uid]["available"] = vals["free"]
                 self.ds["pool"][uid]["total"] = vals["free"] + vals["allocated"]
 
-                self.ds["pool"][uid].pop("root_dataset")
+                # Only there after an answer: the query may have failed this time
+                self.ds["pool"][uid].pop("root_dataset", None)
 
             if self.ds["pool"][uid]["total"] > 0:
                 self.ds["pool"][uid]["usage"] = round(

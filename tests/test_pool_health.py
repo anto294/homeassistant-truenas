@@ -101,6 +101,9 @@ def _coordinator(connected_api, pool):
     coordinator = TrueNASCoordinator.__new__(TrueNASCoordinator)
     coordinator.host = "truenas.lan"
     coordinator.api = api
+    coordinator.present = {}
+    coordinator.answered = set()
+    coordinator.pool_names = set()
     coordinator.ds = {"pool": {}, "dataset": {}}
     return coordinator
 
@@ -233,3 +236,17 @@ def test_last_scrub_entity_on_truenas_27(run_in_hass, scan, state):
         assert hass.states.get(LAST_SCRUB_ENTITY).state == state
 
     run_in_hass(scenario)
+
+
+def test_boot_pool_query_failing_after_a_good_one_fails_nothing(connected_api):
+    """root_dataset is only there after an answer, so removing it may find nothing."""
+    coordinator = _coordinator(connected_api, _pool(_scan()))
+    coordinator.get_pool()
+    query = coordinator.api.query
+    coordinator.api.query = lambda method: (
+        None if method == "boot.get_state" else query(method)
+    )
+
+    coordinator.get_pool()
+
+    assert coordinator.ds["pool"]["boot-pool"]["name"] == "boot-pool"

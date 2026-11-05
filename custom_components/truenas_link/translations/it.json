@@ -25,6 +25,13 @@
                 "data_description": {
                     "access_level": "Sola lettura rimuove le azioni, i pulsanti di installazione e gli interruttori dei cron, e tiene tutti i sensori. Usa una chiave API con il ruolo READONLY_ADMIN, così lo impone anche TrueNAS."
                 }
+            },
+            "reauth_confirm": {
+                "title": "Nuova autenticazione",
+                "description": "TrueNAS ha rifiutato la chiave API di {name}. Inseriscine una nuova.",
+                "data": {
+                    "api_key": "Chiave API"
+                }
             }
         },
         "error": {
@@ -42,7 +49,8 @@
             "unknown_hostname": "Nome host sconosciuto, controlla il DNS."
         },
         "abort": {
-            "reconfigure_successful": "Riconfigurazione completata."
+            "reconfigure_successful": "Riconfigurazione completata.",
+            "reauth_successful": "Nuova autenticazione completata."
         }
     },
     "selector": {

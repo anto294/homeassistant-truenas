@@ -25,6 +25,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - A switch per cron job to enable or disable it. It is disabled by default
   and needs Administrator access.
 - **Security** section in the README.
+- Reauthentication: when TrueNAS rejects the API key, Home Assistant asks for
+  a new one instead of retrying forever. The new key is tested before it is
+  saved.
 
 ### Changed
 

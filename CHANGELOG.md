@@ -65,6 +65,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - `cloudsync_run` and `cloudsync_abort` crashed with a `TypeError` when the
   task could not be read, or had never run.
 - A failed update install no longer leaves an empty job id behind.
+- A TrueNAS that kept the connection up but stopped answering blocked the
+  integration indefinitely: entities stayed available with old data, and
+  actions waited without an end. Requests now give up after 150 seconds, the
+  update fails, entities become unavailable, and the next update reconnects.
 - Entities could stay available with old data when the connection dropped
   during an update, if a later request of that update reconnected. The update
   now fails, entities become unavailable, and the next update reconnects.

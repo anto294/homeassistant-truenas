@@ -48,6 +48,7 @@ class FakeWebSocket:
         self._responder = responder
         self._pending: list[str] = []
         self.requests: list[dict[str, Any]] = []
+        self.recv_timeouts: list[float | None] = []
         self.closed = False
 
     def send(self, message: str) -> None:
@@ -65,6 +66,7 @@ class FakeWebSocket:
 
     def recv(self, timeout: float | None = None) -> str:
         """Return the response queued by the last send()."""
+        self.recv_timeouts.append(timeout)
         if not self._pending:
             raise TimeoutError(f"timed out in {timeout}s")
 

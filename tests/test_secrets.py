@@ -7,7 +7,7 @@ import logging
 
 import pytest
 
-from custom_components.truenas_link.const import DOMAIN, TO_REDACT
+from custom_components.truenas_link.const import TO_REDACT
 from custom_components.truenas_link.apiparser import parse_api
 from custom_components.truenas_link.diagnostics import (
     async_get_config_entry_diagnostics,
@@ -89,7 +89,7 @@ def test_task_secrets_are_not_requested_and_every_field_still_arrives(
         with caplog.at_level(logging.DEBUG):
             entry = await async_add_entry(hass)
 
-        ds = hass.data[DOMAIN][entry.entry_id].ds
+        ds = entry.runtime_data.ds
         task = next(iter(ds["cloudsync"].values()))
         assert task["description"] == "offsite"
         assert task["transfer_mode"] == "COPY"
@@ -218,7 +218,7 @@ def test_diagnostics_hide_what_identifies_the_system(run_in_hass):
         assert result["data"]["system_info"]["version"] == "25.10.1"
         assert result["data"]["interface"]["eth0"]["name"] == "eth0"
         # The data in use keeps its values
-        ds = hass.data[DOMAIN][entry.entry_id].ds
+        ds = entry.runtime_data.ds
         assert ds["system_info"]["hostname"] == "my-nas"
 
     run_in_hass(scenario)
@@ -248,7 +248,7 @@ def test_app_notes_stay_out_of_logs_entities_and_diagnostics(run_in_hass, caplog
         assert logged
         assert FAKE_SECRET not in caplog.text
 
-        ds = hass.data[DOMAIN][entry.entry_id].ds
+        ds = entry.runtime_data.ds
         assert ds["app"]["scrutiny"]["name"] == "scrutiny"
         assert "notes" not in ds["app"]["scrutiny"]
         assert FAKE_SECRET not in json.dumps(ds, default=str)
@@ -321,7 +321,7 @@ def test_diagnostics_hide_a_cron_jobs_description_and_its_copy(run_in_hass):
         ]
         entry = await async_add_entry(hass)
 
-        ds = hass.data[DOMAIN][entry.entry_id].ds
+        ds = entry.runtime_data.ds
         assert ds["cronjob"][1]["cron_name"] == FAKE_SECRET
         diagnostics = await async_get_config_entry_diagnostics(hass, entry)
         assert FAKE_SECRET not in json.dumps(diagnostics, default=str)

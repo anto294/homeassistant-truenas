@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -14,7 +13,7 @@ from homeassistant.components.update import (
     UpdateEntityFeature,
 )
 
-from .coordinator import TrueNASCoordinator
+from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
 from .entity import TrueNASEntity, async_add_entities, invalid_state_error
 from .update_types import SENSOR_SERVICES, SENSOR_TYPES
 
@@ -26,7 +25,7 @@ DEVICE_UPDATE = "device_update"
 # ---------------------------
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: TrueNASConfigEntry,
     _async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up device tracker for TrueNAS component."""

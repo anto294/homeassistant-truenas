@@ -5,12 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .coordinator import TrueNASConfigEntry
 from .entity import TrueNASEntity, async_add_entities
 from .switch_types import SENSOR_SERVICES, SENSOR_TYPES
 
@@ -19,7 +18,9 @@ from .switch_types import SENSOR_SERVICES, SENSOR_TYPES
 #   async_remove_switches
 # ---------------------------
 @callback
-def async_remove_switches(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+def async_remove_switches(
+    hass: HomeAssistant, config_entry: TrueNASConfigEntry
+) -> None:
     """Remove this entry's switches, and the devices left without entities.
 
     Switches cannot work on a read-only entry. Without this, those from when
@@ -48,11 +49,11 @@ def async_remove_switches(hass: HomeAssistant, config_entry: ConfigEntry) -> Non
 # ---------------------------
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: TrueNASConfigEntry,
     _async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up switches for TrueNAS component."""
-    if hass.data[DOMAIN][config_entry.entry_id].read_only:
+    if config_entry.runtime_data.read_only:
         async_remove_switches(hass, config_entry)
         return
 

@@ -22,7 +22,7 @@ def _reauth_flows(hass):
 
 async def _lose_connection(hass, entry):
     """Drop the connection, as a restart of TrueNAS or the network would."""
-    api = hass.data[DOMAIN][entry.entry_id].api
+    api = entry.runtime_data.api
     await hass.async_add_executor_job(api.disconnect)
 
 
@@ -35,7 +35,7 @@ def test_revoked_key_starts_reauthentication(run_in_hass):
         server.valid_keys.clear()
         await _lose_connection(hass, entry)
 
-        await hass.data[DOMAIN][entry.entry_id].async_refresh()
+        await entry.runtime_data.async_refresh()
         await hass.async_block_till_done()
 
         flows = _reauth_flows(hass)
@@ -70,7 +70,7 @@ def test_other_failures_do_not_start_reauthentication(run_in_hass):
     async def scenario(hass, server):
         entry = await async_add_entry(hass)
         await _lose_connection(hass, entry)
-        coordinator = hass.data[DOMAIN][entry.entry_id]
+        coordinator = entry.runtime_data
         server.valid_keys.clear()
 
         def refuse(*_args, **_kwargs):

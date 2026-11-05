@@ -4,21 +4,19 @@ from __future__ import annotations
 
 
 from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import device_registry as dr
 
-from .const import (
-    DOMAIN,
-    PLATFORMS,
-)
-from .coordinator import TrueNASCoordinator
+from .const import PLATFORMS
+from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
 from .entity import system_device_info
 
 
 # ---------------------------
 #   async_setup_entry
 # ---------------------------
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(
+    hass: HomeAssistant, config_entry: TrueNASConfigEntry
+) -> bool:
     """Set up TrueNAS config entry."""
     coordinator = TrueNASCoordinator(hass, config_entry)
     try:
@@ -37,7 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     )
     coordinator.system_device_id = system_device.id
 
-    hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = coordinator
+    config_entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
     return True
 
@@ -45,13 +43,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 # ---------------------------
 #   async_unload_entry
 # ---------------------------
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, config_entry: TrueNASConfigEntry
+) -> bool:
     """Unload TrueNAS config entry."""
 
     if unload_ok := await hass.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     ):
-        coordinator = hass.data[DOMAIN].pop(config_entry.entry_id)
-        await hass.async_add_executor_job(coordinator.api.disconnect)
+        await hass.async_add_executor_job(config_entry.runtime_data.api.disconnect)
 
     return unload_ok

@@ -15,6 +15,8 @@ from .binary_sensor_types import (
 from .entity import TrueNASEntity, async_add_entities
 
 _LOGGER = getLogger(__name__)
+# Seconds a virt instance gets to shut down cleanly (TrueNAS 25.04)
+VIRT_STOP_TIMEOUT = 60
 
 
 # ---------------------------
@@ -156,7 +158,9 @@ class TrueNASVMBinarySensor(TrueNASBinarySensor):
             await self.hass.async_add_executor_job(
                 self.coordinator.api.query,
                 "virt.instance.stop",
-                [self._data["id"], {"timeout": 0, "force": True}],
+                # Clean shutdown. TrueNAS 25.04 has no fallback to a forced
+                # stop: if the timeout passes, the instance keeps running.
+                [self._data["id"], {"timeout": VIRT_STOP_TIMEOUT, "force": False}],
             )
 
 

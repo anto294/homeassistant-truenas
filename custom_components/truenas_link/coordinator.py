@@ -7,6 +7,7 @@ import logging
 import re
 
 from datetime import datetime, timedelta
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -21,7 +22,14 @@ from homeassistant.const import (
 
 from .api import TrueNASAPI
 from .apiparser import parse_api, utc_from_timestamp
-from .const import DOMAIN
+from .const import (
+    BOOT_POOL_NAMES,
+    DOMAIN,
+    SCAN_IDLE,
+    SCAN_PAUSED,
+    SCAN_RESILVERING,
+    SCAN_SCRUBBING,
+)
 from .helper import is_read_only
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,6 +42,52 @@ MAX_ALERT_MESSAGE_LENGTH = 255
 
 # First "<major>.<minor>" pair in a TrueNAS version string
 _VERSION_RE = re.compile(r"(\d+)\.(\d+)")
+
+
+# ---------------------------
+#   scan_status
+# ---------------------------
+def scan_status(pool: dict) -> str:
+    """Return what the pool's scan is doing, from its parsed scan values."""
+    if pool.get("scrub_state") != "SCANNING":
+        return SCAN_IDLE
+
+    if pool.get("scan_function") == "RESILVER":
+        return SCAN_RESILVERING
+
+    return SCAN_PAUSED if pool.get("scan_pause") else SCAN_SCRUBBING
+
+
+# ---------------------------
+#   topology_errors
+# ---------------------------
+def topology_errors(topology: Any) -> dict[str, int]:
+    """Return a pool's ZFS error counters, added up over its disks.
+
+    Only leaves count: a mirror or raidz vdev keeps counters of its own that
+    do not add up to those of its disks, so adding them would double count.
+    """
+    errors = {"read_errors": 0, "write_errors": 0, "checksum_errors": 0}
+
+    def add(vdevs: list) -> None:
+        for vdev in vdevs:
+            if not isinstance(vdev, dict):
+                continue
+
+            if children := vdev.get("children"):
+                add(children)
+                continue
+
+            stats = vdev.get("stats") or {}
+            for name in errors:
+                errors[name] += stats.get(name) or 0
+
+    if isinstance(topology, dict):
+        for vdevs in topology.values():
+            if isinstance(vdevs, list):
+                add(vdevs)
+
+    return errors
 
 
 # ---------------------------
@@ -686,9 +740,10 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     # ---------------------------
     def get_pool(self) -> None:
         """Get pools from TrueNAS."""
+        tmp_pools = self.api.query("pool.query")
         self.ds["pool"] = parse_api(
             data=self.ds["pool"],
-            source=self.api.query("pool.query"),
+            source=tmp_pools,
             key="guid",
             vals=[
                 {"name": "guid", "default": 0},
@@ -727,6 +782,9 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                     "source": "scan/total_secs_left",
                     "default": 0,
                 },
+                {"name": "scan_pause", "source": "scan/pause", "default": 0},
+                {"name": "scan_percentage", "source": "scan/percentage", "default": 0},
+                {"name": "scan_errors", "source": "scan/errors", "default": 0},
             ],
             ensure_vals=[
                 {"name": "available", "default": 0.0},
@@ -735,9 +793,10 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             ],
         )
 
+        tmp_boot = self.api.query("boot.get_state")
         self.ds["pool"] = parse_api(
             data=self.ds["pool"],
-            source=self.api.query("boot.get_state"),
+            source=tmp_boot,
             key="name",
             vals=[
                 {"name": "guid", "default": "boot-pool"},
@@ -787,6 +846,9 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                     "source": "scan/total_secs_left",
                     "default": 0,
                 },
+                {"name": "scan_pause", "source": "scan/pause", "default": 0},
+                {"name": "scan_percentage", "source": "scan/percentage", "default": 0},
+                {"name": "scan_errors", "source": "scan/errors", "default": 0},
                 {"name": "allocated", "default": 0},
                 {"name": "free", "default": 0},
             ],
@@ -798,6 +860,17 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         )
         if not self.api.connected():
             return
+
+        # ZFS error counters, from the topology that is not kept in ds
+        raw_pools = {pool.get("guid"): pool for pool in tmp_pools or []}
+        if isinstance(tmp_boot, dict):
+            raw_pools[tmp_boot.get("name")] = tmp_boot
+
+        for uid, raw_pool in raw_pools.items():
+            if uid in self.ds["pool"]:
+                errors = topology_errors(raw_pool.get("topology"))
+                self.ds["pool"][uid].update(errors)
+                self.ds["pool"][uid]["pool_errors"] = sum(errors.values())
 
         # Process pools
         tmp_dataset_available = {}
@@ -812,13 +885,24 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             )
 
         for uid, vals in self.ds["pool"].items():
+            vals["scan_status"] = scan_status(vals)
+            # pool.query only has the latest scan, which may be a resilver or
+            # a canceled scrub, so remember the last scrub that finished
+            vals.setdefault("last_scrub", None)
+            if (
+                vals["scan_function"] == "SCRUB"
+                and vals["scrub_state"] == "FINISHED"
+                and isinstance(vals["scrub_end"], datetime)
+            ):
+                vals["last_scrub"] = vals["scrub_end"]
+
             if vals["path"] in tmp_dataset_available:
                 self.ds["pool"][uid]["available"] = tmp_dataset_available[vals["path"]]
 
             if vals["path"] in tmp_dataset_total:
                 self.ds["pool"][uid]["total"] = tmp_dataset_total[vals["path"]]
 
-            if vals["name"] in ["boot-pool", "freenas-boot"]:
+            if vals["name"] in BOOT_POOL_NAMES:
                 self.ds["pool"][uid]["available"] = vals["free"]
                 self.ds["pool"][uid]["total"] = vals["free"] + vals["allocated"]
 

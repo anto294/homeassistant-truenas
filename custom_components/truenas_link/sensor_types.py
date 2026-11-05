@@ -19,6 +19,10 @@ from homeassistant.const import (
 from homeassistant.helpers.entity import EntityCategory
 
 from .const import (
+    SCAN_IDLE,
+    SCAN_PAUSED,
+    SCAN_RESILVERING,
+    SCAN_SCRUBBING,
     SCHEMA_SERVICE_CLOUDSYNC_RUN,
     SCHEMA_SERVICE_CLOUDSYNC_ABORT,
     SCHEMA_SERVICE_DATASET_SNAPSHOT,
@@ -52,6 +56,22 @@ DEVICE_ATTRIBUTES_POOL = [
     "scrub_secs_left",
     "healthy",
     "usage",
+]
+
+DEVICE_ATTRIBUTES_POOL_SCAN = [
+    "scan_function",
+    "scrub_state",
+    "scan_percentage",
+    "scan_errors",
+    "scrub_start",
+    "scrub_end",
+    "scrub_secs_left",
+]
+
+DEVICE_ATTRIBUTES_POOL_ERRORS = [
+    "read_errors",
+    "write_errors",
+    "checksum_errors",
 ]
 
 DEVICE_ATTRIBUTES_DATASET = [
@@ -360,6 +380,54 @@ SENSOR_TYPES: tuple[TrueNASSensorEntityDescription, ...] = (
         data_uid="",
         data_reference="guid",
         data_attributes_list=DEVICE_ATTRIBUTES_POOL,
+    ),
+    TrueNASSensorEntityDescription(
+        key="pool_scan",
+        name="scan",
+        icon="mdi:database-search",
+        native_unit_of_measurement=None,
+        device_class=SensorDeviceClass.ENUM,
+        options=[SCAN_IDLE, SCAN_SCRUBBING, SCAN_PAUSED, SCAN_RESILVERING],
+        state_class=None,
+        entity_category=None,
+        ha_group="System",
+        data_path="pool",
+        data_attribute="scan_status",
+        data_name="name",
+        data_uid="",
+        data_reference="guid",
+        data_attributes_list=DEVICE_ATTRIBUTES_POOL_SCAN,
+    ),
+    TrueNASSensorEntityDescription(
+        key="pool_last_scrub",
+        name="last scrub",
+        icon="mdi:database-clock",
+        native_unit_of_measurement=None,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        state_class=None,
+        entity_category=None,
+        ha_group="System",
+        data_path="pool",
+        data_attribute="last_scrub",
+        data_name="name",
+        data_uid="",
+        data_reference="guid",
+    ),
+    TrueNASSensorEntityDescription(
+        key="pool_errors",
+        name="errors",
+        icon="mdi:database-alert",
+        native_unit_of_measurement=None,
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=None,
+        ha_group="System",
+        data_path="pool",
+        data_attribute="pool_errors",
+        data_name="name",
+        data_uid="",
+        data_reference="guid",
+        data_attributes_list=DEVICE_ATTRIBUTES_POOL_ERRORS,
     ),
     TrueNASSensorEntityDescription(
         key="cloudsync",

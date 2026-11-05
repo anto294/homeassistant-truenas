@@ -92,6 +92,8 @@ class TrueNASAPI(object):
         self._connected = False
         self._error = ""
         self._error_logged = False
+        # What each method last failed with, to log a repeated failure once
+        self._failed_methods: dict[str, str] = {}
 
     # ---------------------------
     #   connect
@@ -228,12 +230,12 @@ class TrueNASAPI(object):
         with self.lock:
             self._error = ""
             try:
-                return self._exchange(service, params)
+                result = self._exchange(service, params)
             except TrueNASMalformedResponseError as e:
-                _LOGGER.error("TrueNAS %s query (%s) %s", self._host, service, e)
+                self._log_failed_method(service, str(e))
                 self._error = "malformed_result"
             except TrueNASRequestError as e:
-                _LOGGER.error("TrueNAS %s query (%s) error: %s", self._host, service, e)
+                self._log_failed_method(service, str(e))
             except TrueNASConnectionError as e:
                 _LOGGER.warning(
                     'TrueNAS %s unable to fetch data "%s" (%s)',
@@ -244,8 +246,33 @@ class TrueNASAPI(object):
                 self.disconnect()
                 # The reason is in the log. This is a code the forms can show.
                 self._error = ERROR_CANNOT_CONNECT
+            else:
+                if self._failed_methods.pop(service, None) is not None:
+                    _LOGGER.info(
+                        "TrueNAS %s query (%s) works again", self._host, service
+                    )
+
+                return result
 
             return None
+
+    # ---------------------------
+    #   _log_failed_method
+    # ---------------------------
+    def _log_failed_method(self, service: str, reason: str) -> None:
+        """Log why a polled method failed, unless it was already logged.
+
+        A method that TrueNAS refuses fails on every poll, so this would fill the
+        log. A failure with another reason is logged again.
+        """
+        if self._failed_methods.get(service) == reason:
+            _LOGGER.debug(
+                "TrueNAS %s query (%s) error: %s", self._host, service, reason
+            )
+            return
+
+        self._failed_methods[service] = reason
+        _LOGGER.error("TrueNAS %s query (%s) error: %s", self._host, service, reason)
 
     # ---------------------------
     #   call

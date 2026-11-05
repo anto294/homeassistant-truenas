@@ -25,6 +25,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - The link to TrueNAS on the System device now uses HTTPS, the only protocol the
   integration uses to reach it.
+- A method that TrueNAS refuses no longer writes an error to the log on every
+  update. It is logged once, again if the reason changes, and a message says when
+  the method works again.
 
 ## [2.1.0b1] - 2026-11-05
 

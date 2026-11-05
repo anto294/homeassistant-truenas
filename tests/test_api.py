@@ -376,3 +376,78 @@ def test_query_failure_during_the_test_gives_a_known_code():
 
     with connect:
         assert api.connection_test() == (False, "cannot_connect")
+
+
+def _errors(caplog):
+    """Return the messages logged as errors."""
+    return [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+
+
+def test_repeated_rpc_error_is_logged_once(connected_api, caplog):
+    """A method that keeps failing the same way does not fill the log."""
+    api, _ = connected_api(_reply(error={"data": {"reason": "[EBUSY] busy"}}))
+
+    with caplog.at_level(logging.INFO, logger="custom_components.truenas_link.api"):
+        for _ in range(3):
+            assert api.query("pool.query") is None
+
+    assert len(_errors(caplog)) == 1
+    assert "[EBUSY] busy" in caplog.text
+
+
+def test_other_rpc_error_of_the_same_method_is_logged(connected_api, caplog):
+    """A different failure says something new."""
+    replies = iter(["[EBUSY] busy", "[EBUSY] busy", "[EIO] broken", "[EIO] broken"])
+    api, _ = connected_api(
+        lambda request: {"id": 0, "error": {"data": {"reason": next(replies)}}}
+    )
+
+    with caplog.at_level(logging.INFO, logger="custom_components.truenas_link.api"):
+        for _ in range(4):
+            api.query("pool.query")
+
+    assert len(_errors(caplog)) == 2
+    assert "[EIO] broken" in _errors(caplog)[1]
+
+
+def test_each_method_logs_its_own_error(connected_api, caplog):
+    """One method's failure does not hide another's."""
+    api, _ = connected_api(_reply(error={"data": {"reason": "[EBUSY] busy"}}))
+
+    with caplog.at_level(logging.INFO, logger="custom_components.truenas_link.api"):
+        api.query("pool.query")
+        api.query("disk.query")
+
+    assert len(_errors(caplog)) == 2
+
+
+def test_method_that_works_again_says_so_and_can_fail_again(connected_api, caplog):
+    """Recovery is logged once, and a later failure counts as new."""
+    replies = iter(
+        [
+            {"id": 0, "error": {"data": {"reason": "[EBUSY] busy"}}},
+            {"id": 0, "result": []},
+            {"id": 0, "result": []},
+            {"id": 0, "error": {"data": {"reason": "[EBUSY] busy"}}},
+        ]
+    )
+    api, _ = connected_api(lambda request: next(replies))
+
+    with caplog.at_level(logging.INFO, logger="custom_components.truenas_link.api"):
+        for _ in range(4):
+            api.query("pool.query")
+
+    assert len(_errors(caplog)) == 2
+    assert caplog.text.count("works again") == 1
+
+
+def test_malformed_response_is_logged_once_and_keeps_its_code(connected_api, caplog):
+    """The error code stays on every poll, even when nothing new is logged."""
+    api, _ = connected_api(_reply(include_result=False))
+
+    with caplog.at_level(logging.INFO, logger="custom_components.truenas_link.api"):
+        api.query("system.info")
+        api.query("system.info")
+
+    assert len(_errors(caplog)) == 1
+    assert api.error == "malformed_result"

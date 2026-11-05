@@ -2,39 +2,165 @@
     "config": {
         "step": {
             "user": {
-                "description": "Configure a integração TrueNAS.",
+                "description": "Configure a integração do TrueNAS.",
                 "data": {
                     "name": "Nome da integração",
                     "host": "Host",
-                    "api_key": "Chave API",
+                    "api_key": "Chave de API",
+                    "access_level": "Nível de acesso",
                     "verify_ssl": "Verificar certificado SSL"
+                },
+                "data_description": {
+                    "name": "Usado nos IDs das entidades. Não pode ser alterado depois, e cada entrada precisa do seu.",
+                    "host": "Endereço do TrueNAS, com a porta se não for a 443. A integração se conecta por HTTPS.",
+                    "api_key": "Crie-a na interface web do TrueNAS: menu do usuário → API Keys → Add.",
+                    "verify_ssl": "Verifica o certificado do TrueNAS. Desative para um certificado autoassinado: nesse caso, alguém na sua rede poderia interceptar a chave.",
+                    "access_level": "Somente leitura recusa as ações, remove os botões de instalação e os interruptores de cron, e mantém todos os sensores. Use uma chave de API com o papel READONLY_ADMIN para que o TrueNAS também o imponha."
                 }
             },
             "reconfigure": {
-                "description": "Reconfigure TrueNAS integration.",
+                "description": "Reconfigure a integração do TrueNAS.",
                 "data": {
                     "host": "Host",
-                    "api_key": "API key",
-                    "verify_ssl": "Verify SSL certificate"
+                    "api_key": "Chave de API",
+                    "access_level": "Nível de acesso",
+                    "verify_ssl": "Verificar certificado SSL"
+                },
+                "data_description": {
+                    "host": "Endereço do TrueNAS, com a porta se não for a 443. A integração se conecta por HTTPS.",
+                    "api_key": "Deixe vazio para manter a chave atual.",
+                    "access_level": "Somente leitura recusa as ações, remove os botões de instalação e os interruptores de cron, e mantém todos os sensores. Use uma chave de API com o papel READONLY_ADMIN para que o TrueNAS também o imponha.",
+                    "verify_ssl": "Verifica o certificado do TrueNAS. Desative para um certificado autoassinado: nesse caso, alguém na sua rede poderia interceptar a chave."
+                }
+            },
+            "reauth_confirm": {
+                "title": "Reautenticar",
+                "description": "O TrueNAS recusou a chave de API de {name}. Informe uma nova.",
+                "data": {
+                    "api_key": "Chave de API"
+                },
+                "data_description": {
+                    "api_key": "A nova chave para este sistema TrueNAS. Crie-a na interface web do TrueNAS: menu do usuário → API Keys → Add."
                 }
             }
         },
         "error": {
             "name_exists": "O nome já existe.",
-            "invalid_key": "Login failed, invalid API key.",
-            "invalid_hostname": "Connection failed, invalid hostname.",
-            "connection_refused": "Connection failed, connection refused.",
-            "handshake_timeout": "Connection failed, timed out while waiting for handshake response.",
-            "api_not_found": "Connection failed, API not found.",
-            "malformed_result": "API response is malformed.",
-            "certificate_verify_failed": "Certificate verification failed.",
-            "http_used": "The plain HTTP request was sent to HTTPS port. Reverse proxy?",
-            "tlsv1_not_supported": "TLSv1 not supported. Reverse proxy?",
-            "websocket_not_supported": "WebSocket not supported. Reverse proxy?",
-            "unknown_hostname": "Unknown hostname, check DNS."
+            "certificate_verify_failed": "A verificação do certificado falhou. Se o TrueNAS usa um certificado autoassinado, desative Verificar certificado SSL.",
+            "http_used": "A solicitação HTTP foi enviada para a porta HTTPS. Proxy reverso?",
+            "tlsv1_not_supported": "TLSv1 não é compatível. Proxy reverso?",
+            "websocket_not_supported": "WebSocket não é compatível. Proxy reverso?",
+            "invalid_key": "Falha no login, chave de API inválida.",
+            "invalid_hostname": "Falha na conexão, nome de host inválido.",
+            "unknown_hostname": "Nome de host desconhecido, verifique o DNS.",
+            "connection_refused": "Falha na conexão, conexão recusada.",
+            "handshake_timeout": "Falha na conexão, tempo esgotado ao aguardar a resposta.",
+            "api_not_found": "Falha na conexão, API não encontrada.",
+            "malformed_result": "A resposta da API é inválida.",
+            "cannot_connect": "Não foi possível conectar ao TrueNAS. Verifique o host e se o TrueNAS está em execução."
         },
         "abort": {
-            "reconfigure_successful": "Reconfigure successful."
+            "reconfigure_successful": "Reconfiguração concluída.",
+            "reauth_successful": "Reautenticação concluída.",
+            "already_configured": "Este sistema TrueNAS já está configurado.",
+            "unique_id_mismatch": "Este é outro sistema TrueNAS. Para adicioná-lo, use Adicionar entrada."
+        }
+    },
+    "selector": {
+        "access_level": {
+            "options": {
+                "admin": "Administrador (sensores, ações e atualizações)",
+                "read_only": "Somente leitura (somente sensores)"
+            }
+        }
+    },
+    "exceptions": {
+        "read_only_action": {
+            "message": "{entity} pertence a uma entrada do TrueNAS com acesso somente leitura. Para usar suas ações, altere o nível de acesso para Administrador em Reconfigurar."
+        },
+        "action_unreachable": {
+            "message": "Não foi possível acessar o TrueNAS para executar {method}."
+        },
+        "action_rejected": {
+            "message": "O TrueNAS recusou {method}: {reason}"
+        },
+        "action_failed": {
+            "message": "O TrueNAS não conseguiu concluir {method}."
+        },
+        "action_invalid_response": {
+            "message": "O TrueNAS retornou dados que não podem ser usados para {name}."
+        },
+        "invalid_state": {
+            "message": "{name} está em {state}, portanto {action} não se aplica."
+        },
+        "scrub_boot_pool": {
+            "message": "As ações de scrub não estão disponíveis para o pool de inicialização {name}."
+        }
+    },
+    "entity": {
+        "sensor": {
+            "system_uptime": {
+                "name": "Tempo de atividade"
+            },
+            "system_cpu_temperature": {
+                "name": "Temperatura"
+            },
+            "system_load_shortterm": {
+                "name": "Carga de CPU de curto prazo"
+            },
+            "system_load_midterm": {
+                "name": "Carga de CPU de médio prazo"
+            },
+            "system_load_longterm": {
+                "name": "Carga de CPU de longo prazo"
+            },
+            "system_cpu_usage": {
+                "name": "Uso de CPU"
+            },
+            "system_memory_usage": {
+                "name": "Uso de memória"
+            },
+            "system_cache_size-arc_value": {
+                "name": "Tamanho do ARC"
+            },
+            "system_alerts": {
+                "name": "Alertas"
+            },
+            "pool_free": {
+                "name": "{name} livre"
+            },
+            "pool_scan": {
+                "name": "{name} varredura",
+                "state": {
+                    "idle": "Inativo",
+                    "scrubbing": "Scrub em andamento",
+                    "paused": "Em pausa",
+                    "resilvering": "Resilver em andamento"
+                }
+            },
+            "pool_last_scrub": {
+                "name": "{name} último scrub"
+            },
+            "pool_errors": {
+                "name": "{name} erros"
+            },
+            "traffic_rx": {
+                "name": "{name} RX"
+            },
+            "traffic_tx": {
+                "name": "{name} TX"
+            }
+        },
+        "binary_sensor": {
+            "system_alerts_critical": {
+                "name": "Alertas críticos"
+            },
+            "system_reboot_required": {
+                "name": "Reinicialização necessária"
+            },
+            "pool_healthy": {
+                "name": "{name} íntegro"
+            }
         }
     }
 }

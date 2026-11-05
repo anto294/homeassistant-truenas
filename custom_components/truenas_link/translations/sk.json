@@ -2,39 +2,165 @@
     "config": {
         "step": {
             "user": {
-                "description": "Nastavenie integrácie TrueNAS.",
+                "description": "Nastavte integráciu TrueNAS.",
                 "data": {
                     "name": "Názov integrácie",
                     "host": "Hostiteľ",
-                    "api_key": "API kľúč",
-                    "verify_ssl": "Overte certifikát SSL"
+                    "api_key": "Kľúč API",
+                    "access_level": "Úroveň prístupu",
+                    "verify_ssl": "Overiť certifikát SSL"
+                },
+                "data_description": {
+                    "name": "Používa sa v ID entít. Neskôr ho nemožno zmeniť a každá položka musí mať vlastný.",
+                    "host": "Adresa TrueNAS, s portom, ak to nie je 443. Integrácia sa pripája cez HTTPS.",
+                    "api_key": "Vytvorte ho vo webovom rozhraní TrueNAS: menu používateľa → API Keys → Add.",
+                    "verify_ssl": "Kontroluje certifikát TrueNAS. Pri certifikáte podpísanom sebou samým ho vypnite: niekto vo vašej sieti by potom mohol kľúč zachytiť.",
+                    "access_level": "Režim iba na čítanie odmieta akcie, odstraňuje tlačidlá inštalácie a prepínače úloh cron a ponecháva všetky senzory. Použite kľúč API s rolou READONLY_ADMIN, aby to vynucoval aj TrueNAS."
                 }
             },
             "reconfigure": {
-                "description": "Reconfigure TrueNAS integration.",
+                "description": "Znova nastavte integráciu TrueNAS.",
                 "data": {
-                    "host": "Host",
-                    "api_key": "API key",
-                    "verify_ssl": "Verify SSL certificate"
+                    "host": "Hostiteľ",
+                    "api_key": "Kľúč API",
+                    "access_level": "Úroveň prístupu",
+                    "verify_ssl": "Overiť certifikát SSL"
+                },
+                "data_description": {
+                    "host": "Adresa TrueNAS, s portom, ak to nie je 443. Integrácia sa pripája cez HTTPS.",
+                    "api_key": "Nechajte prázdne, ak chcete ponechať aktuálny kľúč.",
+                    "access_level": "Režim iba na čítanie odmieta akcie, odstraňuje tlačidlá inštalácie a prepínače úloh cron a ponecháva všetky senzory. Použite kľúč API s rolou READONLY_ADMIN, aby to vynucoval aj TrueNAS.",
+                    "verify_ssl": "Kontroluje certifikát TrueNAS. Pri certifikáte podpísanom sebou samým ho vypnite: niekto vo vašej sieti by potom mohol kľúč zachytiť."
+                }
+            },
+            "reauth_confirm": {
+                "title": "Opätovné overenie",
+                "description": "TrueNAS odmietol kľúč API pre {name}. Zadajte nový.",
+                "data": {
+                    "api_key": "Kľúč API"
+                },
+                "data_description": {
+                    "api_key": "Nový kľúč pre tento systém TrueNAS. Vytvorte ho vo webovom rozhraní TrueNAS: menu používateľa → API Keys → Add."
                 }
             }
         },
         "error": {
             "name_exists": "Názov už existuje.",
+            "certificate_verify_failed": "Overenie certifikátu zlyhalo. Ak TrueNAS používa certifikát podpísaný sebou samým, vypnite Overiť certifikát SSL.",
+            "http_used": "Požiadavka HTTP bola odoslaná na port HTTPS. Reverzný proxy?",
+            "tlsv1_not_supported": "TLSv1 nie je podporovaný. Reverzný proxy?",
+            "websocket_not_supported": "WebSocket nie je podporovaný. Reverzný proxy?",
             "invalid_key": "Prihlásenie zlyhalo, neplatný kľúč API.",
-            "invalid_hostname": "Pripojenie zlyhalo, neplatné meno hostiteľa.",
+            "invalid_hostname": "Pripojenie zlyhalo, neplatný názov hostiteľa.",
+            "unknown_hostname": "Neznámy názov hostiteľa, skontrolujte DNS.",
             "connection_refused": "Pripojenie zlyhalo, pripojenie bolo odmietnuté.",
-            "handshake_timeout": "Pripojenie zlyhalo, počas čakania na odpoveď na podanie ruky došlo k časovému oneskoreniu.",
+            "handshake_timeout": "Pripojenie zlyhalo, čas čakania na odpoveď vypršal.",
             "api_not_found": "Pripojenie zlyhalo, API sa nenašlo.",
-            "malformed_result": "Odpoveď API je chybná.",
-            "certificate_verify_failed": "Certificate verification failed.",
-            "http_used": "The plain HTTP request was sent to HTTPS port. Reverse proxy?",
-            "tlsv1_not_supported": "TLSv1 not supported. Reverse proxy?",
-            "websocket_not_supported": "WebSocket not supported. Reverse proxy?",
-            "unknown_hostname": "Unknown hostname, check DNS."
+            "malformed_result": "Odpoveď API je neplatná.",
+            "cannot_connect": "Nepodarilo sa pripojiť k TrueNAS. Skontrolujte hostiteľa a či TrueNAS beží."
         },
         "abort": {
-            "reconfigure_successful": "Reconfigure successful."
+            "reconfigure_successful": "Opätovné nastavenie bolo úspešné.",
+            "reauth_successful": "Opätovné overenie bolo úspešné.",
+            "already_configured": "Tento systém TrueNAS je už nastavený.",
+            "unique_id_mismatch": "Toto je iný systém TrueNAS. Ak ho chcete pridať, použite Pridať položku."
+        }
+    },
+    "selector": {
+        "access_level": {
+            "options": {
+                "admin": "Správca (senzory, akcie a aktualizácie)",
+                "read_only": "Iba na čítanie (iba senzory)"
+            }
+        }
+    },
+    "exceptions": {
+        "read_only_action": {
+            "message": "{entity} patrí k položke TrueNAS s prístupom iba na čítanie. Ak chcete používať jej akcie, nastavte úroveň prístupu Správca cez opätovné nastavenie."
+        },
+        "action_unreachable": {
+            "message": "Nepodarilo sa spojiť s TrueNAS na spustenie {method}."
+        },
+        "action_rejected": {
+            "message": "TrueNAS odmietol {method}: {reason}"
+        },
+        "action_failed": {
+            "message": "TrueNAS nedokázal dokončiť {method}."
+        },
+        "action_invalid_response": {
+            "message": "TrueNAS vrátil údaje, ktoré nemožno použiť pre {name}."
+        },
+        "invalid_state": {
+            "message": "{name} je v stave {state}, takže {action} sa nedá použiť."
+        },
+        "scrub_boot_pool": {
+            "message": "Akcie scrub nie sú dostupné pre zavádzací pool {name}."
+        }
+    },
+    "entity": {
+        "sensor": {
+            "system_uptime": {
+                "name": "Doba prevádzky"
+            },
+            "system_cpu_temperature": {
+                "name": "Teplota"
+            },
+            "system_load_shortterm": {
+                "name": "Krátkodobé zaťaženie CPU"
+            },
+            "system_load_midterm": {
+                "name": "Strednodobé zaťaženie CPU"
+            },
+            "system_load_longterm": {
+                "name": "Dlhodobé zaťaženie CPU"
+            },
+            "system_cpu_usage": {
+                "name": "Využitie CPU"
+            },
+            "system_memory_usage": {
+                "name": "Využitie pamäte"
+            },
+            "system_cache_size-arc_value": {
+                "name": "Veľkosť ARC"
+            },
+            "system_alerts": {
+                "name": "Upozornenia"
+            },
+            "pool_free": {
+                "name": "{name} voľné"
+            },
+            "pool_scan": {
+                "name": "{name} kontrola",
+                "state": {
+                    "idle": "Nečinné",
+                    "scrubbing": "Prebieha scrub",
+                    "paused": "Pozastavené",
+                    "resilvering": "Prebieha resilver"
+                }
+            },
+            "pool_last_scrub": {
+                "name": "{name} posledný scrub"
+            },
+            "pool_errors": {
+                "name": "{name} chyby"
+            },
+            "traffic_rx": {
+                "name": "{name} RX"
+            },
+            "traffic_tx": {
+                "name": "{name} TX"
+            }
+        },
+        "binary_sensor": {
+            "system_alerts_critical": {
+                "name": "Kritické upozornenia"
+            },
+            "system_reboot_required": {
+                "name": "Vyžaduje sa reštart"
+            },
+            "pool_healthy": {
+                "name": "{name} v poriadku"
+            }
         }
     }
 }

@@ -37,8 +37,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   them still validate when TrueNAS is unreachable. Calling one on a read-only entity
   gives an error and sends nothing to TrueNAS. If the target's entry is not loaded,
   Home Assistant does nothing, and logs that the entity is not available.
-- **Entity names are now translated**, for now in English and Italian, so they may
-  look different in your language. Entity IDs do not change, in any language.
+- **Entity names are now translated**, into Italian, Portuguese (Brazil), Russian,
+  Slovak and Spanish, so they may look different in your language. Forms and errors
+  are now complete in these languages. Entity IDs do not change, in any language.
   Names you gave to entities yourself stay. Icons moved to `icons.json`, so the
   `icon` attribute is gone from these entities' state: templates that read it need
   another source.

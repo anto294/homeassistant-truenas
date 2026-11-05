@@ -36,7 +36,7 @@ Check a method's name, parameters and return shape in these docs before adding o
 1. Check the method in the API docs (see above).
 2. Add a `get_<x>` method in `coordinator.py`, add the `ds["<x>"]` section in `__init__`, and add the job to the list in `_async_update_data`.
 3. Add descriptions in the right `*_types.py` file, plus an entity class if it needs actions.
-4. Update `strings.json` **and** `translations/en.json`. Other languages are contributed by pull request to `translations/`.
+4. Update `strings.json` and every file in `translations/`: `tests/test_translations.py` fails if a language lacks a key or a placeholder.
 5. If there is new sensitive data, including a free-text field, add its name to `TO_REDACT` in `const.py`, which `diagnostics.py` and the debug logs of `api.py` and `apiparser.py` use. Redaction goes by field name and cannot see secrets inside a text.
 
 ## Conventions

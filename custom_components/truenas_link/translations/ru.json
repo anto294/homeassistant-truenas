@@ -7,34 +7,160 @@
                     "name": "Название интеграции",
                     "host": "Хост",
                     "api_key": "Ключ API",
-                    "verify_ssl": "Проверка SSL-сертификата"
+                    "access_level": "Уровень доступа",
+                    "verify_ssl": "Проверять сертификат SSL"
+                },
+                "data_description": {
+                    "name": "Используется в ID сущностей. Его нельзя изменить позже, и у каждой записи он должен быть своим.",
+                    "host": "Адрес TrueNAS, с портом, если он не 443. Интеграция подключается по HTTPS.",
+                    "api_key": "Создайте его в веб-интерфейсе TrueNAS: меню пользователя → API Keys → Add.",
+                    "verify_ssl": "Проверяет сертификат TrueNAS. Отключите для самоподписанного сертификата: тогда кто-то в вашей сети сможет перехватить ключ.",
+                    "access_level": "Режим «только чтение» отклоняет действия, убирает кнопки установки и переключатели заданий cron и сохраняет все датчики. Используйте ключ API с ролью READONLY_ADMIN, чтобы это ограничение применял и TrueNAS."
                 }
             },
             "reconfigure": {
-                "description": "Reconfigure TrueNAS integration.",
+                "description": "Перенастройка интеграции TrueNAS.",
                 "data": {
-                    "host": "Host",
-                    "api_key": "API key",
-                    "verify_ssl": "Verify SSL certificate"
+                    "host": "Хост",
+                    "api_key": "Ключ API",
+                    "access_level": "Уровень доступа",
+                    "verify_ssl": "Проверять сертификат SSL"
+                },
+                "data_description": {
+                    "host": "Адрес TrueNAS, с портом, если он не 443. Интеграция подключается по HTTPS.",
+                    "api_key": "Оставьте пустым, чтобы сохранить текущий ключ.",
+                    "access_level": "Режим «только чтение» отклоняет действия, убирает кнопки установки и переключатели заданий cron и сохраняет все датчики. Используйте ключ API с ролью READONLY_ADMIN, чтобы это ограничение применял и TrueNAS.",
+                    "verify_ssl": "Проверяет сертификат TrueNAS. Отключите для самоподписанного сертификата: тогда кто-то в вашей сети сможет перехватить ключ."
+                }
+            },
+            "reauth_confirm": {
+                "title": "Повторная аутентификация",
+                "description": "TrueNAS отклонил ключ API для {name}. Введите новый.",
+                "data": {
+                    "api_key": "Ключ API"
+                },
+                "data_description": {
+                    "api_key": "Новый ключ для этой системы TrueNAS. Создайте его в веб-интерфейсе TrueNAS: меню пользователя → API Keys → Add."
                 }
             }
         },
         "error": {
-            "name_exists": "Имя уже используется",
-            "invalid_key": "Login failed, invalid API key.",
-            "invalid_hostname": "Connection failed, invalid hostname.",
-            "connection_refused": "Connection failed, connection refused.",
-            "handshake_timeout": "Connection failed, timed out while waiting for handshake response.",
-            "api_not_found": "Connection failed, API not found.",
-            "malformed_result": "API response is malformed.",
-            "certificate_verify_failed": "Certificate verification failed.",
-            "http_used": "The plain HTTP request was sent to HTTPS port. Reverse proxy?",
-            "tlsv1_not_supported": "TLSv1 not supported. Reverse proxy?",
-            "websocket_not_supported": "WebSocket not supported. Reverse proxy?",
-            "unknown_hostname": "Unknown hostname, check DNS."
+            "name_exists": "Такое название уже существует.",
+            "certificate_verify_failed": "Не удалось проверить сертификат. Если TrueNAS использует самоподписанный сертификат, отключите «Проверять сертификат SSL».",
+            "http_used": "Запрос HTTP отправлен на порт HTTPS. Обратный прокси?",
+            "tlsv1_not_supported": "TLSv1 не поддерживается. Обратный прокси?",
+            "websocket_not_supported": "WebSocket не поддерживается. Обратный прокси?",
+            "invalid_key": "Не удалось войти, неверный ключ API.",
+            "invalid_hostname": "Не удалось подключиться, неверное имя хоста.",
+            "unknown_hostname": "Неизвестное имя хоста, проверьте DNS.",
+            "connection_refused": "Не удалось подключиться, в подключении отказано.",
+            "handshake_timeout": "Не удалось подключиться, истекло время ожидания ответа.",
+            "api_not_found": "Не удалось подключиться, API не найден.",
+            "malformed_result": "Некорректный ответ API.",
+            "cannot_connect": "Не удалось подключиться к TrueNAS. Проверьте хост и работу TrueNAS."
         },
         "abort": {
-            "reconfigure_successful": "Reconfigure successful."
+            "reconfigure_successful": "Перенастройка выполнена.",
+            "reauth_successful": "Повторная аутентификация выполнена.",
+            "already_configured": "Эта система TrueNAS уже настроена.",
+            "unique_id_mismatch": "Это другая система TrueNAS. Чтобы добавить её, используйте «Добавить запись»."
+        }
+    },
+    "selector": {
+        "access_level": {
+            "options": {
+                "admin": "Администратор (датчики, действия и обновления)",
+                "read_only": "Только чтение (только датчики)"
+            }
+        }
+    },
+    "exceptions": {
+        "read_only_action": {
+            "message": "{entity} относится к записи TrueNAS с доступом только для чтения. Чтобы использовать действия, установите уровень доступа «Администратор» через перенастройку."
+        },
+        "action_unreachable": {
+            "message": "Не удалось связаться с TrueNAS для выполнения {method}."
+        },
+        "action_rejected": {
+            "message": "TrueNAS отклонил {method}: {reason}"
+        },
+        "action_failed": {
+            "message": "TrueNAS не смог выполнить {method}."
+        },
+        "action_invalid_response": {
+            "message": "TrueNAS вернул данные, которые нельзя использовать для {name}."
+        },
+        "invalid_state": {
+            "message": "{name} в состоянии {state}, поэтому {action} неприменимо."
+        },
+        "scrub_boot_pool": {
+            "message": "Действия scrub недоступны для загрузочного пула {name}."
+        }
+    },
+    "entity": {
+        "sensor": {
+            "system_uptime": {
+                "name": "Время работы"
+            },
+            "system_cpu_temperature": {
+                "name": "Температура"
+            },
+            "system_load_shortterm": {
+                "name": "Краткосрочная нагрузка ЦП"
+            },
+            "system_load_midterm": {
+                "name": "Среднесрочная нагрузка ЦП"
+            },
+            "system_load_longterm": {
+                "name": "Долгосрочная нагрузка ЦП"
+            },
+            "system_cpu_usage": {
+                "name": "Использование ЦП"
+            },
+            "system_memory_usage": {
+                "name": "Использование памяти"
+            },
+            "system_cache_size-arc_value": {
+                "name": "Размер ARC"
+            },
+            "system_alerts": {
+                "name": "Оповещения"
+            },
+            "pool_free": {
+                "name": "{name} свободно"
+            },
+            "pool_scan": {
+                "name": "{name} сканирование",
+                "state": {
+                    "idle": "Простой",
+                    "scrubbing": "Выполняется scrub",
+                    "paused": "Приостановлено",
+                    "resilvering": "Выполняется resilver"
+                }
+            },
+            "pool_last_scrub": {
+                "name": "{name} последний scrub"
+            },
+            "pool_errors": {
+                "name": "{name} ошибки"
+            },
+            "traffic_rx": {
+                "name": "{name} RX"
+            },
+            "traffic_tx": {
+                "name": "{name} TX"
+            }
+        },
+        "binary_sensor": {
+            "system_alerts_critical": {
+                "name": "Критические оповещения"
+            },
+            "system_reboot_required": {
+                "name": "Требуется перезагрузка"
+            },
+            "pool_healthy": {
+                "name": "{name} исправен"
+            }
         }
     }
 }

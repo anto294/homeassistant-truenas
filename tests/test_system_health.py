@@ -103,6 +103,34 @@ def test_failed_alert_query_keeps_values_and_creates_no_entity(connected_api):
     assert api.connected()
 
 
+def test_reboot_required_reports_the_reasons(connected_api):
+    """Pending reasons turn the sensor on and are kept as text."""
+    info = {
+        "boot_id": "abc",
+        "reboot_required_reasons": [{"code": "FIPS", "reason": "FIPS changed"}],
+    }
+    api, ws = connected_api(_reply(result=info))
+    coordinator = _coordinator(api)
+
+    coordinator.get_rebootinfo()
+
+    assert ws.requests[0]["method"] == "system.reboot.info"
+    assert coordinator.ds["system_info"]["reboot_required"] is True
+    assert coordinator.ds["system_info"]["reboot_required_reasons"] == ["FIPS changed"]
+
+
+def test_no_reboot_reasons_means_no_reboot_required(connected_api):
+    """An empty list means no reboot is required."""
+    api, _ = connected_api(
+        _reply(result={"boot_id": "abc", "reboot_required_reasons": []})
+    )
+    coordinator = _coordinator(api)
+
+    coordinator.get_rebootinfo()
+
+    assert coordinator.ds["system_info"]["reboot_required"] is False
+
+
 def test_system_level_binary_sensors_can_be_created():
     """async_add_entities reads data_attribute when there is no data_reference."""
     for description in SENSOR_TYPES:

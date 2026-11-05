@@ -9,6 +9,7 @@ PLATFORMS = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
     Platform.UPDATE,
+    Platform.SWITCH,
 ]
 
 DOMAIN = "truenas_link"

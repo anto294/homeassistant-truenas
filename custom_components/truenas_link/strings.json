@@ -11,7 +11,7 @@
                     "verify_ssl": "Verify SSL certificate"
                 },
                 "data_description": {
-                    "access_level": "Read-only hides the actions and the install buttons. All entities stay available. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too."
+                    "access_level": "Read-only removes the actions, the install buttons and the cron job switches, and keeps every sensor. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too."
                 }
             },
             "reconfigure": {
@@ -23,7 +23,7 @@
                     "verify_ssl": "Verify SSL certificate"
                 },
                 "data_description": {
-                    "access_level": "Read-only hides the actions and the install buttons. All entities stay available. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too."
+                    "access_level": "Read-only removes the actions, the install buttons and the cron job switches, and keeps every sensor. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too."
                 }
             }
         },
@@ -48,8 +48,8 @@
     "selector": {
         "access_level": {
             "options": {
-                "admin": "Administrator (entities, actions and updates)",
-                "read_only": "Read-only (entities only)"
+                "admin": "Administrator (sensors, actions and updates)",
+                "read_only": "Read-only (sensors only)"
             }
         }
     },

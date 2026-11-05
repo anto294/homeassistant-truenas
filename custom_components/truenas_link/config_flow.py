@@ -10,6 +10,7 @@ import voluptuous as vol
 
 from homeassistant.config_entries import (
     CONN_CLASS_LOCAL_POLL,
+    ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
 )
@@ -140,6 +141,8 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Initialize the config flow."""
         self.truenas_config: dict[str, Any] = {}
+        # From the last connection test, None if TrueNAS did not give it
+        self._system_id: str | None = None
 
     async def _async_connection_error(
         self, host: str, api_key: str, verify_ssl: bool
@@ -150,10 +153,23 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         conn, errorcode = await self.hass.async_add_executor_job(api.connection_test)
         if conn:
+            self._system_id = api.system_id
             return None
 
         _LOGGER.error("TrueNAS connection error (%s)", errorcode)
         return errorcode
+
+    async def _async_abort_if_other_system(self, entry: ConfigEntry) -> None:
+        """Stop a form from pointing an entry to another TrueNAS system.
+
+        A new address for the same system is fine. An entry without a unique id
+        has nothing to compare with, and neither has a system that gives no id.
+        """
+        if entry.unique_id is None or self._system_id is None:
+            return
+
+        await self.async_set_unique_id(self._system_id, raise_on_progress=False)
+        self._abort_if_unique_id_mismatch()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -177,6 +193,9 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
             )
             if errorcode is not None:
                 errors[CONF_HOST] = errorcode
+            elif self._system_id is not None:
+                await self.async_set_unique_id(self._system_id, raise_on_progress=False)
+                self._abort_if_unique_id_configured()
 
             # Save instance
             if not errors:
@@ -214,6 +233,8 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
             )
             if errorcode is not None:
                 errors[CONF_HOST] = errorcode
+            else:
+                await self._async_abort_if_other_system(reconfigure_entry)
 
             # Save instance
             if not errors:
@@ -253,6 +274,7 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
                 reauth_entry.data[CONF_VERIFY_SSL],
             )
             if errorcode is None:
+                await self._async_abort_if_other_system(reauth_entry)
                 return self.async_update_reload_and_abort(
                     reauth_entry, data_updates=user_input
                 )

@@ -21,6 +21,15 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   Reconfigure no longer sends the stored key to the browser: leave the field
   empty to keep it.
 
+### Changed
+
+- **The same TrueNAS system can no longer be added twice**, whatever its name or
+  address. Reconfigure and reauthentication refuse an address or key that leads
+  to another system, and still accept a new address for the same one. Existing
+  entries get their system's id at startup. If you already have two entries for
+  one system, both keep working and the log says so: remove one if you do not need
+  it.
+
 ### Fixed
 
 - The link to TrueNAS on the System device now uses HTTPS, the only protocol the

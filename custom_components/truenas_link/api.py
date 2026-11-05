@@ -94,6 +94,8 @@ class TrueNASAPI(object):
         self._error_logged = False
         # What each method last failed with, to log a repeated failure once
         self._failed_methods: dict[str, str] = {}
+        # Set by connection_test
+        self.system_id: str | None = None
 
     # ---------------------------
     #   connect
@@ -205,11 +207,27 @@ class TrueNASAPI(object):
         try:
             self.connect()
             if self.connected():
+                self.system_id = self.read_system_id()
+                # Last, because each query replaces the error code
                 self.query("system.info")
 
             return self._connected, self._error
         finally:
             self.disconnect()
+
+    # ---------------------------
+    #   read_system_id
+    # ---------------------------
+    def read_system_id(self) -> str | None:
+        """Return the UUID that identifies this TrueNAS system, None if unknown.
+
+        system.global.id is a value of the system's configuration, so it stays the
+        same when the address changes, and it is not tied to the hardware, unlike
+        a serial number, which can be empty or repeated on virtual machines. It
+        needs READONLY_ADMIN, and both controllers of an HA system share it.
+        """
+        system_id = self.query("system.global.id")
+        return system_id if isinstance(system_id, str) and system_id else None
 
     # ---------------------------
     #   query

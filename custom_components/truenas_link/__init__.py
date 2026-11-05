@@ -21,7 +21,12 @@ from .entity import system_device_info
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up TrueNAS config entry."""
     coordinator = TrueNASCoordinator(hass, config_entry)
-    await coordinator.async_config_entry_first_refresh()
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except Exception:
+        # A setup retry starts over with a new coordinator and connection
+        await hass.async_add_executor_job(coordinator.api.disconnect)
+        raise
 
     # Register the parent "System" device first, so child devices (Disks,
     # VMs, Apps, ...) can link to its device id whatever platform is set up
@@ -46,6 +51,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     if unload_ok := await hass.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     ):
-        hass.data[DOMAIN].pop(config_entry.entry_id)
+        coordinator = hass.data[DOMAIN].pop(config_entry.entry_id)
+        await hass.async_add_executor_job(coordinator.api.disconnect)
 
     return unload_ok

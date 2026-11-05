@@ -5,9 +5,13 @@ from __future__ import annotations
 import logging
 import ssl
 
+from unittest.mock import patch
+
 from homeassistant.util.ssl import client_context, get_default_no_verify_context
 
 from custom_components.truenas_link.api import TrueNASAPI
+
+from .conftest import FakeWebSocket
 
 # update.status on TrueNAS 25.10 for a system that is up to date. The
 # "error": null key is part of the method's own result, not a JSON-RPC error.
@@ -110,3 +114,100 @@ def test_ssl_context_without_verification():
     assert api._ssl_context is get_default_no_verify_context()
     assert api._ssl_context.verify_mode == ssl.CERT_NONE
     assert not api._ssl_context.check_hostname
+
+
+def _login(result=True):
+    """Build a responder that answers a login with `result`, and queries with []."""
+
+    def responder(request):
+        if request["method"] == "auth.login_with_api_key":
+            return {"id": request["id"], "result": result}
+        return {"id": request["id"], "result": []}
+
+    return responder
+
+
+def _api_with(*sockets):
+    """Return an API and the patch that makes connect() hand out `sockets`."""
+    api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=False)
+    return api, patch(
+        "custom_components.truenas_link.api.connect", side_effect=list(sockets)
+    )
+
+
+def test_rejected_login_closes_the_socket():
+    """A wrong key leaves no connection open."""
+    ws = FakeWebSocket(_login(False))
+    api, connect = _api_with(ws)
+
+    with connect:
+        assert api.connect() is False
+
+    assert ws.closed
+    assert api.error == "invalid_key"
+    assert not api.connected()
+
+
+def test_login_exception_closes_the_socket():
+    """A login that raises, here on a reply without a result, leaves nothing open."""
+    ws = FakeWebSocket(lambda request: {"id": request["id"]})
+    api, connect = _api_with(ws)
+
+    with connect:
+        assert api.connect() is False
+
+    assert ws.closed
+    assert not api.connected()
+
+
+def test_connect_closes_a_socket_that_is_still_open():
+    """connect() never loses track of a previous connection."""
+    first = FakeWebSocket(_login())
+    second = FakeWebSocket(_login())
+    api, connect = _api_with(first, second)
+
+    with connect:
+        assert api.connect()
+        assert api.connect()
+
+    assert first.closed
+    assert not second.closed
+    assert api.connected()
+
+
+def test_disconnect_survives_a_close_that_fails():
+    """disconnect() does not raise, and the API counts as disconnected."""
+    ws = FakeWebSocket(_login())
+    ws.close = lambda: (_ for _ in ()).throw(OSError("broken pipe"))
+    api, connect = _api_with(ws)
+
+    with connect:
+        assert api.connect()
+
+    assert api.disconnect() is False
+    assert not api.connected()
+    # Nothing is left to close
+    assert api.disconnect() is False
+
+
+def test_connection_test_disconnects_and_reports_success():
+    """A successful test closes its connection and still reports the outcome."""
+    ws = FakeWebSocket(_login())
+    api, connect = _api_with(ws)
+
+    with connect:
+        assert api.connection_test() == (True, "")
+
+    assert ws.closed
+    assert not api.connected()
+
+
+def test_connection_test_keeps_the_error_code():
+    """A failed test closes its connection and reports why it failed."""
+    ws = FakeWebSocket(_login(False))
+    api, connect = _api_with(ws)
+
+    with connect:
+        assert api.connection_test() == (False, "invalid_key")
+
+    assert ws.closed

@@ -17,8 +17,6 @@ _LOGGER = getLogger(__name__)
 class TrueNASAPI(object):
     """Handle all communication with TrueNAS."""
 
-    _ws: ClientConnection
-
     def __init__(
         self,
         host: str,
@@ -37,6 +35,7 @@ class TrueNASAPI(object):
         )
 
         self.lock = Lock()
+        self._ws: ClientConnection | None = None
         self._connected = False
         self._error = ""
         self._error_logged = False
@@ -47,7 +46,9 @@ class TrueNASAPI(object):
     def connect(self) -> bool:
         """Return connected boolean."""
         with self.lock:
-            self._connected = False
+            # Each connection has threads of its own, so never lose track of
+            # one by overwriting it
+            self.disconnect()
             self._error = ""
             try:
                 self._ws = connect(
@@ -105,11 +106,13 @@ class TrueNASAPI(object):
                 self._connected = data["result"]
                 if not self._connected:
                     self._error = "invalid_key"
+                    self.disconnect()
 
             except Exception as e:
                 if not self._error_logged:
                     _LOGGER.error("TrueNAS %s failed to login (%s)", self._host, e)
 
+                self.disconnect()
                 self._error_logged = True
                 return False
 
@@ -120,11 +123,16 @@ class TrueNASAPI(object):
     #   disconnect
     # ---------------------------
     def disconnect(self) -> bool:
-        """Return connected boolean."""
-        if hasattr(self, "_ws") and self._ws:
-            self._ws.close()
-
+        """Close the connection, if any, and return connected boolean."""
+        ws, self._ws = self._ws, None
         self._connected = False
+        if ws:
+            try:
+                ws.close()
+            except Exception as e:
+                # The connection is gone either way
+                _LOGGER.debug("TrueNAS %s failed to disconnect (%s)", self._host, e)
+
         return self._connected
 
     # ---------------------------
@@ -147,12 +155,15 @@ class TrueNASAPI(object):
     #   connection_test
     # ---------------------------
     def connection_test(self) -> tuple:
-        """Test connection."""
-        self.connect()
-        if self.connected():
-            self.query("system.info")
+        """Return whether a connection and a query work, and the error code."""
+        try:
+            self.connect()
+            if self.connected():
+                self.query("system.info")
 
-        return self._connected, self._error
+            return self._connected, self._error
+        finally:
+            self.disconnect()
 
     # ---------------------------
     #   query

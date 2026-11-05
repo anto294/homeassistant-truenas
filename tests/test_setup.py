@@ -19,7 +19,7 @@ def test_reconfigure_reloads_the_entry_once(run_in_hass):
 
     async def scenario(hass, server):
         entry = await async_add_entry(hass)
-        coordinator = hass.data[DOMAIN][entry.entry_id]
+        coordinator = entry.runtime_data
         assert entry.state is ConfigEntryState.LOADED
         assert not entry.update_listeners
         connections = len(server.sockets)
@@ -45,7 +45,7 @@ def test_reconfigure_reloads_the_entry_once(run_in_hass):
         assert result["reason"] == "reconfigure_successful"
         assert entry.data["host"] == "nas2"
         assert entry.state is ConfigEntryState.LOADED
-        reloaded = hass.data[DOMAIN][entry.entry_id]
+        reloaded = entry.runtime_data
         assert reloaded is not coordinator
         assert reloaded.read_only
         # One connection for the flow's test and one for a single reload
@@ -173,7 +173,7 @@ def test_reconfigure_shows_the_stored_verify_ssl(run_in_hass, stored):
 
     async def scenario(hass, _server):
         entry = await async_add_entry(hass, verify_ssl=stored)
-        assert hass.data[DOMAIN][entry.entry_id].api._ssl_verify is stored
+        assert entry.runtime_data.api._ssl_verify is stored
 
         flow = await _reconfigure_flow(hass, entry)
 
@@ -440,7 +440,7 @@ def test_connection_lost_during_a_poll_fails_the_poll(run_in_hass):
 
     async def scenario(hass, server):
         entry = await async_add_entry(hass)
-        coordinator = hass.data[DOMAIN][entry.entry_id]
+        coordinator = entry.runtime_data
         states = [state.entity_id for state in hass.states.async_all()]
         assert states
         connections = len(server.sockets)

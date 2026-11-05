@@ -6,7 +6,6 @@ from collections.abc import Mapping, Sequence
 from logging import getLogger
 from typing import Any, Callable
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ATTRIBUTION, CONF_HOST, CONF_NAME
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
@@ -25,7 +24,7 @@ from .const import (
     ATTRIBUTION,
     DOMAIN,
 )
-from .coordinator import TrueNASCoordinator
+from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
 from .helper import format_attribute, is_read_only
 
 _LOGGER = getLogger(__name__)
@@ -169,7 +168,7 @@ def async_update_services(
 # ---------------------------
 async def async_add_entities(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: TrueNASConfigEntry,
     dispatcher: dict[str, Callable],
     descriptions: Sequence[Any],
     services: Sequence[Sequence[Any]],
@@ -221,7 +220,7 @@ async def async_add_entities(
                     )
                     await async_check_exist(obj, coordinator, uid)
 
-    await async_update_controller(hass.data[DOMAIN][config_entry.entry_id])
+    await async_update_controller(config_entry.runtime_data)
 
     unsub = async_dispatcher_connect(hass, "update_sensors", async_update_controller)
     config_entry.async_on_unload(unsub)

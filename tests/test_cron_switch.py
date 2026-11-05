@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock, MagicMock
 from homeassistant.helpers.entity import EntityCategory
 
 from custom_components.truenas_link import switch as switch_module
-from custom_components.truenas_link.const import DOMAIN
 from custom_components.truenas_link.coordinator import TrueNASCoordinator
 from custom_components.truenas_link.switch import TrueNASCronJobSwitch
 from custom_components.truenas_link.switch_types import SENSOR_TYPES
@@ -117,11 +116,11 @@ def test_switch_only_sends_enabled():
     )
 
 
-def _hass_for(read_only):
-    """Return a stand-in hass whose entry has the given access level."""
-    hass = MagicMock()
-    hass.data = {DOMAIN: {"entry": SimpleNamespace(read_only=read_only)}}
-    return hass
+def _entry_for(read_only):
+    """Return a stand-in config entry with the given access level."""
+    return SimpleNamespace(
+        entry_id="entry", runtime_data=SimpleNamespace(read_only=read_only)
+    )
 
 
 def test_read_only_setup_removes_switches_and_adds_none(monkeypatch):
@@ -130,8 +129,8 @@ def test_read_only_setup_removes_switches_and_adds_none(monkeypatch):
     remove = MagicMock()
     monkeypatch.setattr(switch_module, "async_add_entities", add)
     monkeypatch.setattr(switch_module, "async_remove_switches", remove)
-    hass = _hass_for(True)
-    entry = SimpleNamespace(entry_id="entry")
+    hass = MagicMock()
+    entry = _entry_for(True)
 
     asyncio.run(switch_module.async_setup_entry(hass, entry, None))
 
@@ -146,11 +145,7 @@ def test_administrator_setup_adds_switches(monkeypatch):
     monkeypatch.setattr(switch_module, "async_add_entities", add)
     monkeypatch.setattr(switch_module, "async_remove_switches", remove)
 
-    asyncio.run(
-        switch_module.async_setup_entry(
-            _hass_for(False), SimpleNamespace(entry_id="entry"), None
-        )
-    )
+    asyncio.run(switch_module.async_setup_entry(MagicMock(), _entry_for(False), None))
 
     add.assert_awaited_once()
     remove.assert_not_called()

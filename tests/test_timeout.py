@@ -143,7 +143,7 @@ def test_action_without_answer_is_an_error_unless_it_stops_truenas(run_in_hass):
 
     async def scenario(hass, server):
         entry = await async_add_entry(hass)
-        coordinator = hass.data[DOMAIN][entry.entry_id]
+        coordinator = entry.runtime_data
         entity = SimpleNamespace(hass=hass, coordinator=coordinator)
         server.unanswered = {"cronjob.update", "system.reboot"}
 
@@ -171,7 +171,7 @@ def test_login_without_answer_does_not_ask_for_a_new_key(run_in_hass):
 
     async def scenario(hass, server):
         entry = await async_add_entry(hass)
-        coordinator = hass.data[DOMAIN][entry.entry_id]
+        coordinator = entry.runtime_data
         coordinator.api.disconnect()
         server.unanswered = {"auth.login_with_api_key"}
 

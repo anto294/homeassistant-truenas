@@ -91,16 +91,19 @@ def topology_errors(topology: Any) -> dict[str, int]:
     return errors
 
 
+type TrueNASConfigEntry = ConfigEntry[TrueNASCoordinator]
+
+
 # ---------------------------
 #   TrueNASControllerData
 # ---------------------------
 class TrueNASCoordinator(DataUpdateCoordinator[None]):
     """TrueNASCoordinator Class."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry):
+    def __init__(self, hass: HomeAssistant, config_entry: TrueNASConfigEntry):
         """Initialize TrueNASCoordinator."""
         self.hass = hass
-        self.config_entry: ConfigEntry = config_entry
+        self.config_entry: TrueNASConfigEntry = config_entry
 
         super().__init__(
             self.hass,

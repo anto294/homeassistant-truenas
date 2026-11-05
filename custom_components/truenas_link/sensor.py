@@ -6,14 +6,13 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import BOOT_POOL_NAMES, DOMAIN, SCAN_IDLE, SCAN_PAUSED, SCAN_SCRUBBING
-from .coordinator import TrueNASCoordinator
+from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
 from .entity import (
     TrueNASEntity,
     async_add_entities,
@@ -34,7 +33,7 @@ JOB_ACTIVE_STATES = ("WAITING", "RUNNING")
 # ---------------------------
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: TrueNASConfigEntry,
     _async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up entry for TrueNAS component."""

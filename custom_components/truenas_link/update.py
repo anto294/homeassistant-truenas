@@ -59,8 +59,9 @@ class TrueNASUpdate(TrueNASEntity, UpdateEntity):
         """Set up device update entity."""
         super().__init__(coordinator, entity_description, uid)
 
-        self._attr_supported_features = UpdateEntityFeature.INSTALL
-        self._attr_supported_features |= UpdateEntityFeature.PROGRESS
+        if not coordinator.read_only:
+            self._attr_supported_features = UpdateEntityFeature.INSTALL
+            self._attr_supported_features |= UpdateEntityFeature.PROGRESS
         self._attr_title = self.entity_description.title
 
     @property
@@ -121,7 +122,8 @@ class TrueNASAppUpdate(TrueNASEntity, UpdateEntity):
         """Set up device update entity."""
         super().__init__(coordinator, entity_description, uid)
 
-        self._attr_supported_features = UpdateEntityFeature.INSTALL
+        if not coordinator.read_only:
+            self._attr_supported_features = UpdateEntityFeature.INSTALL
 
     @property
     def installed_version(self) -> str:

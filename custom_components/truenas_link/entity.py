@@ -8,13 +8,15 @@ from typing import Any, Callable
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ATTRIBUTION, CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import (
     entity_platform as ep,
     entity_registry as er,
 )
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, Entity
+from homeassistant.helpers.service import remove_entity_service_fields
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
@@ -23,7 +25,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import TrueNASCoordinator
-from .helper import format_attribute
+from .helper import format_attribute, is_read_only
 
 _LOGGER = getLogger(__name__)
 
@@ -82,6 +84,58 @@ def build_entity_id(domain: str, inst: str, group: Any, name: Any) -> str:
 
 
 # ---------------------------
+#   entity_service_handler
+# ---------------------------
+def entity_service_handler(method: str) -> Callable:
+    """Return the handler of an entity service that runs the entity's `method`.
+
+    An action can still reach an entity with read-only access: services are
+    shared by all entries of the integration, so another entry with
+    Administrator access keeps them registered. Refuse it here, because the
+    API key of that entity may well be allowed to do it.
+    """
+
+    async def handler(entity: TrueNASEntity, call: ServiceCall) -> None:
+        """Run the method unless the entity's entry is read-only."""
+        if entity.coordinator.read_only:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="read_only_action",
+                translation_placeholders={"entity": entity.entity_id},
+            )
+
+        await getattr(entity, method)(**remove_entity_service_fields(call))
+
+    return handler
+
+
+# ---------------------------
+#   async_update_services
+# ---------------------------
+def async_update_services(
+    hass: HomeAssistant,
+    platform: ep.EntityPlatform,
+    services: Sequence[Sequence[Any]],
+) -> None:
+    """Offer the platform's actions only if an entry can use them.
+
+    Home Assistant keeps entity services after a config entry is unloaded,
+    so switching the last Administrator entry to read-only has to remove them.
+    """
+    has_admin_entry = any(
+        not entry.disabled_by and not is_read_only(entry.data)
+        for entry in hass.config_entries.async_entries(DOMAIN)
+    )
+    for service in services:
+        if has_admin_entry:
+            platform.async_register_entity_service(
+                service[0], service[1], entity_service_handler(service[2])
+            )
+        elif hass.services.has_service(DOMAIN, service[0]):
+            hass.services.async_remove(DOMAIN, service[0])
+
+
+# ---------------------------
 #   async_add_entities
 # ---------------------------
 async def async_add_entities(
@@ -98,8 +152,7 @@ async def async_add_entities(
     """
     platform = ep.async_get_current_platform()
 
-    for service in services:
-        platform.async_register_entity_service(service[0], service[1], service[2])
+    async_update_services(hass, platform, services)
 
     @callback
     async def async_update_controller(coordinator):

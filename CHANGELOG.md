@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- TrueNAS Link is now in the HACS default repositories: search for it in
+  HACS, without adding a custom repository. The README is updated to match.
+
 ### Fixed
 
 - The 2.0.0 upgrade steps (README and changelog) told 1.x users to update

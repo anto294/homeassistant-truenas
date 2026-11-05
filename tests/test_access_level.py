@@ -16,7 +16,6 @@ from custom_components.truenas_link.const import (
     ACCESS_LEVEL_ADMIN,
     ACCESS_LEVEL_READ_ONLY,
     CONF_ACCESS_LEVEL,
-    DOMAIN,
 )
 from custom_components.truenas_link.helper import is_read_only
 from custom_components.truenas_link.update_types import SENSOR_TYPES

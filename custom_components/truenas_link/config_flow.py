@@ -20,8 +20,17 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
 )
 from homeassistant.core import callback
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from .const import (
+    ACCESS_LEVEL_ADMIN,
+    ACCESS_LEVEL_READ_ONLY,
+    CONF_ACCESS_LEVEL,
+    DEFAULT_ACCESS_LEVEL,
     DEFAULT_DEVICE_NAME,
     DEFAULT_HOST,
     DEFAULT_SSL_VERIFY,
@@ -30,6 +39,17 @@ from .const import (
 from .api import TrueNASAPI
 
 _LOGGER = getLogger(__name__)
+
+
+def _access_level_selector() -> SelectSelector:
+    """Return the selector for the level of access the API key is used with."""
+    return SelectSelector(
+        SelectSelectorConfig(
+            options=[ACCESS_LEVEL_ADMIN, ACCESS_LEVEL_READ_ONLY],
+            mode=SelectSelectorMode.DROPDOWN,
+            translation_key=CONF_ACCESS_LEVEL,
+        )
+    )
 
 
 def _base_schema(truenas_config: Mapping[str, Any]) -> vol.Schema:
@@ -42,6 +62,10 @@ def _base_schema(truenas_config: Mapping[str, Any]) -> vol.Schema:
             CONF_HOST, default=truenas_config.get(CONF_HOST) or DEFAULT_HOST
         ): str,
         vol.Required(CONF_API_KEY, default=truenas_config.get(CONF_API_KEY) or ""): str,
+        vol.Required(
+            CONF_ACCESS_LEVEL,
+            default=truenas_config.get(CONF_ACCESS_LEVEL) or DEFAULT_ACCESS_LEVEL,
+        ): _access_level_selector(),
         vol.Required(
             CONF_VERIFY_SSL,
             default=truenas_config.get(CONF_VERIFY_SSL) or DEFAULT_SSL_VERIFY,
@@ -58,6 +82,10 @@ def _reconfigure_schema(truenas_config: Mapping[str, Any]) -> vol.Schema:
             CONF_HOST, default=truenas_config.get(CONF_HOST) or DEFAULT_HOST
         ): str,
         vol.Required(CONF_API_KEY, default=truenas_config.get(CONF_API_KEY) or ""): str,
+        vol.Required(
+            CONF_ACCESS_LEVEL,
+            default=truenas_config.get(CONF_ACCESS_LEVEL) or DEFAULT_ACCESS_LEVEL,
+        ): _access_level_selector(),
         vol.Required(
             CONF_VERIFY_SSL,
             default=truenas_config.get(CONF_VERIFY_SSL) or DEFAULT_SSL_VERIFY,

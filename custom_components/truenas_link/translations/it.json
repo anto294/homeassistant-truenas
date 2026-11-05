@@ -7,7 +7,11 @@
                     "name": "Nome dell'integrazione",
                     "host": "Host",
                     "api_key": "Chiave API",
+                    "access_level": "Livello di accesso",
                     "verify_ssl": "Verifica il certificato SSL"
+                },
+                "data_description": {
+                    "access_level": "Sola lettura nasconde le azioni e i pulsanti di installazione. Tutte le entità restano disponibili. Usa una chiave API con il ruolo READONLY_ADMIN, così lo impone anche TrueNAS."
                 }
             },
             "reconfigure": {
@@ -15,7 +19,11 @@
                 "data": {
                     "host": "Host",
                     "api_key": "Chiave API",
+                    "access_level": "Livello di accesso",
                     "verify_ssl": "Verifica il certificato SSL"
+                },
+                "data_description": {
+                    "access_level": "Sola lettura nasconde le azioni e i pulsanti di installazione. Tutte le entità restano disponibili. Usa una chiave API con il ruolo READONLY_ADMIN, così lo impone anche TrueNAS."
                 }
             }
         },
@@ -35,6 +43,19 @@
         },
         "abort": {
             "reconfigure_successful": "Riconfigurazione completata."
+        }
+    },
+    "selector": {
+        "access_level": {
+            "options": {
+                "admin": "Amministratore (entità, azioni e aggiornamenti)",
+                "read_only": "Sola lettura (solo entità)"
+            }
+        }
+    },
+    "exceptions": {
+        "read_only_action": {
+            "message": "{entity} appartiene a una voce TrueNAS con accesso in sola lettura. Per usare le sue azioni, imposta il livello di accesso su Amministratore con Riconfigura."
         }
     }
 }

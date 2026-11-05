@@ -21,6 +21,12 @@ DEFAULT_USERNAME = "admin"
 DEFAULT_DEVICE_NAME = "TrueNAS"
 DEFAULT_SSL_VERIFY = False
 
+CONF_ACCESS_LEVEL = "access_level"
+ACCESS_LEVEL_ADMIN = "admin"
+ACCESS_LEVEL_READ_ONLY = "read_only"
+# Entries created before the option existed have always had every action
+DEFAULT_ACCESS_LEVEL = ACCESS_LEVEL_ADMIN
+
 TO_REDACT = {
     "username",
     "password",

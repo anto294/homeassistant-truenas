@@ -7,6 +7,8 @@ import importlib
 
 import pytest
 
+from custom_components.truenas_link.const import PLATFORMS
+
 
 @pytest.mark.parametrize(
     ("platform", "types_module"),
@@ -37,3 +39,11 @@ def test_platform_passes_its_own_descriptions_and_services(
     assert received["services"] is types.SENSOR_SERVICES
     # Every description's entity class is in the platform's dispatcher
     assert {d.func for d in types.SENSOR_TYPES} <= set(received["dispatcher"])
+
+
+@pytest.mark.parametrize("platform", [platform.value for platform in PLATFORMS])
+def test_platform_sets_parallel_updates(platform):
+    """Every platform says how many actions it runs at a time."""
+    module = importlib.import_module(f"custom_components.truenas_link.{platform}")
+
+    assert module.PARALLEL_UPDATES == 1

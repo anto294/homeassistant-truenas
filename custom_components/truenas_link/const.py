@@ -60,6 +60,8 @@ TO_REDACT = {
     "notes",
     "comments",
     "description",
+    # A copy of a cron job's description
+    "cron_name",
     "user_properties",
     "command",
     "command_line_args",

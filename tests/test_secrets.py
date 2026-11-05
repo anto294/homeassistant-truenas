@@ -305,3 +305,25 @@ def test_free_text_fields_stay_out_of_both_debug_logs(
     assert {API_LOGGER, PARSER_LOGGER} <= {record.name for record in caplog.records}
     assert "visible-name" in caplog.text
     assert FAKE_SECRET not in caplog.text
+
+
+def test_diagnostics_hide_a_cron_jobs_description_and_its_copy(run_in_hass):
+    """cron_name repeats a description, which can hold anything."""
+
+    async def scenario(hass, server):
+        server.results["cronjob.query"] = [
+            {
+                "id": 1,
+                "description": FAKE_SECRET,
+                "enabled": True,
+                "schedule": {"minute": "0"},
+            }
+        ]
+        entry = await async_add_entry(hass)
+
+        ds = hass.data[DOMAIN][entry.entry_id].ds
+        assert ds["cronjob"][1]["cron_name"] == FAKE_SECRET
+        diagnostics = await async_get_config_entry_diagnostics(hass, entry)
+        assert FAKE_SECRET not in json.dumps(diagnostics, default=str)
+
+    run_in_hass(scenario)

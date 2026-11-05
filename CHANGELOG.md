@@ -15,6 +15,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   arguments, job output and alert text. Diagnostics hide them too. Text in a
   field the integration does not know about can still reach the debug log, so
   check a log before sharing it.
+- Diagnostics also hide the names of cron job switches, which repeat the job's
+  description.
 - The setup, Reconfigure and reauthentication forms now mask the API key.
   Reconfigure no longer sends the stored key to the browser: leave the field
   empty to keep it.

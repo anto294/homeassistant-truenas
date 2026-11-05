@@ -100,7 +100,7 @@ See [Security](#security) for what the level does and does not protect against.
 
 ## Entities
 
-Data is polled every 60 seconds; available updates are checked every 12 hours.
+Data is polled every 60 seconds; available updates are checked every 12 hours. If TrueNAS reports no value for a sensor, its state is unknown, not 0. A value of 0 that TrueNAS does report stays 0. On a virtual TrueNAS, which has no such reading, CPU temperature stays unknown.
 
 | Device | Entity | Type | Notes |
 |---|---|---|---|

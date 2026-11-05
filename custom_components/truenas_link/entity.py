@@ -157,8 +157,10 @@ async def async_add_entities(
             data = coordinator.data[description.data_path]
             factory = dispatcher[description.func]
             if not description.data_reference:
+                # A value of None is an entity with an unknown state. Without the
+                # key, such as when alerts could not be read yet, there is none.
                 if (
-                    data.get(description.data_attribute) is not None
+                    description.data_attribute in data
                     and (description.key, None) not in known
                 ):
                     known.add((description.key, None))

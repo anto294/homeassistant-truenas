@@ -288,17 +288,19 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 {"name": "physmem", "default": 0},
             ],
             ensure_vals=[
-                {"name": "uptimeEpoch", "default": 0},
-                {"name": "cpu_temperature", "default": 0.0},
-                {"name": "load_shortterm", "default": 0.0},
-                {"name": "load_midterm", "default": 0.0},
-                {"name": "load_longterm", "default": 0.0},
-                {"name": "cpu_usage", "default": 0.0},
-                {"name": "cache_size-arc_value", "default": 0.0},
-                {"name": "memory-used_value", "default": 0.0},
-                {"name": "memory-free_value", "default": 0.0},
-                {"name": "memory-total_value", "default": 0.0},
-                {"name": "memory-usage_percent", "default": 0},
+                # None: the entity exists, and its state is unknown until TrueNAS
+                # reports a value. A default of 0 would show as a real reading.
+                {"name": "uptimeEpoch", "default": None},
+                {"name": "cpu_temperature", "default": None},
+                {"name": "load_shortterm", "default": None},
+                {"name": "load_midterm", "default": None},
+                {"name": "load_longterm", "default": None},
+                {"name": "cpu_usage", "default": None},
+                {"name": "cache_size-arc_value", "default": None},
+                {"name": "memory-used_value", "default": None},
+                {"name": "memory-free_value", "default": None},
+                {"name": "memory-total_value", "default": None},
+                {"name": "memory-usage_percent", "default": None},
                 {"name": "update_available", "type": "bool", "default": False},
                 {"name": "update_progress", "default": 0},
                 {"name": "update_jobid", "default": 0},
@@ -394,8 +396,8 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 },
             ],
             ensure_vals=[
-                {"name": "rx", "default": 0},
-                {"name": "tx", "default": 0},
+                {"name": "rx", "default": None},
+                {"name": "tx", "default": None},
             ],
         )
 
@@ -648,10 +650,9 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     for v in self._systemstats_mean(tmp_graph[i]).values()
                     if v is not None
                 ]
-                if tmp_temps:
-                    self.ds["system_info"]["cpu_temperature"] = round(max(tmp_temps), 2)
-                else:
-                    self.ds["system_info"]["cpu_temperature"] = 0.0
+                self.ds["system_info"]["cpu_temperature"] = (
+                    round(max(tmp_temps), 2) if tmp_temps else None
+                )
 
             # CPU load
             if tmp_graph[i]["name"] == "load":
@@ -664,51 +665,38 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # Aggregate "cpu" only, not the per-core "cpu0", "cpu1", ...
                 tmp_arr = ("cpu",)
                 self._systemstats_process(tmp_arr, tmp_graph[i], "cpu")
-                self.ds["system_info"]["cpu_usage"] = round(
-                    self.ds["system_info"]["cpu_cpu"], 2
-                )
+                self.ds["system_info"]["cpu_usage"] = self.ds["system_info"]["cpu_cpu"]
 
             # Interface
             if tmp_graph[i]["name"] == "interface":
                 tmp_etc = tmp_graph[i]["identifier"]
                 if tmp_etc in self.ds["interface"]:
-                    tmp_arr = ("rx", "tx")
-                    tmp_mean = self._systemstats_mean(tmp_graph[i])
-                    if tmp_mean:
-                        tmp_mean = {
-                            k.replace("received", "rx").replace("sent", "tx"): v
-                            for k, v in tmp_mean.items()
-                        }
-                        tmp_legend = [
-                            tmp.replace("received", "rx").replace("sent", "tx")
-                            for tmp in tmp_graph[i].get("legend") or []
-                        ]
-                        for tmp_var in tmp_legend:
-                            if tmp_var in tmp_arr:
-                                tmp_val = tmp_mean.get(tmp_var) or 0.0
-                                self.ds["interface"][tmp_etc][tmp_var] = round(
-                                    (tmp_val * 0.12207), 2
-                                )
-
-                    else:
-                        for tmp_load in tmp_arr:
-                            self.ds["interface"][tmp_etc][tmp_load] = 0.0
+                    tmp_mean = {
+                        k.replace("received", "rx").replace("sent", "tx"): v
+                        for k, v in self._systemstats_mean(tmp_graph[i]).items()
+                    }
+                    for tmp_var in ("rx", "tx"):
+                        tmp_val = tmp_mean.get(tmp_var)
+                        self.ds["interface"][tmp_etc][tmp_var] = (
+                            None if tmp_val is None else round(tmp_val * 0.12207, 2)
+                        )
 
             # memory
             if tmp_graph[i]["name"] == "memory":
                 # Legend is "total", "available"; only available is used
                 tmp_arr = ("available",)
-                self.ds["system_info"]["memory-total_value"] = round(
-                    self.ds["system_info"]["physmem"]
+                tmp_physmem = self.ds["system_info"]["physmem"]
+                self.ds["system_info"]["memory-total_value"] = (
+                    round(tmp_physmem) if tmp_physmem else None
                 )
 
-                # Without samples free memory would be stored as 0 and usage
-                # reported as 100%; keep the last known values instead.
-                if not self._systemstats_mean(tmp_graph[i]):
+                # A moment without samples says nothing about the memory in use,
+                # so keep the last known values, or unknown if there are none yet.
+                if self._systemstats_mean(tmp_graph[i]).get("available") is None:
                     continue
 
                 self._systemstats_process(tmp_arr, tmp_graph[i], "memory")
-                tmp_total = float(self.ds["system_info"]["memory-total_value"])
+                tmp_total = float(self.ds["system_info"]["memory-total_value"] or 0)
                 if tmp_total > 0:
                     # Used = total - available, the same figure as the usage %
                     tmp_used = max(
@@ -767,29 +755,25 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         `arr` is a tuple of exact legend names.
         """
         tmp_mean = self._systemstats_mean(graph)
-        if tmp_mean:
-            for tmp_var in graph.get("legend") or []:
-                if tmp_var in arr:
-                    self._systemstats_store(t, tmp_var, tmp_mean.get(tmp_var) or 0.0)
-        else:
-            # No data for this window: reset to 0 under the same keys
-            for tmp_var in arr:
-                self._systemstats_store(t, tmp_var, 0.0)
+        for tmp_var in arr:
+            # None if this window has no data: 0 would be a false reading
+            self._systemstats_store(t, tmp_var, tmp_mean.get(tmp_var))
 
     # ---------------------------
     #   _systemstats_store
     # ---------------------------
-    def _systemstats_store(self, t: str, tmp_var: str, tmp_val: float) -> None:
+    def _systemstats_store(self, t: str, tmp_var: str, tmp_val: float | None) -> None:
         """Store one reporting value in system_info under its sensor key."""
+        tmp_round = None if tmp_val is None else round(tmp_val, 2)
         if t == "memory":
-            if tmp_var == "available":
-                self.ds["system_info"]["memory-free_value"] = round(tmp_val)
+            # The caller only gets here with a value
+            self.ds["system_info"]["memory-free_value"] = round(tmp_val or 0)
         elif t == "cpu":
-            self.ds["system_info"][f"cpu_{tmp_var}"] = round(tmp_val, 2)
+            self.ds["system_info"][f"cpu_{tmp_var}"] = tmp_round
         elif t == "load":
-            self.ds["system_info"][f"load_{tmp_var}"] = round(tmp_val, 2)
+            self.ds["system_info"][f"load_{tmp_var}"] = tmp_round
         elif t == "arcsize":
-            self.ds["system_info"]["cache_size-arc_value"] = round(tmp_val, 2)
+            self.ds["system_info"]["cache_size-arc_value"] = tmp_round
 
     # ---------------------------
     #   get_service
@@ -1120,7 +1104,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 {"name": "identifier", "default": "unknown"},
             ],
             ensure_vals=[
-                {"name": "temperature", "default": 0},
+                {"name": "temperature", "default": None},
             ],
         )
 
@@ -1130,12 +1114,13 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             params={},
         )
 
-        if temps:
+        # None: the query failed, so keep the last values. If TrueNAS answers without
+        # a disk, it has no temperature to report for it now.
+        if isinstance(temps, dict):
             for uid, vals in self.ds["disk"].items():
-                if vals["name"] in temps:  # looks for devname here
-                    self.ds["disk"][uid]["temperature"] = temps[vals["name"]]
-                    # return devname temp to uid disk
-                    # I feel like this will break in the future when TrueNAS updates to a more sensible system. Currently their own long term stats are broken by the changing devnames.
+                self.ds["disk"][uid]["temperature"] = temps.get(vals["name"])
+                # looks for devname here, and returns devname temp to uid disk
+                # I feel like this will break in the future when TrueNAS updates to a more sensible system. Currently their own long term stats are broken by the changing devnames.
 
     # ---------------------------
     #   get_vm

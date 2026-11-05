@@ -94,8 +94,8 @@ def test_systemstats_populates_every_sensor(connected_api):
     assert coordinator.ds["interface"]["eno1"] == {"rx": 12.21, "tx": 6.1}
 
 
-def test_arcsize_without_samples_reports_zero(connected_api):
-    """A null aggregation (27.0) resets ARC size to 0 instead of failing."""
+def test_arcsize_without_samples_is_unknown(connected_api):
+    """A null aggregation (27.0) gives no ARC size, not a false 0."""
     graph = _graph("arcsize", ["size"], {})
     graph["aggregations"] = None
     api, _ = connected_api(_reply(result=[graph]))
@@ -104,7 +104,7 @@ def test_arcsize_without_samples_reports_zero(connected_api):
 
     asyncio.run(coordinator.get_systemstats())
 
-    assert coordinator.ds["system_info"]["cache_size-arc_value"] == 0.0
+    assert coordinator.ds["system_info"]["cache_size-arc_value"] is None
 
 
 def _graphs_by_request(request):

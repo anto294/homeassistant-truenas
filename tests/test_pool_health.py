@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -10,6 +10,8 @@ from custom_components.truenas_link.coordinator import (
     TrueNASCoordinator,
     topology_errors,
 )
+
+from .conftest import async_add_entry
 
 END_MS = 1762250000000
 
@@ -182,3 +184,52 @@ def test_boot_pool_gets_the_same_values(connected_api):
 def test_topology_errors_tolerates_missing_data(topology):
     """An unexpected topology means no errors, not a failed update."""
     assert sum(topology_errors(topology).values()) == 0
+
+
+LAST_SCRUB_ENTITY = "sensor.truenas_system_tank_last_scrub"
+
+
+@pytest.mark.parametrize(
+    ("scan", "state"),
+    [
+        (
+            _scan(),
+            datetime.fromtimestamp(END_MS / 1000, tz=timezone.utc).isoformat(),
+        ),
+        # TrueNAS 27 returns null when no scan has ever run
+        (None, "unknown"),
+        # ZFS only keeps the latest scan
+        (_scan(function="RESILVER"), "unknown"),
+        (_scan(state="CANCELED"), "unknown"),
+        (_scan(state="SCANNING", end=None), "unknown"),
+    ],
+    ids=["finished", "never", "resilver", "canceled", "running"],
+)
+def test_last_scrub_entity_on_truenas_27(run_in_hass, scan, state):
+    """The sensor shows a finished scrub, and unknown when there is none."""
+
+    async def scenario(hass, server):
+        server.results["system.info"] = {
+            **server.results["system.info"],
+            "version": "27.0.0-RC.1",
+        }
+        server.results["pool.query"] = [
+            {
+                "guid": "123",
+                "id": 1,
+                "name": "tank",
+                "path": "/mnt/tank",
+                "status": "ONLINE",
+                "healthy": True,
+                "is_decrypted": True,
+                "autotrim": {"parsed": False},
+                "scan": scan,
+                "topology": {},
+            }
+        ]
+
+        await async_add_entry(hass)
+
+        assert hass.states.get(LAST_SCRUB_ENTITY).state == state
+
+    run_in_hass(scenario)

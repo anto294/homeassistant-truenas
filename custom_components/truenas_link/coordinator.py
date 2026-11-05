@@ -125,6 +125,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             "snapshottask": {},
             "app": {},
             "container": {},
+            "cronjob": {},
         }
 
         self.api = TrueNASAPI(
@@ -173,6 +174,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             self.get_snapshottask,
             self.get_app,
             self.get_container,
+            self.get_cronjob,
         ]
 
         for job in jobs:
@@ -1321,6 +1323,43 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                 },
             ],
         )
+
+    # ---------------------------
+    #   get_cronjob
+    # ---------------------------
+    def get_cronjob(self) -> None:
+        """Get cron jobs from TrueNAS, for the switches that enable them.
+
+        Read-only entries have no use for them. The fields are selected so
+        the command and user, which can hold secrets, never reach Home
+        Assistant, not even its debug log.
+        """
+        if self.read_only:
+            return
+
+        self.ds["cronjob"] = parse_api(
+            data=self.ds["cronjob"],
+            source=self.api.query(
+                "cronjob.query",
+                params=[[], {"select": ["id", "description", "enabled", "schedule"]}],
+            ),
+            key="id",
+            vals=[
+                {"name": "id", "default": 0},
+                {"name": "description", "default": ""},
+                {"name": "enabled", "type": "bool", "default": False},
+                {"name": "minute", "source": "schedule/minute", "default": "*"},
+                {"name": "hour", "source": "schedule/hour", "default": "*"},
+                {"name": "dom", "source": "schedule/dom", "default": "*"},
+                {"name": "month", "source": "schedule/month", "default": "*"},
+                {"name": "dow", "source": "schedule/dow", "default": "*"},
+            ],
+        )
+        for uid, vals in self.ds["cronjob"].items():
+            vals["cron_name"] = vals["description"] or f"Cron job {uid}"
+            vals["schedule"] = " ".join(
+                str(vals[field]) for field in ("minute", "hour", "dom", "month", "dow")
+            )
 
     # ---------------------------
     #   get_app

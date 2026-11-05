@@ -42,6 +42,7 @@ TO_REDACT = {
     "ip6_addr",
     "account",
     "key",
+    "alert_messages",
 }
 
 SERVICE_CLOUDSYNC_RUN = "cloudsync_run"

@@ -1223,10 +1223,31 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     #   get_cloudsync
     # ---------------------------
     def get_cloudsync(self) -> None:
-        """Get cloudsync from TrueNAS."""
+        """Get cloudsync from TrueNAS.
+
+        The fields are selected so the credentials and the encryption password,
+        which the task also holds, never reach Home Assistant.
+        """
         self.ds["cloudsync"] = parse_api(
             data=self.ds["cloudsync"],
-            source=self.api.query("cloudsync.query"),
+            source=self.api.query(
+                "cloudsync.query",
+                params=[
+                    [],
+                    {
+                        "select": [
+                            "id",
+                            "description",
+                            "direction",
+                            "path",
+                            "enabled",
+                            "transfer_mode",
+                            "snapshot",
+                            "job",
+                        ]
+                    },
+                ],
+            ),
             key="id",
             vals=[
                 {"name": "id", "default": "unknown"},
@@ -1262,10 +1283,34 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     #   get_replication
     # ---------------------------
     def get_replication(self) -> None:
-        """Get replication from TrueNAS."""
+        """Get replication from TrueNAS.
+
+        The fields are selected so the encryption key and the SSH credentials,
+        which the task also holds, never reach Home Assistant.
+        """
         self.ds["replication"] = parse_api(
             data=self.ds["replication"],
-            source=self.api.query("replication.query"),
+            source=self.api.query(
+                "replication.query",
+                params=[
+                    [],
+                    {
+                        "select": [
+                            "id",
+                            "name",
+                            "source_datasets",
+                            "target_dataset",
+                            "recursive",
+                            "enabled",
+                            "direction",
+                            "transport",
+                            "auto",
+                            "retention_policy",
+                            "job",
+                        ]
+                    },
+                ],
+            ),
             key="id",
             vals=[
                 {"name": "id", "default": 0},

@@ -5,7 +5,12 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from .const import ACCESS_LEVEL_READ_ONLY, CONF_ACCESS_LEVEL, LEGACY_ACCESS_LEVEL
+from .const import (
+    ACCESS_LEVEL_READ_ONLY,
+    CONF_ACCESS_LEVEL,
+    LEGACY_ACCESS_LEVEL,
+    TO_REDACT,
+)
 
 
 # ---------------------------
@@ -34,3 +39,24 @@ def is_read_only(entry_data: Mapping[str, Any]) -> bool:
     return (
         entry_data.get(CONF_ACCESS_LEVEL, LEGACY_ACCESS_LEVEL) == ACCESS_LEVEL_READ_ONLY
     )
+
+
+# ---------------------------
+#   redact_secrets
+# ---------------------------
+def redact_secrets(data: Any) -> Any:
+    """Return a copy of an API request or response that is safe to log."""
+    if isinstance(data, Mapping):
+        return {
+            key: (
+                "**REDACTED**"
+                if str(key).lower() in TO_REDACT and value is not None
+                else redact_secrets(value)
+            )
+            for key, value in data.items()
+        }
+
+    if isinstance(data, (list, tuple)):
+        return [redact_secrets(item) for item in data]
+
+    return data

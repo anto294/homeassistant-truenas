@@ -65,6 +65,15 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   not recognize. A timeout now gets its own message, and everything else a
   general "could not connect" one.
 
+### Security
+
+- Cloud sync and replication tasks are now read with only the fields the
+  integration uses, so their credentials, encryption password and encryption
+  key do not reach Home Assistant, not even its debug log.
+- The debug log now hides secrets in everything TrueNAS sends or receives.
+- Diagnostics now also hide the hostname, the network interfaces' MAC
+  addresses, and those secrets.
+
 ### Development
 
 - Fixed the open CodeQL code scanning alerts: the platforms pass their

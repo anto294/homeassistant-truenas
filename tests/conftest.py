@@ -116,6 +116,14 @@ class FakeTrueNAS:
             result = request["params"][0] in self.valid_keys
         else:
             result = self.results.get(request["method"], [])
+            params = request["params"]
+            options = params[1] if len(params) > 1 else None
+            # The query options' select, for top-level fields only
+            if isinstance(options, dict) and "select" in options:
+                result = [
+                    {k: v for k, v in item.items() if k in options["select"]}
+                    for item in result
+                ]
 
         return {"jsonrpc": "2.0", "id": request["id"], "result": result}
 

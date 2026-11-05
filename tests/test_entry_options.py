@@ -148,3 +148,109 @@ def test_configure_without_a_change_does_not_reload(run_in_hass):
         assert entry.runtime_data is coordinator
 
     run_in_hass(scenario)
+
+
+def _system(server, system_id, hostname):
+    """Make the fake TrueNAS answer as another system."""
+    server.results["system.global.id"] = system_id
+    server.results["system.info"] = {
+        **server.results["system.info"],
+        "hostname": hostname,
+    }
+
+
+def test_new_entries_are_named_without_asking(run_in_hass):
+    """The first gets the default name, later ones their system's hostname."""
+
+    async def scenario(hass, server):
+        server.results = answers("25.10")
+
+        names = []
+        for system_id, hostname in (
+            ("system-a", "first"),
+            ("system-b", "second.home.lan"),
+            ("system-c", "SECOND"),
+        ):
+            _system(server, system_id, hostname)
+            entry = await async_add_entry(hass)
+            names.append((entry.title, entry.options["name"]))
+
+        assert names == [
+            ("TrueNAS", "TrueNAS"),
+            ("second", "second"),
+            ("SECOND 2", "SECOND 2"),
+        ]
+        assert hass.states.get("sensor.truenas_system_uptime") is not None
+        assert hass.states.get("sensor.second_system_uptime") is not None
+        assert hass.states.get("sensor.second_2_system_uptime") is not None
+
+    run_in_hass(scenario)
+
+
+@pytest.mark.parametrize(
+    ("existing", "expected"),
+    [
+        # An entry from when names were free: same ids, so not free again
+        ({"name": "truenas"}, "nas"),
+        ({"name": "Other"}, "TrueNAS"),
+    ],
+)
+def test_a_new_name_never_gives_the_ids_of_an_older_entry(
+    run_in_hass, existing, expected
+):
+    """Older entries can have any name, and two entries must not share ids."""
+
+    async def scenario(hass, server):
+        server.results = answers("25.10")
+        _system(server, "system-a", "older")
+        await async_add_entry(hass, **existing)
+        _system(server, "system-b", "nas")
+
+        entry = await async_add_entry(hass)
+
+        assert entry.options["name"] == expected
+
+    run_in_hass(scenario)
+
+
+def test_a_system_without_hostname_still_gets_a_name(run_in_hass):
+    """It falls back on the default name, with a number."""
+
+    async def scenario(hass, server):
+        server.results = answers("25.10")
+        _system(server, "system-a", "first")
+        await async_add_entry(hass)
+        _system(server, "system-b", "")
+
+        entry = await async_add_entry(hass)
+
+        assert entry.options["name"] == "TrueNAS 2"
+
+    run_in_hass(scenario)
+
+
+def test_renaming_an_entry_survives_reconfigure_and_keeps_its_ids(run_in_hass):
+    """The title is the user's: entity ids come from the name in the options."""
+
+    async def scenario(hass, server):
+        server.results = answers("25.10")
+        entry = await async_add_entry(hass)
+        hass.config_entries.async_update_entry(entry, title="Garage NAS")
+
+        flow = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": entry.entry_id,
+            },
+        )
+        await hass.config_entries.flow.async_configure(
+            flow["flow_id"], {"host": "nas", "verify_ssl": False}
+        )
+        await hass.async_block_till_done()
+
+        assert entry.title == "Garage NAS"
+        assert entry.options["name"] == "TrueNAS"
+        assert hass.states.get(UPTIME) is not None
+
+    run_in_hass(scenario)

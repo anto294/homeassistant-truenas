@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from types import MappingProxyType
+
 import asyncio
 import inspect
 import json
@@ -233,14 +235,41 @@ def run_in_hass() -> Callable[[Callable[..., Awaitable[None]]], None]:
 
 
 async def async_add_entry(hass: HomeAssistant, **overrides: Any):
-    """Add an Administrator entry through the setup form and return it."""
+    """Add an Administrator entry through the setup form and return it.
+
+    With a name, add it as an entry from before the form stopped asking for one.
+    """
+    if (name := overrides.pop("name", None)) is not None:
+        fields = {
+            "host": "nas",
+            "api_key": "good",
+            "access_level": "admin",
+            "verify_ssl": False,
+            **overrides,
+        }
+        level = fields.pop("access_level")
+        entry = config_entries.ConfigEntry(
+            version=2,
+            minor_version=1,
+            domain=DOMAIN,
+            title=name,
+            data=fields,
+            options={"name": name, "access_level": level},
+            source=config_entries.SOURCE_USER,
+            unique_id=None,
+            discovery_keys=MappingProxyType({}),
+            subentries_data=None,
+        )
+        await hass.config_entries.async_add(entry)
+        await hass.async_block_till_done()
+        return entry
+
     flow = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await hass.config_entries.flow.async_configure(
         flow["flow_id"],
         {
-            "name": "TrueNAS",
             "host": "nas",
             "api_key": "good",
             "access_level": "admin",

@@ -4,14 +4,12 @@
             "user": {
                 "description": "Configure a integração do TrueNAS.",
                 "data": {
-                    "name": "Nome da integração",
                     "host": "Host",
                     "api_key": "Chave de API",
                     "access_level": "Nível de acesso",
                     "verify_ssl": "Verificar certificado SSL"
                 },
                 "data_description": {
-                    "name": "Usado nos IDs das entidades. Não pode ser alterado depois, e cada entrada precisa do seu.",
                     "host": "Endereço do TrueNAS, com a porta se não for a 443. A integração se conecta por HTTPS.",
                     "api_key": "Crie-a na interface web do TrueNAS: menu do usuário → API Keys → Add.",
                     "verify_ssl": "Verifica o certificado do TrueNAS. Desative para um certificado autoassinado: nesse caso, alguém na sua rede poderia interceptar a chave.",
@@ -43,7 +41,6 @@
             }
         },
         "error": {
-            "name_exists": "O nome já existe.",
             "certificate_verify_failed": "A verificação do certificado falhou. Se o TrueNAS usa um certificado autoassinado, desative Verificar certificado SSL.",
             "http_used": "A solicitação HTTP foi enviada para a porta HTTPS. Proxy reverso?",
             "tlsv1_not_supported": "TLSv1 não é compatível. Proxy reverso?",

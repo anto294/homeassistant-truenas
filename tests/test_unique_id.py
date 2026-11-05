@@ -26,7 +26,6 @@ async def _start_user_flow(hass, server, **overrides):
     result = await hass.config_entries.flow.async_configure(
         flow["flow_id"],
         {
-            "name": "Second",
             "host": "other",
             "api_key": "good",
             "access_level": "admin",
@@ -90,7 +89,7 @@ def test_new_entry_gets_the_id_of_its_system(run_in_hass):
     run_in_hass(scenario)
 
 
-def test_same_system_is_refused_whatever_its_name_or_address(run_in_hass):
+def test_same_system_is_refused_whatever_its_address(run_in_hass):
     """A second entry on the same system aborts, and changes nothing."""
 
     async def scenario(hass, server):
@@ -118,22 +117,6 @@ def test_other_system_can_be_added(run_in_hass):
 
         assert result["type"] == "create_entry"
         assert result["result"].unique_id == SYSTEM_B
-
-    run_in_hass(scenario)
-
-
-def test_name_of_another_system_is_still_refused(run_in_hass):
-    """Two entries with one name would collide on their entity ids."""
-
-    async def scenario(hass, server):
-        server.results["system.global.id"] = SYSTEM_A
-        await async_add_entry(hass)
-        server.results["system.global.id"] = SYSTEM_B
-
-        result = await _start_user_flow(hass, server, name="TrueNAS")
-
-        assert result["errors"] == {"base": "name_exists"}
-        assert len(hass.config_entries.async_entries(DOMAIN)) == 1
 
     run_in_hass(scenario)
 
@@ -375,7 +358,7 @@ def test_setup_recovers_from_an_error(run_in_hass):
         flow = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        fields = {"name": "TrueNAS", "host": "nas", "access_level": "admin", **FIELDS}
+        fields = {"host": "nas", "access_level": "admin", **FIELDS}
 
         failed = await _configure(hass, flow, {**fields, "api_key": "wrong"})
         assert failed["errors"] == {"host": "invalid_key"}

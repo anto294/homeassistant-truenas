@@ -4,14 +4,12 @@
             "user": {
                 "description": "Set up TrueNAS integration.",
                 "data": {
-                    "name": "Name of the integration",
                     "host": "Host",
                     "api_key": "API key",
                     "access_level": "Access level",
                     "verify_ssl": "Verify SSL certificate"
                 },
                 "data_description": {
-                    "name": "Used in entity IDs. It cannot be changed later, and each entry needs its own.",
                     "host": "Address of TrueNAS, with the port if it is not 443. The integration connects over HTTPS.",
                     "api_key": "Create it in the TrueNAS web UI: user menu → API Keys → Add.",
                     "verify_ssl": "Check the certificate of TrueNAS. Turn it off for a self-signed certificate: someone on your network could then intercept the key.",
@@ -43,7 +41,6 @@
             }
         },
         "error": {
-            "name_exists": "Name already exists.",
             "invalid_key": "Login failed, invalid API key.",
             "invalid_hostname": "Connection failed, invalid hostname.",
             "connection_refused": "Connection failed, connection refused.",

@@ -4,14 +4,12 @@
             "user": {
                 "description": "Nastavte integráciu TrueNAS.",
                 "data": {
-                    "name": "Názov integrácie",
                     "host": "Hostiteľ",
                     "api_key": "Kľúč API",
                     "access_level": "Úroveň prístupu",
                     "verify_ssl": "Overiť certifikát SSL"
                 },
                 "data_description": {
-                    "name": "Používa sa v ID entít. Neskôr ho nemožno zmeniť a každá položka musí mať vlastný.",
                     "host": "Adresa TrueNAS, s portom, ak to nie je 443. Integrácia sa pripája cez HTTPS.",
                     "api_key": "Vytvorte ho vo webovom rozhraní TrueNAS: menu používateľa → API Keys → Add.",
                     "verify_ssl": "Kontroluje certifikát TrueNAS. Pri certifikáte podpísanom sebou samým ho vypnite: niekto vo vašej sieti by potom mohol kľúč zachytiť.",
@@ -43,7 +41,6 @@
             }
         },
         "error": {
-            "name_exists": "Názov už existuje.",
             "certificate_verify_failed": "Overenie certifikátu zlyhalo. Ak TrueNAS používa certifikát podpísaný sebou samým, vypnite Overiť certifikát SSL.",
             "http_used": "Požiadavka HTTP bola odoslaná na port HTTPS. Reverzný proxy?",
             "tlsv1_not_supported": "TLSv1 nie je podporovaný. Reverzný proxy?",

@@ -125,7 +125,6 @@ def test_form_shows_a_known_error_for_an_unknown_failure(run_in_hass):
             result = await hass.config_entries.flow.async_configure(
                 flow["flow_id"],
                 {
-                    "name": "TrueNAS",
                     "host": "nas",
                     "api_key": "good",
                     "access_level": "admin",
@@ -160,7 +159,7 @@ def test_new_entries_verify_ssl_by_default(run_in_hass):
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
-        data = flow["data_schema"]({**FORM_KEYS, "name": "TrueNAS"})
+        data = flow["data_schema"](FORM_KEYS)
         assert data["verify_ssl"] is True
 
     run_in_hass(scenario)
@@ -238,7 +237,6 @@ def test_setup_form_keeps_false_after_an_error(run_in_hass):
             flow["flow_id"],
             {
                 **FORM_KEYS,
-                "name": "TrueNAS",
                 "api_key": "wrong",
                 "access_level": "admin",
                 "verify_ssl": False,
@@ -246,7 +244,7 @@ def test_setup_form_keeps_false_after_an_error(run_in_hass):
         )
 
         assert result["errors"] == {"host": "invalid_key"}
-        data = result["data_schema"]({**FORM_KEYS, "name": "TrueNAS"})
+        data = result["data_schema"](FORM_KEYS)
         assert data["verify_ssl"] is False
 
     run_in_hass(scenario)
@@ -295,7 +293,6 @@ def test_setup_form_masks_the_api_key(run_in_hass):
             flow["flow_id"],
             {
                 **FORM_KEYS,
-                "name": "TrueNAS",
                 "api_key": "wrong",
                 "access_level": "admin",
                 "verify_ssl": False,

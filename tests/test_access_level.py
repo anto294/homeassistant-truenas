@@ -23,7 +23,6 @@ from custom_components.truenas_link.update_types import SENSOR_TYPES
 
 SYSTEM_UPDATE, APP_UPDATE = SENSOR_TYPES
 FORM = {
-    "name": "TrueNAS",
     "host": "truenas.lan",
     "api_key": "key",
     "verify_ssl": False,

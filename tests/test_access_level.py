@@ -137,57 +137,14 @@ def _coordinator(read_only):
     ],
 )
 def test_update_entities_only_install_with_administrator_access(
-    monkeypatch, cls, description, uid, admin_features
+    cls, description, uid, admin_features
 ):
     """Read-only update entities still report updates, without the install button."""
-    monkeypatch.setattr(
-        entity_module.ep,
-        "async_get_current_platform",
-        lambda: SimpleNamespace(domain="update"),
-    )
-
     admin = cls(_coordinator(False), description, uid)
     read_only = cls(_coordinator(True), description, uid)
 
     assert admin.supported_features == admin_features
     assert read_only.supported_features == UpdateEntityFeature(0)
-
-
-def _hass(*access_levels, registered=()):
-    """Return a stand-in hass with one config entry per access level."""
-    hass = MagicMock()
-    hass.config_entries.async_entries.return_value = [
-        SimpleNamespace(disabled_by=None, data={CONF_ACCESS_LEVEL: level})
-        for level in access_levels
-    ]
-    hass.services.has_service.side_effect = lambda _, name: name in registered
-    return hass
-
-
-SERVICES = [["vm_start", {}, "start"], ["vm_stop", {}, "stop"]]
-
-
-def test_actions_are_registered_with_an_administrator_entry():
-    """One Administrator entry is enough to offer the actions."""
-    hass = _hass(ACCESS_LEVEL_READ_ONLY, ACCESS_LEVEL_ADMIN)
-    platform = MagicMock()
-
-    entity_module.async_update_services(hass, platform, SERVICES)
-
-    names = [c.args[0] for c in platform.async_register_entity_service.call_args_list]
-    assert names == ["vm_start", "vm_stop"]
-    hass.services.async_remove.assert_not_called()
-
-
-def test_actions_are_not_offered_with_only_read_only_entries():
-    """Read-only entries register nothing and remove what an earlier setup left."""
-    hass = _hass(ACCESS_LEVEL_READ_ONLY, registered={"vm_start"})
-    platform = MagicMock()
-
-    entity_module.async_update_services(hass, platform, SERVICES)
-
-    platform.async_register_entity_service.assert_not_called()
-    hass.services.async_remove.assert_called_once_with(DOMAIN, "vm_start")
 
 
 def test_action_runs_the_entity_method_without_targeting_fields():

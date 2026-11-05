@@ -42,5 +42,3 @@ SENSOR_TYPES: tuple[TrueNASSwitchEntityDescription, ...] = (
         data_attributes_list=["schedule"],
     ),
 )
-
-SENSOR_SERVICES = []

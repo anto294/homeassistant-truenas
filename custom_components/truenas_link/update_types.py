@@ -48,5 +48,3 @@ SENSOR_TYPES: tuple[TrueNASUpdateEntityDescription, ...] = (
         func="TrueNASAppUpdate",
     ),
 )
-
-SENSOR_SERVICES = []

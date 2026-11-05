@@ -31,6 +31,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **TrueNAS Link now requires Home Assistant 2026.11 or later.** On an older
   version, stay on 2.0.1 until you can update Home Assistant. Note that 2.0.1's
   Reconfigure stops working on Home Assistant 2026.12.
+- **Actions now always stay available, and are refused on read-only entries.**
+  They used to disappear from Home Assistant when no entry had Administrator
+  access. They are now registered once for the integration, so automations using
+  them still validate when TrueNAS is unreachable. Calling one on a read-only entity
+  gives an error and sends nothing to TrueNAS. If the target's entry is not loaded,
+  Home Assistant does nothing, and logs that the entity is not available.
 - **Entity names are now translated**, for now in English and Italian, so they may
   look different in your language. Entity IDs do not change, in any language.
   Names you gave to entities yourself stay. Icons moved to `icons.json`, so the

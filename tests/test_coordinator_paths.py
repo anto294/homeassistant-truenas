@@ -337,12 +337,9 @@ def test_going_read_only_removes_switches_and_their_device(run_in_hass):
         device_id = switch.device_id
         assert device_id
 
-        flow = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": "reconfigure", "entry_id": entry.entry_id}
-        )
-        await hass.config_entries.flow.async_configure(
-            flow["flow_id"],
-            {"host": "nas", "access_level": "read_only", "verify_ssl": False},
+        flow = await hass.config_entries.options.async_init(entry.entry_id)
+        await hass.config_entries.options.async_configure(
+            flow["flow_id"], {"access_level": "read_only"}
         )
         await hass.async_block_till_done()
 

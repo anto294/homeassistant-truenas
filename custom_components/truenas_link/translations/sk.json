@@ -23,13 +23,11 @@
                 "data": {
                     "host": "Hostiteľ",
                     "api_key": "Kľúč API",
-                    "access_level": "Úroveň prístupu",
                     "verify_ssl": "Overiť certifikát SSL"
                 },
                 "data_description": {
                     "host": "Adresa TrueNAS, s portom, ak to nie je 443. Integrácia sa pripája cez HTTPS.",
                     "api_key": "Nechajte prázdne, ak chcete ponechať aktuálny kľúč.",
-                    "access_level": "Režim iba na čítanie odmieta akcie, odstraňuje tlačidlá inštalácie a prepínače úloh cron a ponecháva všetky senzory. Použite kľúč API s rolou READONLY_ADMIN, aby to vynucoval aj TrueNAS.",
                     "verify_ssl": "Kontroluje certifikát TrueNAS. Pri certifikáte podpísanom sebou samým ho vypnite: niekto vo vašej sieti by potom mohol kľúč zachytiť."
                 }
             },
@@ -66,6 +64,19 @@
             "unique_id_mismatch": "Toto je iný systém TrueNAS. Ak ho chcete pridať, použite Pridať položku."
         }
     },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Vyberte, čo môže Home Assistant robiť v tomto systéme TrueNAS.",
+                "data": {
+                    "access_level": "Úroveň prístupu"
+                },
+                "data_description": {
+                    "access_level": "Režim iba na čítanie odmieta akcie, odstraňuje tlačidlá inštalácie a prepínače úloh cron a ponecháva všetky senzory. Použite kľúč API s rolou READONLY_ADMIN, aby to vynucoval aj TrueNAS."
+                }
+            }
+        }
+    },
     "selector": {
         "access_level": {
             "options": {
@@ -76,7 +87,7 @@
     },
     "exceptions": {
         "read_only_action": {
-            "message": "{entity} patrí k položke TrueNAS s prístupom iba na čítanie. Ak chcete používať jej akcie, nastavte úroveň prístupu Správca cez opätovné nastavenie."
+            "message": "{entity} patrí k položke TrueNAS s prístupom iba na čítanie. Ak chcete používať jej akcie, nastavte úroveň prístupu Správca cez Konfigurovať."
         },
         "wrong_action_target": {
             "message": "Akciu {action} nemožno použiť na {entity}. Do TrueNAS sa nič neodoslalo."

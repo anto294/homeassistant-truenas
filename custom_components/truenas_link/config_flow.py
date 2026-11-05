@@ -12,6 +12,7 @@ from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
+    OptionsFlowWithReload,
 )
 from homeassistant.const import (
     CONF_API_KEY,
@@ -38,7 +39,6 @@ from .const import (
     DEFAULT_HOST,
     DEFAULT_SSL_VERIFY,
     DOMAIN,
-    LEGACY_ACCESS_LEVEL,
 )
 from .api import TrueNASAPI
 
@@ -104,10 +104,6 @@ def _reconfigure_schema(
             CONF_API_KEY, description={"suggested_value": entered_api_key}
         ): _api_key_selector(),
         vol.Required(
-            CONF_ACCESS_LEVEL,
-            default=truenas_config.get(CONF_ACCESS_LEVEL) or LEGACY_ACCESS_LEVEL,
-        ): _access_level_selector(),
-        vol.Required(
             CONF_VERIFY_SSL,
             # Not "or": a stored False has to stay False
             default=truenas_config.get(CONF_VERIFY_SSL, DEFAULT_SSL_VERIFY),
@@ -124,7 +120,7 @@ def _reconfigure_schema(
 def configured_instances(hass: HomeAssistant) -> set[str]:
     """Return a set of configured instances."""
     return {
-        entry.data[CONF_NAME] for entry in hass.config_entries.async_entries(DOMAIN)
+        entry.options[CONF_NAME] for entry in hass.config_entries.async_entries(DOMAIN)
     }
 
 
@@ -134,7 +130,14 @@ def configured_instances(hass: HomeAssistant) -> set[str]:
 class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
     """TrueNASConfigFlow class."""
 
-    VERSION = 1
+    # 2: what is not needed to connect moved from data to options
+    VERSION = 2
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> TrueNASOptionsFlow:
+        """Return the flow behind the entry's Configure button."""
+        return TrueNASOptionsFlow()
 
     def __init__(self) -> None:
         """Initialize the config flow."""
@@ -195,8 +198,18 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
 
             # Save instance
             if not errors:
+                options = {
+                    CONF_NAME: truenas_config[CONF_NAME],
+                    CONF_ACCESS_LEVEL: truenas_config[CONF_ACCESS_LEVEL],
+                }
                 return self.async_create_entry(
-                    title=truenas_config[CONF_NAME], data=truenas_config
+                    title=truenas_config[CONF_NAME],
+                    data={
+                        key: value
+                        for key, value in truenas_config.items()
+                        if key not in options
+                    },
+                    options=options,
                 )
 
         return self.async_show_form(
@@ -236,7 +249,7 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
             if not errors:
                 return self.async_update_reload_and_abort(
                     self._get_reconfigure_entry(),
-                    title=reconfigure_entry.data[CONF_NAME],
+                    title=reconfigure_entry.options[CONF_NAME],
                     data_updates=truenas_config,
                 )
 
@@ -282,4 +295,35 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({vol.Required(CONF_API_KEY): _api_key_selector()}),
             description_placeholders={"name": reauth_entry.title},
             errors=errors,
+        )
+
+
+# ---------------------------
+#   TrueNASOptionsFlow
+# ---------------------------
+class TrueNASOptionsFlow(OptionsFlowWithReload):
+    """Change the access level, reloading the entry if it changed.
+
+    The name is an option too, because it is not needed to connect, but entity ids
+    are built from it, so this flow keeps it as it is.
+    """
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask for the access level."""
+        options = self.config_entry.options
+        if user_input is not None:
+            return self.async_create_entry(data={**options, **user_input})
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_ACCESS_LEVEL,
+                        default=options.get(CONF_ACCESS_LEVEL, DEFAULT_ACCESS_LEVEL),
+                    ): _access_level_selector()
+                }
+            ),
         )

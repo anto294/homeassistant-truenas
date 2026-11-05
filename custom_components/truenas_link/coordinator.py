@@ -114,10 +114,10 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             update_interval=timedelta(seconds=60),
         )
 
-        self.name = config_entry.data[CONF_NAME]
-        self.instance = config_entry.data[CONF_NAME]
+        self.name = config_entry.options[CONF_NAME]
+        self.instance = config_entry.options[CONF_NAME]
         self.host = config_entry.data[CONF_HOST]
-        self.read_only = is_read_only(config_entry.data)
+        self.read_only = is_read_only(config_entry.options)
 
         self.ds: dict[str, dict[Any, Any]] = {
             "interface": {},

@@ -23,13 +23,11 @@
                 "data": {
                     "host": "Host",
                     "api_key": "Clave API",
-                    "access_level": "Nivel de acceso",
                     "verify_ssl": "Verificar certificado SSL"
                 },
                 "data_description": {
                     "host": "Dirección de TrueNAS, con el puerto si no es el 443. La integración se conecta por HTTPS.",
                     "api_key": "Déjelo vacío para mantener la clave actual.",
-                    "access_level": "Solo lectura rechaza las acciones, quita los botones de instalación y los interruptores de cron, y mantiene todos los sensores. Use una clave API con el rol READONLY_ADMIN para que TrueNAS también lo imponga.",
                     "verify_ssl": "Comprueba el certificado de TrueNAS. Desactívelo para un certificado autofirmado: entonces alguien en su red podría interceptar la clave."
                 }
             },
@@ -66,6 +64,19 @@
             "unique_id_mismatch": "Este es otro sistema TrueNAS. Para añadirlo, use Añadir entrada."
         }
     },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Elija lo que Home Assistant puede hacer en este sistema TrueNAS.",
+                "data": {
+                    "access_level": "Nivel de acceso"
+                },
+                "data_description": {
+                    "access_level": "Solo lectura rechaza las acciones, quita los botones de instalación y los interruptores de cron, y mantiene todos los sensores. Use una clave API con el rol READONLY_ADMIN para que TrueNAS también lo imponga."
+                }
+            }
+        }
+    },
     "selector": {
         "access_level": {
             "options": {
@@ -76,7 +87,7 @@
     },
     "exceptions": {
         "read_only_action": {
-            "message": "{entity} pertenece a una entrada de TrueNAS con acceso de solo lectura. Para usar sus acciones, cambie el nivel de acceso a Administrador con Reconfigurar."
+            "message": "{entity} pertenece a una entrada de TrueNAS con acceso de solo lectura. Para usar sus acciones, cambie el nivel de acceso a Administrador con Configurar."
         },
         "wrong_action_target": {
             "message": "La acción {action} no se puede usar en {entity}. No se ha enviado nada a TrueNAS."

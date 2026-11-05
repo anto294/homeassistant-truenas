@@ -13,7 +13,7 @@ from custom_components.truenas_link.const import DOMAIN
 
 from .conftest import async_add_entry
 
-FIELDS = {"access_level": "admin", "verify_ssl": False}
+FIELDS = {"verify_ssl": False}
 SYSTEM_A = "system-a"
 SYSTEM_B = "system-b"
 
@@ -25,7 +25,14 @@ async def _start_user_flow(hass, server, **overrides):
     )
     result = await hass.config_entries.flow.async_configure(
         flow["flow_id"],
-        {"name": "Second", "host": "other", "api_key": "good", **FIELDS, **overrides},
+        {
+            "name": "Second",
+            "host": "other",
+            "api_key": "good",
+            "access_level": "admin",
+            **FIELDS,
+            **overrides,
+        },
     )
     await hass.async_block_till_done()
     return result
@@ -368,7 +375,7 @@ def test_setup_recovers_from_an_error(run_in_hass):
         flow = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        fields = {"name": "TrueNAS", "host": "nas", **FIELDS}
+        fields = {"name": "TrueNAS", "host": "nas", "access_level": "admin", **FIELDS}
 
         failed = await _configure(hass, flow, {**fields, "api_key": "wrong"})
         assert failed["errors"] == {"host": "invalid_key"}

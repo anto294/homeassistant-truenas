@@ -56,6 +56,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   counts, so Docker restarting or a pool that is not imported yet removes nothing,
   and neither do the datasets of a pool that is gone. What an empty list leaves
   behind, such as the last VM, can be removed by deleting its device.
+- **The access level has moved from Reconfigure to Configure**, in the integration's
+  menu. The name and the access level are now options of the entry, because only the
+  host, the API key and Verify SSL are needed to connect. Existing entries are
+  migrated at startup, and keep their name, access level and entity IDs.
+  **After this, going back to an older version needs the entry to be added again:**
+  an older version refuses to load the migrated entry, so a read-only entry can never
+  turn into an Administrator one by accident.
 - **The same TrueNAS system can no longer be added twice**, whatever its name or
   address. Reconfigure and reauthentication refuse an address or key that leads
   to another system, and still accept a new address for the same one. Existing

@@ -38,7 +38,7 @@ def system_device_info(coordinator: TrueNASCoordinator) -> DeviceInfo:
     id exists when child devices link to it, and by the System entities.
     Both use this function, so they always describe the same device.
     """
-    inst = coordinator.config_entry.data[CONF_NAME]
+    inst = coordinator.config_entry.options[CONF_NAME]
     system_info = coordinator.data["system_info"]
     device_key = (DOMAIN, f"{inst}_{system_info['hostname']}")
     return DeviceInfo(
@@ -259,7 +259,7 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
         """Initialize entity."""
         super().__init__(coordinator)
         self.entity_description = entity_description
-        self._inst = coordinator.config_entry.data[CONF_NAME]
+        self._inst = coordinator.config_entry.options[CONF_NAME]
         self._config_entry = self.coordinator.config_entry
         self._uid = uid
         if self._uid:

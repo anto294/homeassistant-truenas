@@ -16,7 +16,7 @@
     "iot_class": "local_polling",
     "issue_tracker": "https://github.com/anto294/homeassistant-truenas/issues",
     "requirements": [
-        "websockets>=15.0.1"
+        "websockets==17.4"
     ],
     "version": "0.0.0"
 }

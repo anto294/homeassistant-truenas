@@ -7,6 +7,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- `websockets` is now pinned to 17.4, instead of any version from 15.0.1 on.
+
 ## [2.1.0b2] - 2026-11-05
 
 ### Security

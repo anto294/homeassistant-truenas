@@ -140,9 +140,9 @@ async def async_setup_entry(
     # Register the parent "System" device first, so child devices (Disks,
     # VMs, Apps, ...) can link to its device id whatever platform is set up
     # first.
-    system_device = dr.async_get(hass).async_get_or_create(
+    system_device = dr.async_get(hass).async_get_or_create_from_info(
         config_entry_id=config_entry.entry_id,
-        **system_device_info(coordinator),
+        device_info=system_device_info(coordinator),
     )
     coordinator.system_device_id = system_device.id
 

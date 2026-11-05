@@ -105,17 +105,17 @@ def test_child_device_info_is_valid_for_installed_ha(ha_group):
     assert set(info.keys()) <= _allowed_device_info_keys()
     assert not set(info.keys()) & _deprecated_device_info_keys()
     assert not {key for key in info.keys() if key.startswith("default_")}
-    assert info["name"] == ha_group
-    assert info["model"] == "TRUENAS-MINI-3.0-XL+"
-    assert info["manufacturer"] == "iXsystems"
-    assert info["connections"] == {("truenas_link", f"TrueNAS_{ha_group}")}
+    assert info.name == ha_group
+    assert info.model == "TRUENAS-MINI-3.0-XL+"
+    assert info.manufacturer == "iXsystems"
+    assert info.connections == {("truenas_link", f"TrueNAS_{ha_group}")}
 
 
 def test_child_links_its_parent_by_device_id():
     """via_device_id is the parent's device registry id."""
     info = _entity("VMs").device_info
 
-    assert info["via_device_id"] == SYSTEM_DEVICE_ID
+    assert info.via_device_id == SYSTEM_DEVICE_ID
     assert "via_device" not in info
 
 
@@ -125,11 +125,11 @@ def test_system_device_info_is_unchanged():
 
     assert set(info.keys()) <= _allowed_device_info_keys()
     assert info == entity_module.system_device_info(_coordinator())
-    assert info["identifiers"] == {("truenas_link", "TrueNAS_nas")}
-    assert info["connections"] == {("truenas_link", "TrueNAS_nas")}
-    assert info["name"] == "System"
-    assert info["sw_version"] == "25.10.1"
-    assert info["configuration_url"] == "https://truenas.lan"
+    assert info.identifiers == {("truenas_link", "TrueNAS_nas")}
+    assert info.connections == {("truenas_link", "TrueNAS_nas")}
+    assert info.name == "System"
+    assert info.sw_version == "25.10.1"
+    assert info.configuration_url == "https://truenas.lan"
     assert "via_device" not in info and "via_device_id" not in info
 
 
@@ -151,7 +151,7 @@ def test_setup_registers_system_device_before_platforms(monkeypatch):
         calls.append(("device", kwargs))
         return MagicMock(id=SYSTEM_DEVICE_ID)
 
-    registry.async_get_or_create.side_effect = get_or_create
+    registry.async_get_or_create_from_info.side_effect = get_or_create
 
     async def forward(entry, platforms):
         calls.append(("platforms", coordinator.system_device_id))
@@ -169,7 +169,47 @@ def test_setup_registers_system_device_before_platforms(monkeypatch):
     assert [call[0] for call in calls] == ["device", "platforms"]
     assert calls[0][1] == {
         "config_entry_id": "entry",
-        **entity_module.system_device_info(coordinator),
+        "device_info": entity_module.system_device_info(coordinator),
     }
     # Platforms already see the parent's device id
     assert calls[1][1] == SYSTEM_DEVICE_ID
+
+
+def test_devices_in_the_registry_stay_the_same(run_in_hass):
+    """Every field of the System device and of a device linked to it."""
+    from homeassistant.helpers import device_registry as dr, entity_registry as er
+
+    from custom_components.truenas_link.const import DOMAIN
+
+    from .conftest import async_add_entry
+    from .sample_data import answers
+
+    async def scenario(hass, server):
+        server.results = answers("25.10")
+        entry = await async_add_entry(hass)
+        devices = dr.async_get(hass)
+
+        system = devices.async_get(entry.runtime_data.system_device_id)
+        key = (DOMAIN, "TrueNAS_nas")
+        assert system.identifiers == {key}
+        assert system.connections == {key}
+        assert system.name == "System"
+        assert system.configuration_url == "https://nas"
+        assert system.sw_version == server.results["system.info"]["version"]
+        assert system.model == server.results["system.info"]["system_product"]
+        info = server.results["system.info"]
+        assert system.manufacturer == info["system_manufacturer"]
+        assert system.via_device_id is None
+
+        entities = er.async_get(hass)
+        disks = devices.async_get(
+            entities.async_get("sensor.truenas_disks_sda").device_id
+        )
+        assert disks.connections == {(DOMAIN, "TrueNAS_Disks")}
+        assert disks.name == "Disks"
+        assert disks.identifiers == set()
+        assert disks.model == info["system_product"]
+        assert disks.manufacturer == info["system_manufacturer"]
+        assert disks.via_device_id == system.id
+
+    run_in_hass(scenario)

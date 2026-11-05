@@ -7,6 +7,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [2.1.0b3] - 2026-11-05
+
 ### Changed
 
 - **Sensors without a value now show as unknown instead of 0.** This applies to CPU
@@ -513,7 +515,8 @@ only as 1.4 betas or not released yet:
   and attaches `truenas.zip`, which HACS installs from. Release notes come
   from this changelog.
 
-[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0b2...HEAD
+[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0b3...HEAD
+[2.1.0b3]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0b2...v2.1.0b3
 [2.1.0b2]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0b1...v2.1.0b2
 [2.1.0b1]: https://github.com/anto294/homeassistant-truenas/compare/v2.0.1...v2.1.0b1
 [2.0.1]: https://github.com/anto294/homeassistant-truenas/compare/v2.0.0...v2.0.1

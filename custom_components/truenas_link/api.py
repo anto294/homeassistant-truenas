@@ -28,6 +28,14 @@ CONNECT_ERRORS = (
 )
 ERROR_CANNOT_CONNECT = "cannot_connect"
 
+# Seconds to wait for the answer to a request. The keepalive pings only show that
+# the connection is up, not that TrueNAS will answer. Job methods answer at once,
+# but service.start, stop, restart and reload answer when they are done, and
+# TrueNAS gives those up to 120 seconds by default, so this has to be above that.
+# After a timeout the connection must be closed: every request has id 0, so a late
+# answer would otherwise be read as the answer to the next request.
+RESPONSE_TIMEOUT = 150
+
 
 # ---------------------------
 #   TrueNASError
@@ -119,7 +127,7 @@ class TrueNASAPI(object):
                     "params": [self._api_key],
                 }
                 self._ws.send(json.dumps(payload))
-                message = self._ws.recv()
+                message = self._ws.recv(timeout=RESPONSE_TIMEOUT)
                 data = json.loads(message)
                 self._connected = data["result"]
                 if not self._connected:
@@ -285,7 +293,7 @@ class TrueNASAPI(object):
             raise TrueNASConnectionError(str(e)) from e
 
         try:
-            message = self._ws.recv()
+            message = self._ws.recv(timeout=RESPONSE_TIMEOUT)
             is_object = message.startswith("{")
             response = json.loads(message) if is_object else None
         except Exception as e:

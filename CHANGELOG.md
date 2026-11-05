@@ -7,6 +7,31 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [2.1.0b1] - 2026-11-05
+
+Pre-release for testing ahead of 2.1.0. It has not been tested on a real TrueNAS
+system yet.
+
+### Before you upgrade
+
+Existing entries keep working with their current settings, including their
+access level and Verify SSL. There is nothing to do first, but two things now
+behave differently:
+
+- **Actions can now fail with a visible error, so an automation can stop where
+  it used to carry on.** Until now, a failed action only wrote to the log or did
+  nothing. It is now an error when TrueNAS refuses the action, cannot be reached
+  or reports that the operation failed, and when the action does not apply, such
+  as starting a running VM or a scrub during a resilver. If a step of an
+  automation or script may fail without stopping the rest, add
+  `continue_on_error: true` to it. A reboot or shutdown does not count as failed
+  if the NAS stops answering or closes the connection while going down. Actions
+  that start a job, such as a cloud sync or an app start, only report failures in
+  starting it: a job that fails later is not reported as a failed action.
+- **Verify SSL is now on by default, for new entries only.** Existing entries
+  keep their setting. If TrueNAS uses a self-signed certificate, turn it off when
+  adding the entry: the error message now says so.
+
 ### Added
 
 - **Access level** option on the setup and Reconfigure forms: Administrator
@@ -14,6 +39,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   have no install button, actions are no longer offered, and cron job
   switches are removed. New entries start as Read-only; existing entries
   stay on Administrator.
+- Reauthentication: when TrueNAS rejects the API key, Home Assistant asks for
+  a new one instead of retrying forever. The new key is tested before it is
+  saved.
 - **Alerts** sensor and **Critical alerts** binary sensor, with the messages
   as an attribute.
 - **Reboot required** binary sensor, with the reasons as an attribute.
@@ -25,57 +53,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - A switch per cron job to enable or disable it. It is disabled by default
   and needs Administrator access.
 - **Security** section in the README.
-- Reauthentication: when TrueNAS rejects the API key, Home Assistant asks for
-  a new one instead of retrying forever. The new key is tested before it is
-  saved.
 
 ### Changed
 
-- **Verify SSL is now on by default for new entries.** If TrueNAS uses a
-  self-signed certificate, turn it off in the form, and the error message now
-  says so. Existing entries keep their setting.
 - TrueNAS Link is now in the HACS default repositories: search for it in
   HACS, without adding a custom repository. The README is updated to match.
-- Actions now fail with a clear error when TrueNAS refuses them, cannot be
-  reached, or reports that the operation failed, instead of only writing to
-  the log or doing nothing. An action that does not apply, such as starting a
-  running VM or a scrub during a resilver, is also an error now: an automation
-  that relies on it being ignored should use `continue_on_error`. A reboot or
-  shutdown does not count as failed if the NAS closes the connection while
-  going down.
-
-### Fixed
-
-- On TrueNAS 25.04, stopping a VM cut its power immediately. It now gets 60
-  seconds to shut down cleanly. If it does not, it keeps running.
-- The 2.0.0 upgrade steps (README and changelog) told 1.x users to update
-  the integration in HACS. That fails, because HACS keeps the old domain:
-  the download and the repository refresh stop with "No manifest.json file
-  found custom_components/truenas/manifest.json". The steps now say to
-  remove TrueNAS Link in HACS (three-dot menu → **Remove**, which also
-  deletes `config/custom_components/truenas/`) and download it again.
-- Reconfigure forgot what was entered when the connection test failed, and
-  showed the stored values again.
-- Reconfigure would have failed from Home Assistant 2026.12, which no longer accepts an update listener together with a config
-  flow that reloads. The integration has no options flow, so the listener is
-  gone, and an entry can no longer reload twice after Reconfigure.
-- Connections to TrueNAS were left open, each with its own threads, after a
-  rejected login, the connection test of the setup and Reconfigure forms, a
-  failed setup, and an unload or reload.
-- `cloudsync_run` and `cloudsync_abort` crashed with a `TypeError` when the
-  task could not be read, or had never run.
-- A failed update install no longer leaves an empty job id behind.
-- A TrueNAS that kept the connection up but stopped answering blocked the
-  integration indefinitely: entities stayed available with old data, and
-  actions waited without an end. Requests now give up after 150 seconds, the
-  update fails, entities become unavailable, and the next update reconnects.
-- Entities could stay available with old data when the connection dropped
-  during an update, if a later request of that update reconnected. The update
-  now fails, entities become unavailable, and the next update reconnects.
-- The setup and Reconfigure forms showed an empty error when TrueNAS accepted
-  the connection but did not answer, or for any failure the integration did
-  not recognize. A timeout now gets its own message, and everything else a
-  general "could not connect" one.
 
 ### Security
 
@@ -85,6 +67,39 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - The debug log now hides secrets in everything TrueNAS sends or receives.
 - Diagnostics now also hide the hostname, the network interfaces' MAC
   addresses, and those secrets.
+
+### Fixed
+
+- On TrueNAS 25.04, stopping a VM cut its power immediately. It now gets 60
+  seconds to shut down cleanly. If it does not, it keeps running.
+- A TrueNAS that kept the connection up but stopped answering blocked the
+  integration indefinitely: entities stayed available with old data, and
+  actions waited without an end. Requests now give up after 150 seconds.
+- Entities could also stay available with old data when the connection dropped
+  during an update. In both cases the update now fails, entities become
+  unavailable, and the next update reconnects.
+- Reconfigure would have failed from Home Assistant 2026.12, which no longer
+  accepts an update listener together with a config flow that reloads. The
+  integration has no options flow, so the listener is gone, and an entry can no
+  longer reload twice after Reconfigure.
+- Connections to TrueNAS were left open, each with its own threads, after a
+  rejected login, the connection test of the setup and Reconfigure forms, a
+  failed setup, and an unload or reload.
+- `cloudsync_run` and `cloudsync_abort` crashed with a `TypeError` when the
+  task could not be read, or had never run.
+- A failed update install no longer leaves an empty job id behind.
+- The setup and Reconfigure forms showed an empty error when TrueNAS accepted
+  the connection but did not answer, or for any failure the integration did
+  not recognize. A timeout now gets its own message, and everything else a
+  general "could not connect" one.
+- Reconfigure forgot what was entered when the connection test failed, and
+  showed the stored values again.
+- The 2.0.0 upgrade steps (README and changelog) told 1.x users to update
+  the integration in HACS. That fails, because HACS keeps the old domain:
+  the download and the repository refresh stop with "No manifest.json file
+  found custom_components/truenas/manifest.json". The steps now say to
+  remove TrueNAS Link in HACS (three-dot menu → **Remove**, which also
+  deletes `config/custom_components/truenas/`) and download it again.
 
 ### Development
 
@@ -381,7 +396,8 @@ only as 1.4 betas or not released yet:
   and attaches `truenas.zip`, which HACS installs from. Release notes come
   from this changelog.
 
-[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0b1...HEAD
+[2.1.0b1]: https://github.com/anto294/homeassistant-truenas/compare/v2.0.1...v2.1.0b1
 [2.0.1]: https://github.com/anto294/homeassistant-truenas/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.3...v2.0.0
 [1.5.3]: https://github.com/anto294/homeassistant-truenas/compare/v1.5.2...v1.5.3

@@ -78,11 +78,23 @@ If you prefer, you can instead keep the upstream integration and run both side b
    | Name | Friendly name for this TrueNAS system |
    | Host | Hostname or IP address |
    | API key | The key created in step 1 |
+   | Access level | **Administrator** or **Read-only** (see [Access level](#access-level)) |
    | Verify SSL | Turn off if TrueNAS uses a self-signed certificate |
 
-You can add the integration once per TrueNAS system. To change the host or API key later, use **Reconfigure** from the integration's menu.
+You can add the integration once per TrueNAS system. To change the host, API key or access level later, use **Reconfigure** from the integration's menu.
 
 If TrueNAS Link does not appear in the list, clear your browser cache.
+
+### Access level
+
+| Level | Entities | Actions | Installing updates | API key |
+|---|---|---|---|---|
+| Administrator | All | Yes | Yes | A key with full access |
+| Read-only | All | No | No | A key whose user has the `READONLY_ADMIN` role |
+
+Read-only does not hide any entity, because every sensor only reads data. Update entities still show that an update is available, but without an install button. The actions are removed from Home Assistant, unless another TrueNAS entry has Administrator access. In that case, calling one on a read-only entity gives an error.
+
+The level is what the integration does with the key, not what the key is allowed to do. To have TrueNAS enforce read-only access as well, use a key with the `READONLY_ADMIN` role. If you select Administrator with such a key, the actions and install buttons appear but TrueNAS refuses them, and the error is written to the Home Assistant log.
 
 ## Entities
 

@@ -14,7 +14,6 @@ Targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.
 
 ## Contents
 
-- [Differences from upstream](#differences-from-upstream)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -23,6 +22,8 @@ Targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.
 - [Supported TrueNAS versions](#supported-truenas-versions)
 - [Troubleshooting](#troubleshooting)
 - [Translations](#translations)
+- [Migrating from version 1.x or from the upstream integration](#migrating-from-version-1x-or-from-the-upstream-integration)
+- [Differences from upstream](#differences-from-upstream)
 - [Credits and license](#credits-and-license)
 
 ## Requirements

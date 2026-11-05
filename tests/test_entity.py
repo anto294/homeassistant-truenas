@@ -102,9 +102,9 @@ def test_child_device_info_is_valid_for_installed_ha(ha_group):
     """Child device info only uses keys the installed HA accepts, none deprecated."""
     info = _entity(ha_group).device_info
 
-    assert set(info) <= _allowed_device_info_keys()
-    assert not set(info) & _deprecated_device_info_keys()
-    assert not {key for key in info if key.startswith("default_")}
+    assert set(info.keys()) <= _allowed_device_info_keys()
+    assert not set(info.keys()) & _deprecated_device_info_keys()
+    assert not {key for key in info.keys() if key.startswith("default_")}
     assert info["name"] == ha_group
     assert info["model"] == "TRUENAS-MINI-3.0-XL+"
     assert info["manufacturer"] == "iXsystems"
@@ -149,7 +149,7 @@ def test_system_device_info_is_unchanged():
     """The System device keeps its identifiers, version and URL."""
     info = _entity("System").device_info
 
-    assert set(info) <= _allowed_device_info_keys()
+    assert set(info.keys()) <= _allowed_device_info_keys()
     assert info == entity_module.system_device_info(_coordinator())
     assert info["identifiers"] == {("truenas_link", "TrueNAS_nas")}
     assert info["connections"] == {("truenas_link", "TrueNAS_nas")}

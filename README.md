@@ -1,7 +1,7 @@
 # TrueNAS Link for Home Assistant
 
 [![GitHub release](https://img.shields.io/github/v/release/anto294/homeassistant-truenas?style=plastic)](https://github.com/anto294/homeassistant-truenas/releases)
-[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=plastic)](https://github.com/hacs/integration)
+[![Marketplace catalog](https://img.shields.io/badge/Marketplace-hacs%2Fdefault-41BDF5.svg?style=plastic)](https://github.com/hacs/default)
 [![CI](https://img.shields.io/github/actions/workflow/status/anto294/homeassistant-truenas/ci.yml?style=plastic)](https://github.com/anto294/homeassistant-truenas/actions)
 ![Downloads](https://img.shields.io/github/downloads/anto294/homeassistant-truenas/total?style=plastic)
 
@@ -39,11 +39,23 @@ TrueNAS CORE and SCALE releases before 25.04 are not supported, because they do 
 
 ## Installation
 
-### HACS (recommended)
+### Marketplace (recommended)
 
-[![Open your Home Assistant instance and open this repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=anto294&repository=homeassistant-truenas&category=integration)
+Since Home Assistant 2026.11, HACS is built into Home Assistant as the Marketplace, and can no longer be installed separately. The Marketplace reads the same catalog, [hacs/default](https://github.com/hacs/default), where TrueNAS Link is listed.
 
-Or, in Home Assistant, open **HACS**, search for **TrueNAS Link**, download it and restart Home Assistant.
+[![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=anto294&repository=homeassistant-truenas&category=integration)
+
+Or go to **Settings → Marketplace**, search for **TrueNAS Link**, open it and select **Install**, then confirm. Restart Home Assistant if a repair asks you to.
+
+#### Pre-releases
+
+The Marketplace offers stable releases only, unless you ask for pre-releases:
+
+1. Go to **Settings → Devices & services → Marketplace** and open the **TrueNAS Link** device.
+2. Enable the **Pre-release** entity, which is disabled by default.
+3. Turn on its switch.
+
+You are then offered a pre-release if it is newer than the latest stable release. Back up Home Assistant first: going back to an older version needs that backup, or adding the entry again.
 
 ### Manual
 
@@ -96,7 +108,7 @@ Data is polled every 60 seconds; available updates are checked every 12 hours.
 | System | CPU usage, CPU temperature, load (1/5/15 min) | sensor | |
 | System | Memory usage, ARC size | sensor | |
 | System | Network RX / TX | sensor | One pair per interface |
-| System | TrueNAS update | update | Install system updates from Home Assistant |
+| System | TrueNAS update | update | Install system updates from Home Assistant. **Installing one reboots the NAS** |
 | System | Alerts | sensor | Active TrueNAS alerts; the messages are an attribute |
 | System | Critical alerts | binary sensor | On for an alert of level CRITICAL or above |
 | System | Reboot required | binary sensor | The reasons are an attribute |
@@ -170,6 +182,7 @@ An API key is powerful, and Home Assistant is one more place that can use it. Th
 **Before you automate power actions**
 
 - If Home Assistant runs in a VM or app on this NAS, shutting down the NAS or stopping that VM also stops Home Assistant, and it cannot bring them back. The integration cannot detect this.
+- Installing a TrueNAS update reboots the NAS when it is done, with no further question. If Home Assistant runs on this NAS, it restarts too. This also applies to an automation that installs updates.
 - Nothing here can turn on a NAS that is off, because its API is not running. Use the [Wake on LAN](https://www.home-assistant.io/integrations/wake_on_lan/) integration, if your hardware supports it.
 - Disabling a cron job is silent. If it runs your backups, nothing tells you they stopped.
 
@@ -206,9 +219,11 @@ You can also download diagnostics from the integration's page (sensitive data is
 ## Removal
 
 1. In **Settings → Devices & services → TrueNAS Link**, open the entry's three-dot menu and select **Delete**. Repeat for each entry. This also removes its devices and entities.
-2. In HACS, open **TrueNAS Link**, then three-dot menu → **Remove**. After a manual installation, delete `config/custom_components/truenas_link/` instead.
-3. Restart Home Assistant.
+2. In **Settings → Marketplace**, open **TrueNAS Link**, then three-dot menu → **Uninstall**, and confirm. After a manual installation, delete `config/custom_components/truenas_link/` instead.
+3. Restart Home Assistant if a repair asks you to. After a manual installation, always restart it.
 4. In the TrueNAS web UI, revoke the API key you created for Home Assistant (user menu → **API Keys**). Home Assistant no longer uses it, but it stays valid until you delete it.
+
+You can also skip step 1: if an entry is still configured, the Marketplace offers **Delete and uninstall** in step 2, which removes the entries, their devices and their entities in one step.
 
 Remove automations, scripts and dashboards that use these entities or actions yourself. Long-term statistics stay until you delete them in **Developer tools → Statistics**.
 
@@ -225,8 +240,10 @@ Version 2.0 renamed the domain from `truenas` to `truenas_link`. Home Assistant 
 1. Note the name of each TrueNAS entry in **Settings → Devices & services → TrueNAS**. It is the entry's title, `TrueNAS` unless you changed it.
 2. Delete those entries (three-dot menu → **Delete**).
 3. Install the new version:
-   - **From 1.x of this integration:** in HACS, open **TrueNAS Link** → three-dot menu → **Remove** (this also deletes `config/custom_components/truenas/`), then download it again from HACS. Do not use **Update**: HACS keeps the old domain, and the download (and the repository refresh) fails with "No manifest.json file found custom_components/truenas/manifest.json".
-   - **From the upstream integration:** download TrueNAS Link as described above, then remove the upstream **TrueNAS** integration in HACS. If the `config/custom_components/truenas/` folder still exists and no other integration uses it, delete it.
+   - **From 1.x of this integration, on Home Assistant 2026.11 or later:** your HACS content moved to the Marketplace when Home Assistant updated. In **Settings → Marketplace**, open **TrueNAS Link** → three-dot menu → **Uninstall**, then install it again. Do not use **Update**, because the domain has changed. If `config/custom_components/truenas/` is still there, delete it.
+   - **From 1.x of this integration, on an older Home Assistant that still has HACS:** in HACS, open **TrueNAS Link** → three-dot menu → **Remove** (this also deletes `config/custom_components/truenas/`). Do not use **Update**: HACS keeps the old domain, and the download (and the repository refresh) fails with "No manifest.json file found custom_components/truenas/manifest.json". Then either update Home Assistant and install from the Marketplace, or download it again from HACS, which only offers releases before 2.1: those are the last for your version of Home Assistant.
+   - **From the upstream integration, on Home Assistant 2026.11 or later:** install TrueNAS Link as described above, then uninstall the upstream **TrueNAS** integration in the Marketplace. If `config/custom_components/truenas/` is still there and no other integration uses it, delete it.
+   - **From the upstream integration, on an older Home Assistant that still has HACS:** remove the upstream **TrueNAS** integration in HACS, and delete the same folder if it is still there. Then update Home Assistant and install from the Marketplace, or download a release before 2.1 from HACS.
 4. Restart Home Assistant.
 5. Add **TrueNAS Link** with the same host and API key as before (see [Configuration](#configuration)).
 6. In automations and scripts, replace `truenas.` actions with `truenas_link.` (for example `truenas.vm_start` becomes `truenas_link.vm_start`).

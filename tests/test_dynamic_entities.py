@@ -8,7 +8,7 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 import pytest
 
 from custom_components.truenas_link import async_remove_config_entry_device
-from custom_components.truenas_link.const import STALE_AFTER_POLLS
+from custom_components.truenas_link.const import DOMAIN, STALE_AFTER_POLLS
 
 from .conftest import async_add_entry
 from .sample_data import _dataset, answers
@@ -467,6 +467,63 @@ def test_system_device_cannot_be_deleted(run_in_hass):
     async def scenario(hass, server):
         entry, _ = await _setup(hass, server)
         device = _device_of(hass, "sensor.truenas_system_uptime")
+
+        assert not await async_remove_config_entry_device(hass, entry, device)
+
+    run_in_hass(scenario)
+
+
+def test_system_device_left_by_a_rename_can_be_deleted(run_in_hass):
+    """Its identifier holds the hostname, so a rename makes a new device."""
+
+    async def scenario(hass, server):
+        server.results = answers("25.10")
+        entry = await async_add_entry(hass)
+        devices = dr.async_get(hass)
+        old = devices.async_get(entry.runtime_data.system_device_id)
+        assert old.identifiers == {(DOMAIN, "TrueNAS_nas")}
+
+        server.results["system.info"]["hostname"] = "renamed"
+        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done()
+
+        current = devices.async_get(entry.runtime_data.system_device_id)
+        assert current.id != old.id
+        assert current.identifiers == {(DOMAIN, "TrueNAS_renamed")}
+        registry = er.async_get(hass)
+        assert not er.async_entries_for_device(registry, old.id, True)
+        assert er.async_entries_for_device(registry, current.id, True)
+
+        assert await async_remove_config_entry_device(hass, entry, old)
+        assert not await async_remove_config_entry_device(hass, entry, current)
+
+    run_in_hass(scenario)
+
+
+def test_empty_current_system_device_cannot_be_deleted(run_in_hass):
+    """Everything else links to it, whatever it holds right now."""
+
+    async def scenario(hass, server):
+        server.results = answers("25.10")
+        entry = await async_add_entry(hass)
+        registry = er.async_get(hass)
+        device = dr.async_get(hass).async_get(entry.runtime_data.system_device_id)
+        for entity in er.async_entries_for_device(registry, device.id, True):
+            registry.async_remove(entity.entity_id)
+
+        assert not await async_remove_config_entry_device(hass, entry, device)
+
+    run_in_hass(scenario)
+
+
+def test_device_of_an_entry_that_is_not_loaded_cannot_be_deleted(run_in_hass):
+    """It has no way to tell what TrueNAS still reports."""
+
+    async def scenario(hass, server):
+        server.results = answers("25.10")
+        entry = await async_add_entry(hass)
+        device = dr.async_get(hass).async_get(entry.runtime_data.system_device_id)
+        await hass.config_entries.async_unload(entry.entry_id)
 
         assert not await async_remove_config_entry_device(hass, entry, device)
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import slugify
@@ -117,17 +118,29 @@ def async_can_remove_device(
     """Return whether the user may delete a device, and forget what it held.
 
     This is the way out for what is never removed automatically: an item that was
-    the last of its section, which leaves an empty list. The System device stays,
-    and so does a device with anything TrueNAS still reports.
+    the last of its section, which leaves an empty list, and a System device left
+    empty when TrueNAS was renamed, since its identifier holds the hostname. The
+    current System device stays, and so does a device with anything TrueNAS still
+    reports. An entry that is not loaded cannot tell any of this.
     """
-    if device_entry.identifiers:
+    if config_entry.state is not ConfigEntryState.LOADED:
         return False
 
     coordinator = config_entry.runtime_data
-    sections = set()
-    for entity in er.async_entries_for_device(
+    if device_entry.id == coordinator.system_device_id:
+        return False
+
+    entities = er.async_entries_for_device(
         er.async_get(hass), device_entry.id, include_disabled_entities=True
-    ):
+    )
+    if not entities:
+        return True
+
+    if device_entry.identifiers:
+        return False
+
+    sections = set()
+    for entity in entities:
         description = _description_of(coordinator, entity)
         if description is None:
             return False

@@ -42,6 +42,12 @@ CRITICAL_ALERT_LEVELS = ("CRITICAL", "ALERT", "EMERGENCY")
 MAX_ALERT_MESSAGES = 20
 MAX_ALERT_MESSAGE_LENGTH = 255
 
+# Seconds that a new boot time may differ from the last one and still be the same
+# boot. It is worked out from "now" here and an uptime measured earlier on TrueNAS, so
+# it moves by a second or two between updates, and more if an answer is slow. Any real
+# reboot takes much longer than this, between firmware and importing the pools.
+UPTIME_TOLERANCE = 10
+
 # First "<major>.<minor>" pair in a TrueNAS version string
 _VERSION_RE = re.compile(r"(\d+)\.(\d+)")
 
@@ -361,7 +367,13 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             uptime_tm = datetime.timestamp(
                 now - timedelta(seconds=int(self.ds["system_info"]["uptime_seconds"]))
             )
-            self.ds["system_info"]["uptimeEpoch"] = utc_from_timestamp(uptime_tm)
+            boot_time = utc_from_timestamp(uptime_tm)
+            last_boot_time = self.ds["system_info"]["uptimeEpoch"]
+            if (
+                last_boot_time is None
+                or abs((boot_time - last_boot_time).total_seconds()) > UPTIME_TOLERANCE
+            ):
+                self.ds["system_info"]["uptimeEpoch"] = boot_time
 
         self.ds["interface"] = parse_api(
             data=self.ds["interface"],

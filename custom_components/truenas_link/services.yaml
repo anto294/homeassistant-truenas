@@ -15,6 +15,30 @@ cloudsync_abort:
       integration: truenas_link
       domain: sensor
 
+pool_scrub_start:
+  name: Pool Scrub Start
+  description: Start a scrub, or resume a paused one (Target Pool Scan Sensor)
+  target:
+    entity:
+      integration: truenas_link
+      domain: sensor
+
+pool_scrub_pause:
+  name: Pool Scrub Pause
+  description: Pause a running scrub (Target Pool Scan Sensor)
+  target:
+    entity:
+      integration: truenas_link
+      domain: sensor
+
+pool_scrub_stop:
+  name: Pool Scrub Stop
+  description: Stop a running or paused scrub (Target Pool Scan Sensor)
+  target:
+    entity:
+      integration: truenas_link
+      domain: sensor
+
 dataset_snapshot:
   name: Dataset Snapshot
   description: Create a Dataset Snapshot

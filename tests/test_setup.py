@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntryState
+import pytest
 
 from custom_components.truenas_link.const import DOMAIN
 
@@ -133,5 +134,121 @@ def test_form_shows_a_known_error_for_an_unknown_failure(run_in_hass):
             )
 
         assert result["errors"] == {"host": "cannot_connect"}
+
+    run_in_hass(scenario)
+
+
+FORM_KEYS = {"host": "nas", "api_key": "good"}
+
+
+def _reconfigure_flow(hass, entry):
+    """Start Reconfigure for an entry."""
+    return hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_RECONFIGURE,
+            "entry_id": entry.entry_id,
+        },
+    )
+
+
+def test_new_entries_verify_ssl_by_default(run_in_hass):
+    """The setup form starts with verification on."""
+
+    async def scenario(hass, _server):
+        flow = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+
+        data = flow["data_schema"]({**FORM_KEYS, "name": "TrueNAS"})
+        assert data["verify_ssl"] is True
+
+    run_in_hass(scenario)
+
+
+@pytest.mark.parametrize("stored", [True, False])
+def test_reconfigure_shows_the_stored_verify_ssl(run_in_hass, stored):
+    """A stored value is shown as it is, and used, without a migration."""
+
+    async def scenario(hass, _server):
+        entry = await async_add_entry(hass, verify_ssl=stored)
+        assert hass.data[DOMAIN][entry.entry_id].api._ssl_verify is stored
+
+        flow = await _reconfigure_flow(hass, entry)
+
+        assert flow["data_schema"](FORM_KEYS)["verify_ssl"] is stored
+        assert entry.data["verify_ssl"] is stored
+
+    run_in_hass(scenario)
+
+
+def test_reconfigure_form_keeps_a_stored_false_after_an_error(run_in_hass):
+    """The form that comes back after an error still shows it off."""
+
+    async def scenario(hass, _server):
+        entry = await async_add_entry(hass, verify_ssl=False)
+        flow = await _reconfigure_flow(hass, entry)
+
+        result = await hass.config_entries.flow.async_configure(
+            flow["flow_id"],
+            {
+                "host": "nas",
+                "api_key": "wrong",
+                "access_level": "admin",
+                "verify_ssl": False,
+            },
+        )
+
+        assert result["errors"] == {"host": "invalid_key"}
+        assert result["data_schema"](FORM_KEYS)["verify_ssl"] is False
+
+    run_in_hass(scenario)
+
+
+def test_reconfigure_form_keeps_what_was_entered_after_an_error(run_in_hass):
+    """Turning it off and getting an error does not turn it back on."""
+
+    async def scenario(hass, _server):
+        entry = await async_add_entry(hass, verify_ssl=True)
+        flow = await _reconfigure_flow(hass, entry)
+
+        result = await hass.config_entries.flow.async_configure(
+            flow["flow_id"],
+            {
+                "host": "other",
+                "api_key": "wrong",
+                "access_level": "admin",
+                "verify_ssl": False,
+            },
+        )
+
+        assert result["data_schema"](FORM_KEYS)["verify_ssl"] is False
+        assert entry.data["verify_ssl"] is True
+
+    run_in_hass(scenario)
+
+
+def test_setup_form_keeps_false_after_an_error(run_in_hass):
+    """The setup form that comes back after an error still shows it off."""
+
+    async def scenario(hass, _server):
+        flow = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+
+        result = await hass.config_entries.flow.async_configure(
+            flow["flow_id"],
+            {
+                **FORM_KEYS,
+                "name": "TrueNAS",
+                "api_key": "wrong",
+                "access_level": "admin",
+                "verify_ssl": False,
+            },
+        )
+
+        assert result["errors"] == {"host": "invalid_key"}
+        data = result["data_schema"]({**FORM_KEYS, "name": "TrueNAS"})
+        assert data["verify_ssl"] is False
 
     run_in_hass(scenario)

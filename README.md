@@ -59,7 +59,7 @@ Download `truenas_link.zip` from the [latest release](https://github.com/anto294
    | Host | Hostname or IP address |
    | API key | The key created in step 1 |
    | Access level | **Read-only** (default) or **Administrator** (see [Access level](#access-level)) |
-   | Verify SSL | Turn off if TrueNAS uses a self-signed certificate |
+   | Verify SSL | On by default. Turn off if TrueNAS uses a self-signed certificate |
 
 You can add the integration once per TrueNAS system. To change the host, API key or access level later, use **Reconfigure** from the integration's menu.
 
@@ -159,7 +159,7 @@ An API key is powerful, and Home Assistant is one more place that can use it. Th
 
 - **The access level is a limit in this integration, not on the key.** Only a key with the `READONLY_ADMIN` role makes TrueNAS itself refuse changes, so use one if you do not need actions. Anyone who can read your Home Assistant configuration can read the key.
 - **Narrow roles do not make a key harmless.** `POOL_WRITE`, needed for scrubs, is also the role of `pool.export`. `SYSTEM_CRON_WRITE`, needed for cron job switches, also allows changing and running cron jobs, which can run commands on the NAS. `system.shutdown` needs `FULL_ADMIN`. Treat any key that can do more than read as an administrator's key.
-- **Verify SSL is off by default**, because TrueNAS often uses a self-signed certificate. Without it, someone on your network could intercept the connection and the key. Turn it on if your certificate is valid, especially with an Administrator key.
+- **Turning off Verify SSL exposes the key.** It is on by default, but TrueNAS often uses a self-signed certificate, which needs it off. Without it, someone on your network could intercept the connection and the key. Prefer a certificate Home Assistant trusts, especially with an Administrator key. Existing entries keep their setting: check it with **Reconfigure**.
 
 **Before you automate power actions**
 

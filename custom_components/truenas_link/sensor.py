@@ -38,6 +38,7 @@ async def async_setup_entry(
         "TrueNASClousyncSensor": TrueNASClousyncSensor,
         "TrueNASDatasetSensor": TrueNASDatasetSensor,
         "TrueNASPoolScanSensor": TrueNASPoolScanSensor,
+        "TrueNASReplicationSensor": TrueNASReplicationSensor,
     }
     await async_add_entities(
         hass, config_entry, dispatcher, SENSOR_TYPES, SENSOR_SERVICES
@@ -156,6 +157,44 @@ class TrueNASPoolScanSensor(TrueNASSensor):
     async def stop(self) -> None:
         """Stop a running or paused scrub."""
         await self._scrub((SCAN_SCRUBBING, SCAN_PAUSED), "CANCEL", "STOP")
+
+
+# ---------------------------
+#   TrueNASReplicationSensor
+# ---------------------------
+class TrueNASReplicationSensor(TrueNASSensor):
+    """Define a TrueNAS replication sensor."""
+
+    async def start(self) -> None:
+        """Run the replication task, unless it is already running."""
+        task = await self.hass.async_add_executor_job(
+            self.coordinator.api.query,
+            "replication.get_instance",
+            [self._data["id"]],
+        )
+        if not isinstance(task, dict):
+            _LOGGER.error(
+                "Replication task %s (%s) invalid",
+                self._data["name"],
+                self._data["id"],
+            )
+            return
+
+        # job is null if the task has never run
+        if (task.get("job") or {}).get("state") in ("WAITING", "RUNNING"):
+            _LOGGER.warning(
+                "Replication task %s (%s) is already running",
+                self._data["name"],
+                self._data["id"],
+            )
+            return
+
+        await self.hass.async_add_executor_job(
+            self.coordinator.api.query,
+            "replication.run",
+            [self._data["id"]],
+        )
+        await self.coordinator.async_refresh()
 
 
 # ---------------------------

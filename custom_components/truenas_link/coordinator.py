@@ -26,6 +26,7 @@ from .apiparser import parse_api, utc_from_timestamp
 from .const import (
     BOOT_POOL_NAMES,
     DOMAIN,
+    STALE_AFTER_POLLS,
     SCAN_IDLE,
     SCAN_PAUSED,
     SCAN_RESILVERING,
@@ -114,6 +115,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         )
 
         self.name = config_entry.data[CONF_NAME]
+        self.instance = config_entry.data[CONF_NAME]
         self.host = config_entry.data[CONF_HOST]
         self.read_only = is_read_only(config_entry.data)
 
@@ -139,6 +141,18 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             config_entry.data[CONF_VERIFY_SSL],
         )
 
+        # Per section: the uids in TrueNAS' last answer, which may be empty.
+        # A failed query leaves this as it was.
+        self.present: dict[str, set[Any]] = {}
+        # Sections whose answer in the current poll was a list with something in it
+        self.answered: set[str] = set()
+        # Names of the pools in TrueNAS' last answer
+        self.pool_names: set[str] = set()
+        self.stale_after_polls = STALE_AFTER_POLLS
+        # Successful polls without an item, per section, and per registry entity
+        self._stale_item_polls: dict[str, dict[Any, int]] = {}
+        self.stale_entity_polls: dict[str, int] = {}
+
         self._systemstats_errored = []
         # Device registry id of the "System" device, set by async_setup_entry
         self.system_device_id: str | None = None
@@ -161,6 +175,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     # ---------------------------
     async def _async_update_data(self):
         """Update TrueNAS data."""
+        self.answered = set()
         if not self.api.connected():
             await self.hass.async_add_executor_job(self.api.connect)
             # Check it here: the next query() clears the error code
@@ -197,7 +212,63 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         if not self.api.connected():
             raise UpdateFailed("TrueNas Disconnected")
 
+        self._forget_stale_items()
         return self.ds
+
+    # ---------------------------
+    #   _seen
+    # ---------------------------
+    def _seen(self, section: str, key: str, source: Any) -> Any:
+        """Note which items a query returned, and return its answer.
+
+        None means that the query failed, which says nothing about the items.
+        """
+        if isinstance(source, list):
+            uids = {
+                item[key] for item in source if isinstance(item, dict) and item.get(key)
+            }
+            self.present[section] = uids
+            if uids:
+                self.answered.add(section)
+
+        return source
+
+    # ---------------------------
+    #   is_missing
+    # ---------------------------
+    def is_missing(self, section: str, uid: Any) -> bool:
+        """Return whether TrueNAS no longer lists an item it knows the section of.
+
+        An empty list does not count: Docker restarting empties the apps, and a
+        pool that is not imported yet empties its datasets. For the same reason a
+        dataset does not count while its pool is not there.
+        """
+        present = self.present.get(section)
+        if not present or uid in present:
+            return False
+
+        if section == "dataset":
+            item = self.ds["dataset"].get(uid) or {}
+            return item.get("pool") in self.pool_names
+
+        return True
+
+    # ---------------------------
+    #   _forget_stale_items
+    # ---------------------------
+    def _forget_stale_items(self) -> None:
+        """Drop items from the data after many successful polls without them."""
+        for section in self.answered:
+            polls = self._stale_item_polls.setdefault(section, {})
+            missing = {uid for uid in self.ds[section] if self.is_missing(section, uid)}
+            for uid in set(polls) - missing:
+                del polls[uid]
+
+            for uid in missing:
+                polls[uid] = polls.get(uid, 0) + 1
+                if polls[uid] >= self.stale_after_polls:
+                    del self.ds[section][uid]
+                    del polls[uid]
 
     # ---------------------------
     #   get_systeminfo
@@ -292,7 +363,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
 
         self.ds["interface"] = parse_api(
             data=self.ds["interface"],
-            source=self.api.query("interface.query"),
+            source=self._seen("interface", "id", self.api.query("interface.query")),
             key="id",
             vals=[
                 {"name": "id", "default": "unknown"},
@@ -729,7 +800,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         """Get service info from TrueNAS."""
         self.ds["service"] = parse_api(
             data=self.ds["service"],
-            source=self.api.query("service.query"),
+            source=self._seen("service", "id", self.api.query("service.query")),
             key="id",
             vals=[
                 {"name": "id", "default": 0},
@@ -804,6 +875,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         )
 
         tmp_boot = self.api.query("boot.get_state")
+        self._seen_pools(tmp_pools, tmp_boot)
         self.ds["pool"] = parse_api(
             data=self.ds["pool"],
             source=tmp_boot,
@@ -934,13 +1006,32 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                 self.ds["pool"][uid]["usage"] = 0
 
     # ---------------------------
+    #   _seen_pools
+    # ---------------------------
+    def _seen_pools(self, pools: Any, boot: Any) -> None:
+        """Note the pools that exist, from the answers of both pool queries.
+
+        The boot pool is always there, so it cannot tell whether the list of the
+        others is empty, and pools only count if both queries worked.
+        """
+        if not isinstance(pools, list) or not isinstance(boot, dict):
+            return
+
+        names = {pool["name"] for pool in pools if pool.get("name")}
+        self.pool_names = names | {boot.get("name")}
+        if pools:
+            self.present["pool"] = {pool["guid"] for pool in pools if pool.get("guid")}
+            self.present["pool"].add(boot.get("name"))
+            self.answered.add("pool")
+
+    # ---------------------------
     #   get_dataset
     # ---------------------------
     def get_dataset(self) -> None:
         """Get datasets from TrueNAS."""
         self.ds["dataset"] = parse_api(
-            data={},
-            source=self.api.query("pool.dataset.query"),
+            data=self.ds["dataset"],
+            source=self._seen("dataset", "id", self.api.query("pool.dataset.query")),
             key="id",
             vals=[
                 {"name": "id", "default": "unknown"},
@@ -1003,43 +1094,6 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             ],
         )
 
-        if len(self.ds["dataset"]) == 0:
-            return
-
-        # entities_to_be_removed = []
-        # if not self.datasets_hass_device_id:
-        #     device_registry = dr.async_get(self.hass)
-        #     for device in device_registry.devices.values():
-        #         if (
-        #             self.config_entry.entry_id in device.config_entries
-        #             and device.name.endswith("Datasets")
-        #         ):
-        #             self.datasets_hass_device_id = device.id
-        #             _LOGGER.debug(f"datasets device: {device.name}")
-        #
-        #     if not self.datasets_hass_device_id:
-        #         return
-        #
-        # _LOGGER.debug(f"datasets_hass_device_id: {self.datasets_hass_device_id}")
-        # entity_registry = er.async_get(self.hass)
-        # entity_entries = async_entries_for_config_entry(
-        #     entity_registry, self.config_entry.entry_id
-        # )
-        # for entity in entity_entries:
-        #     if (
-        #         entity.device_id == self.datasets_hass_device_id
-        #         and entity.unique_id.removeprefix(f"{self.name.lower()}-dataset-")
-        #         not in map(
-        #             lambda x: str.replace(x, "/", "_"),
-        #             map(str.lower, self.ds["dataset"].keys()),
-        #         )
-        #     ):
-        #         _LOGGER.debug(f"dataset to be removed: {entity.unique_id}")
-        #         entities_to_be_removed.append(entity.entity_id)
-        #
-        # for entity_id in entities_to_be_removed:
-        #     entity_registry.async_remove(entity_id)
-
     # ---------------------------
     #   get_disk
     # ---------------------------
@@ -1047,7 +1101,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         """Get disks from TrueNAS."""
         self.ds["disk"] = parse_api(
             data=self.ds["disk"],
-            source=self.api.query("disk.query"),
+            source=self._seen("disk", "identifier", self.api.query("disk.query")),
             key="identifier",
             vals=[
                 {"name": "name", "default": "unknown"},
@@ -1105,7 +1159,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         same. The numeric libvirt id that vm.start/vm.stop expect is stored
         in "vm_id".
         """
-        tmp_source = self.api.query("vm.query")
+        tmp_source = self._seen("vm", "name", self.api.query("vm.query"))
         if not isinstance(tmp_source, list):
             # Query failed: keep the last known entries instead of dropping
             # them (entities would raise KeyError) or converting them twice.
@@ -1146,7 +1200,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     # ---------------------------
     def _get_vm_virt(self) -> None:
         """Get VMs and containers with virt.instance.query (TrueNAS 25.04)."""
-        tmp_source = self.api.query("virt.instance.query")
+        tmp_source = self._seen("vm", "id", self.api.query("virt.instance.query"))
         if not isinstance(tmp_source, list):
             # Query failed: keep the last known entries instead of dropping
             # them (entities would raise KeyError) or converting them twice.
@@ -1191,7 +1245,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             self.ds["container"] = {}
             return
 
-        tmp_source = self.api.query("container.query")
+        tmp_source = self._seen("container", "name", self.api.query("container.query"))
         if not isinstance(tmp_source, list):
             # Query failed: keep the last known entries instead of dropping
             # them (entities would raise KeyError) or converting them twice.
@@ -1234,23 +1288,27 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         """
         self.ds["cloudsync"] = parse_api(
             data=self.ds["cloudsync"],
-            source=self.api.query(
-                "cloudsync.query",
-                params=[
-                    [],
-                    {
-                        "select": [
-                            "id",
-                            "description",
-                            "direction",
-                            "path",
-                            "enabled",
-                            "transfer_mode",
-                            "snapshot",
-                            "job",
-                        ]
-                    },
-                ],
+            source=self._seen(
+                "cloudsync",
+                "id",
+                self.api.query(
+                    "cloudsync.query",
+                    params=[
+                        [],
+                        {
+                            "select": [
+                                "id",
+                                "description",
+                                "direction",
+                                "path",
+                                "enabled",
+                                "transfer_mode",
+                                "snapshot",
+                                "job",
+                            ]
+                        },
+                    ],
+                ),
             ),
             key="id",
             vals=[
@@ -1294,26 +1352,30 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         """
         self.ds["replication"] = parse_api(
             data=self.ds["replication"],
-            source=self.api.query(
-                "replication.query",
-                params=[
-                    [],
-                    {
-                        "select": [
-                            "id",
-                            "name",
-                            "source_datasets",
-                            "target_dataset",
-                            "recursive",
-                            "enabled",
-                            "direction",
-                            "transport",
-                            "auto",
-                            "retention_policy",
-                            "job",
-                        ]
-                    },
-                ],
+            source=self._seen(
+                "replication",
+                "id",
+                self.api.query(
+                    "replication.query",
+                    params=[
+                        [],
+                        {
+                            "select": [
+                                "id",
+                                "name",
+                                "source_datasets",
+                                "target_dataset",
+                                "recursive",
+                                "enabled",
+                                "direction",
+                                "transport",
+                                "auto",
+                                "retention_policy",
+                                "job",
+                            ]
+                        },
+                    ],
+                ),
             ),
             key="id",
             vals=[
@@ -1356,7 +1418,9 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         """Get replication from TrueNAS."""
         self.ds["snapshottask"] = parse_api(
             data=self.ds["snapshottask"],
-            source=self.api.query("pool.snapshottask.query"),
+            source=self._seen(
+                "snapshottask", "id", self.api.query("pool.snapshottask.query")
+            ),
             key="id",
             vals=[
                 {"name": "id", "default": 0},
@@ -1393,9 +1457,16 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
 
         self.ds["cronjob"] = parse_api(
             data=self.ds["cronjob"],
-            source=self.api.query(
-                "cronjob.query",
-                params=[[], {"select": ["id", "description", "enabled", "schedule"]}],
+            source=self._seen(
+                "cronjob",
+                "id",
+                self.api.query(
+                    "cronjob.query",
+                    params=[
+                        [],
+                        {"select": ["id", "description", "enabled", "schedule"]},
+                    ],
+                ),
             ),
             key="id",
             vals=[
@@ -1422,7 +1493,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         """Get Apps from TrueNAS."""
         self.ds["app"] = parse_api(
             data=self.ds["app"],
-            source=self.api.query("app.query"),
+            source=self._seen("app", "id", self.api.query("app.query")),
             key="id",
             vals=[
                 {"name": "id", "default": 0},

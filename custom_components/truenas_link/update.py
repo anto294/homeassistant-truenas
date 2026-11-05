@@ -50,6 +50,7 @@ class TrueNASUpdate(TrueNASEntity, UpdateEntity):
     """Define an TrueNAS Update Sensor."""
 
     TYPE = DEVICE_UPDATE
+    _platform_domain = "update"
     _attr_device_class = UpdateDeviceClass.FIRMWARE
 
     def __init__(
@@ -113,6 +114,7 @@ class TrueNASAppUpdate(TrueNASEntity, UpdateEntity):
     """Define an TrueNAS App Update Sensor."""
 
     TYPE = DEVICE_UPDATE
+    _platform_domain = "update"
 
     def __init__(
         self,

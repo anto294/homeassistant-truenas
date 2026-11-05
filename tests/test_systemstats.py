@@ -57,6 +57,9 @@ def _coordinator(api):
     coordinator = TrueNASCoordinator.__new__(TrueNASCoordinator)
     coordinator.host = "truenas.lan"
     coordinator.api = api
+    coordinator.present = {}
+    coordinator.answered = set()
+    coordinator.pool_names = set()
     coordinator._is_virtual = False
     coordinator._systemstats_errored = []
     coordinator.ds = {

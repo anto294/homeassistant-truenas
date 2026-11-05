@@ -80,6 +80,8 @@ class TrueNASCronJobSwitch(TrueNASEntity, SwitchEntity):
     or user.
     """
 
+    _platform_domain = "switch"
+
     @property
     def is_on(self) -> bool:
         """Return true if the cron job is enabled."""

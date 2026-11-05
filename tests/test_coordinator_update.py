@@ -12,6 +12,9 @@ def _coordinator(api, version="25.10.1"):
     coordinator = TrueNASCoordinator.__new__(TrueNASCoordinator)
     coordinator.host = "truenas.lan"
     coordinator.api = api
+    coordinator.present = {}
+    coordinator.answered = set()
+    coordinator.pool_names = set()
     coordinator._version_major = 0
     coordinator._version_minor = 0
     coordinator._detect_version(version)

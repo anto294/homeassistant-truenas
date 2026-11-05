@@ -169,6 +169,7 @@ def test_setup_registers_system_device_before_platforms(monkeypatch):
     coordinator = _coordinator()
     coordinator.system_device_id = None
     coordinator.async_config_entry_first_refresh = AsyncMock()
+    coordinator.async_add_listener = MagicMock()
 
     registry = MagicMock()
 

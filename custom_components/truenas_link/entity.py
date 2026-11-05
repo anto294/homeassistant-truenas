@@ -9,11 +9,7 @@ from typing import Any, Callable
 from homeassistant.const import ATTR_ATTRIBUTION, CONF_HOST, CONF_NAME
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import (
-    entity_platform as ep,
-    entity_registry as er,
-)
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers import entity_platform as ep
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.service import remove_entity_service_fields
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -182,48 +178,54 @@ async def async_add_entities(
 
     async_update_services(hass, platform, services)
 
+    coordinator = config_entry.runtime_data
+    known: set[tuple[str, Any]] = set()
+
     @callback
-    async def async_update_controller(coordinator):
-        """Update the values of the controller."""
+    def async_new_entities() -> list[Entity]:
+        """Return an entity for each item not seen before."""
+        new: list[Entity] = []
+        for description in descriptions:
+            data = coordinator.data[description.data_path]
+            factory = dispatcher[description.func]
+            if not description.data_reference:
+                if (
+                    data.get(description.data_attribute) is not None
+                    and (description.key, None) not in known
+                ):
+                    known.add((description.key, None))
+                    new.append(factory(coordinator, description))
 
-        async def async_check_exist(obj, coordinator, uid: None) -> None:
-            """Check entity exists."""
-            entity_registry = er.async_get(hass)
-            if uid:
-                unique_id = f"{obj._inst.lower()}-{obj.entity_description.key}-{slugify(str(obj._data[obj.entity_description.data_reference]).lower())}"
-            else:
-                unique_id = f"{obj._inst.lower()}-{obj.entity_description.key}"
+                continue
 
-            entity_id = entity_registry.async_get_entity_id(
-                platform.domain, DOMAIN, unique_id
+            # An item that was removed gets an entity again if it comes back
+            known.difference_update(
+                {
+                    item
+                    for item in known
+                    if item[0] == description.key
+                    and item[1] is not None
+                    and item[1] not in data
+                }
             )
-            entity = entity_registry.async_get(entity_id)
-            if entity is None or (
-                (entity_id not in platform.entities) and (entity.disabled is False)
-            ):
-                _LOGGER.debug("Add entity %s", entity_id)
-                await platform.async_add_entities([obj])
+            for uid in data:
+                if (description.key, uid) not in known:
+                    known.add((description.key, uid))
+                    new.append(factory(coordinator, description, uid))
 
-        for entity_description in descriptions:
-            data = coordinator.data[entity_description.data_path]
-            if not entity_description.data_reference:
-                if data.get(entity_description.data_attribute) is None:
-                    continue
-                obj = dispatcher[entity_description.func](
-                    coordinator, entity_description
-                )
-                await async_check_exist(obj, coordinator, None)
-            else:
-                for uid in data:
-                    obj = dispatcher[entity_description.func](
-                        coordinator, entity_description, uid
-                    )
-                    await async_check_exist(obj, coordinator, uid)
+        return new
 
-    await async_update_controller(config_entry.runtime_data)
+    @callback
+    def async_add_new_entities() -> None:
+        """Add what appeared on TrueNAS since the last update."""
+        if coordinator.last_update_success and (new := async_new_entities()):
+            _LOGGER.debug("Add %s entities", len(new))
+            config_entry.async_create_task(hass, platform.async_add_entities(new))
 
-    unsub = async_dispatcher_connect(hass, "update_sensors", async_update_controller)
-    config_entry.async_on_unload(unsub)
+    # Directly, so the entities exist when the platform setup ends
+    await platform.async_add_entities(async_new_entities())
+
+    config_entry.async_on_unload(coordinator.async_add_listener(async_add_new_entities))
 
 
 # ---------------------------
@@ -233,6 +235,8 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
     """Define entity."""
 
     _attr_has_entity_name = True
+    # The domain of the platform, set by each platform's base class
+    _platform_domain: str
 
     async def _async_call(
         self,
@@ -298,8 +302,6 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
         else:
             self._data = coordinator.data[self.entity_description.data_path]
 
-        platform = ep.async_get_current_platform()
-
         dev_group = self.entity_description.ha_group
         if self.entity_description.ha_group.startswith("data__"):
             dev_group = self.entity_description.ha_group[6:]
@@ -307,17 +309,34 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
                 dev_group = self._data[dev_group]
 
         self.entity_id = build_entity_id(
-            platform.domain, self._inst, dev_group, self.name
+            self._platform_domain, self._inst, dev_group, self.name
         )
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        self._data = self.coordinator.data[self.entity_description.data_path]
-        if self._uid:
-            self._data = self.coordinator.data[self.entity_description.data_path][
-                self._uid
-            ]
+        section = self.coordinator.data[self.entity_description.data_path]
+        if not self._uid:
+            self._data = section
+        elif self._uid in section:
+            self._data = section[self._uid]
+
+        # Otherwise the item is gone: keep its last values for the entity's name,
+        # until its removal. available says that they are out of date.
         super()._handle_coordinator_update()
+
+    @property
+    def available(self) -> bool:
+        """Return false while the item is gone from TrueNAS."""
+        if not super().available:
+            return False
+
+        if not self._uid:
+            return True
+
+        path = self.entity_description.data_path
+        return self._uid in self.coordinator.data[
+            path
+        ] and not self.coordinator.is_missing(path, self._uid)
 
     @property
     def name(self) -> str:

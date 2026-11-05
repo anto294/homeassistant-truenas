@@ -21,8 +21,20 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   Reconfigure no longer sends the stored key to the browser: leave the field
   empty to keep it.
 
+### Added
+
+- New datasets, VMs, containers, apps, disks, tasks and cron jobs get their entities
+  without a reload.
+
 ### Changed
 
+- **Entities of items deleted from TrueNAS are now removed, which loses their
+  customizations.** An item that TrueNAS stops listing becomes unavailable at once,
+  and its entities are removed after about an hour (60 successful updates). If it
+  comes back, it gets the same entity ID. A failed query or an empty list never
+  counts, so Docker restarting or a pool that is not imported yet removes nothing,
+  and neither do the datasets of a pool that is gone. What an empty list leaves
+  behind, such as the last VM, can be removed by deleting its device.
 - **The same TrueNAS system can no longer be added twice**, whatever its name or
   address. Reconfigure and reauthentication refuse an address or key that leads
   to another system, and still accept a new address for the same one. Existing
@@ -33,6 +45,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ### Fixed
 
 - Every entity went unavailable if reading the boot pool failed once.
+- Datasets no longer vanish from the data when their query fails, which made their
+  entities fail on the next update.
 - The link to TrueNAS on the System device now uses HTTPS, the only protocol the
   integration uses to reach it.
 - A method that TrueNAS refuses no longer writes an error to the log on every

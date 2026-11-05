@@ -187,6 +187,6 @@ If you prefer, you can instead keep the upstream integration and run both side b
 
 ## Credits and license
 
-This project is a fork of [tomaae/homeassistant-truenas](https://github.com/tomaae/homeassistant-truenas), created by Tomaae and its contributors. Thanks to them for the original integration.
+This project started as a fork of [tomaae/homeassistant-truenas](https://github.com/tomaae/homeassistant-truenas), created by Tomaae and its contributors. Thanks to them for the original integration.
 
 Distributed under the [Apache License 2.0](LICENSE).

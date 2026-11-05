@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import logging
-import ssl
 
 import json
 from pathlib import Path
-import socket
+import errno
+import ssl
 from unittest.mock import AsyncMock, patch
 
 from homeassistant.util.ssl import client_context, get_default_no_verify_context
@@ -322,21 +322,53 @@ ERROR_CODES = json.loads(
 @pytest.mark.parametrize(
     ("error", "code"),
     [
-        (TimeoutError("timed out during opening handshake"), "handshake_timeout"),
-        (TimeoutError(), "handshake_timeout"),
-        (socket.timeout("_ssl.c:989: The handshake timed out"), "handshake_timeout"),
-        (ConnectionRefusedError(111, "Connection refused"), "connection_refused"),
-        (socket.gaierror(-2, "Name or service not known"), "invalid_hostname"),
-        (OSError(113, "No route to host"), "invalid_hostname"),
+        # What asyncio raises, for what cannot be made to happen on a local socket.
+        # tests/test_connection_errors.py gets the others from real connections.
         (
-            socket.gaierror(-5, "No address associated with hostname"),
-            "unknown_hostname",
+            OSError(errno.EHOSTUNREACH, "Connect call failed ('10.0.0.1', 443)"),
+            "host_unreachable",
         ),
         (
-            ssl.SSLCertVerificationError("[SSL: CERTIFICATE_VERIFY_FAILED] failed"),
-            "certificate_verify_failed",
+            OSError(errno.ENETUNREACH, "Connect call failed ('10.0.0.1', 443)"),
+            "host_unreachable",
         ),
-        (Exception("server rejected WebSocket connection: HTTP 404"), "api_not_found"),
+        (
+            OSError(errno.ETIMEDOUT, "Connect call failed ('10.0.0.1', 443)"),
+            "handshake_timeout",
+        ),
+        (
+            OSError(
+                "Multiple exceptions: [Errno 101] Connect call failed ('::1', 443), "
+                "[Errno 111] Connect call failed ('10.0.0.1', 443)"
+            ),
+            "connection_refused",
+        ),
+        (
+            OSError(
+                "Multiple exceptions: [Errno 110] Connect call failed ('::1', 443), "
+                "[Errno 113] Connect call failed ('10.0.0.1', 443)"
+            ),
+            "host_unreachable",
+        ),
+        (
+            OSError(
+                "Multiple exceptions: [Errno 104] Connect call failed ('::1', 443), "
+                "[Errno 110] Connect call failed ('10.0.0.1', 443)"
+            ),
+            "handshake_timeout",
+        ),
+        # Numbers in an address or a text are not errors
+        (
+            ConnectionRefusedError(111, "Connect call failed ('::1', 8404)"),
+            "connection_refused",
+        ),
+        (OSError("Multiple exceptions: 404, [Errno 1] no"), "cannot_connect"),
+        (
+            OSError(errno.EPERM, "Connect call failed ('10.0.0.1', 404)"),
+            "cannot_connect",
+        ),
+        (OSError("something with 404 in it"), "cannot_connect"),
+        (Exception("server rejected WebSocket connection: HTTP 404"), "cannot_connect"),
         # Not recognized: the fallback, and never the exception's own text
         (OSError("something else entirely"), "cannot_connect"),
         (Exception(""), "cannot_connect"),

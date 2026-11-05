@@ -42,14 +42,13 @@
         },
         "error": {
             "invalid_key": "Accesso non riuscito, chiave API non valida.",
-            "invalid_hostname": "Connessione non riuscita, nome host non valido.",
+            "host_unreachable": "Connessione non riuscita, TrueNAS non è raggiungibile. Controlla l'host e la rete.",
             "connection_refused": "Connessione non riuscita, connessione rifiutata.",
             "handshake_timeout": "Connessione non riuscita, tempo scaduto in attesa della risposta all'handshake.",
             "api_not_found": "Connessione non riuscita, API non trovata.",
             "malformed_result": "La risposta dell'API non è valida.",
             "certificate_verify_failed": "Verifica del certificato non riuscita. Se TrueNAS usa un certificato autofirmato, disattiva Verifica il certificato SSL.",
-            "http_used": "È stata inviata una richiesta HTTP semplice alla porta HTTPS. Reverse proxy?",
-            "tlsv1_not_supported": "TLSv1 non supportato. Reverse proxy?",
+            "tls_unrecognized_name": "TLS non riuscito, il server non riconosce questo nome host. Reverse proxy?",
             "websocket_not_supported": "WebSocket non supportato. Reverse proxy?",
             "unknown_hostname": "Nome host sconosciuto, controlla il DNS.",
             "cannot_connect": "Impossibile connettersi a TrueNAS. Controlla l'host e che TrueNAS sia in funzione."

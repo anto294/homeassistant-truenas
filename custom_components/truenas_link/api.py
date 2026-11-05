@@ -1,32 +1,43 @@
 """TrueNAS API."""
 
 import asyncio
+import errno
+import re
+import socket
+import ssl
 from logging import DEBUG, ERROR, WARNING, getLogger
 from typing import Any
 
 import json
 from homeassistant.util.ssl import client_context, get_default_no_verify_context
 from websockets.asyncio.client import ClientConnection, connect
+from websockets.exceptions import InvalidHandshake, InvalidStatus
 
 from .helper import redact_secrets
 
 _LOGGER = getLogger(__name__)
 
 
-# Text in a connection error, and the error code it stands for. Codes are keys
-# of "config.error" in strings.json. The first match wins.
-CONNECT_ERRORS = (
-    ("CERTIFICATE_VERIFY_FAILED", "certificate_verify_failed"),
-    ("The plain HTTP request was sent to HTTPS port", "http_used"),
-    ("TLSV1_UNRECOGNIZED_NAME", "tlsv1_not_supported"),
-    ("No WebSocket UPGRADE", "websocket_not_supported"),
-    ("No address associated with hostname", "unknown_hostname"),
-    ("Connection refused", "connection_refused"),
-    ("No route to host", "invalid_hostname"),
-    ("Name or service not known", "invalid_hostname"),
-    ("404", "api_not_found"),
-)
+# The errors of a connection, and the codes they stand for. Codes are keys of
+# "config.error" in strings.json. These go by type and errno, because the text of an
+# error holds the address, and a port such as 8404 is not a 404.
 ERROR_CANNOT_CONNECT = "cannot_connect"
+ERROR_REFUSED = "connection_refused"
+ERROR_UNREACHABLE = "host_unreachable"
+ERROR_TIMEOUT = "handshake_timeout"
+CONNECT_ERRNOS = {
+    errno.ECONNREFUSED: ERROR_REFUSED,
+    errno.EHOSTUNREACH: ERROR_UNREACHABLE,
+    errno.ENETUNREACH: ERROR_UNREACHABLE,
+    errno.ETIMEDOUT: ERROR_TIMEOUT,
+}
+# What says most about a host with several addresses: IPv6 being unreachable says
+# little if IPv4 answered with a refusal.
+AGGREGATE_ERROR_ORDER = (ERROR_REFUSED, ERROR_UNREACHABLE, ERROR_TIMEOUT)
+# asyncio's error when all addresses of a host fail with different errors: an OSError
+# without an errno, whose text is all that is left of the errors
+MULTIPLE_ERRORS_PREFIX = "Multiple exceptions:"
+ERRNO_IN_TEXT = re.compile(r"\[Errno (\d+)\]")
 
 # Seconds to wait for the answer to a request. The keepalive pings only show that
 # the connection is up, not that TrueNAS will answer. Job methods answer at once,
@@ -160,14 +171,38 @@ class TrueNASAPI(object):
     @staticmethod
     def _connect_error_code(error: Exception) -> str:
         """Return the error code for an exception raised while connecting."""
-        # Its text depends on the websockets release and the step that timed out
         if isinstance(error, TimeoutError):
-            return "handshake_timeout"
+            return ERROR_TIMEOUT
 
-        text = str(error)
-        for marker, code in CONNECT_ERRORS:
-            if marker in text:
-                return code
+        if isinstance(error, socket.gaierror):
+            return "unknown_hostname"
+
+        if isinstance(error, ssl.SSLCertVerificationError):
+            return "certificate_verify_failed"
+
+        if isinstance(error, ssl.SSLError):
+            if error.reason == "TLSV1_UNRECOGNIZED_NAME":
+                return "tls_unrecognized_name"
+
+            return ERROR_CANNOT_CONNECT
+
+        if isinstance(error, InvalidStatus) and error.response.status_code == 404:
+            return "api_not_found"
+
+        if isinstance(error, InvalidHandshake):
+            # Something answers at this address, but not with a websocket
+            return "websocket_not_supported"
+
+        if isinstance(error, OSError):
+            if error.errno is not None:
+                return CONNECT_ERRNOS.get(error.errno, ERROR_CANNOT_CONNECT)
+
+            if str(error).startswith(MULTIPLE_ERRORS_PREFIX):
+                numbers = ERRNO_IN_TEXT.findall(str(error))
+                codes = {CONNECT_ERRNOS.get(int(number)) for number in numbers}
+                for code in AGGREGATE_ERROR_ORDER:
+                    if code in codes:
+                        return code
 
         return ERROR_CANNOT_CONNECT
 

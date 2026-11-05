@@ -351,3 +351,87 @@ def test_going_back_needs_no_migration(run_in_hass):
         assert dict(entry.data) == data
 
     run_in_hass(scenario)
+
+
+async def _configure(hass, flow, data):
+    """Submit a form."""
+    result = await hass.config_entries.flow.async_configure(flow["flow_id"], data)
+    await hass.async_block_till_done()
+    return result
+
+
+def test_setup_recovers_from_an_error(run_in_hass):
+    """A wrong key can be corrected in the form, and the entry gets its unique id."""
+
+    async def scenario(hass, server):
+        server.results["system.global.id"] = SYSTEM_A
+        flow = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        fields = {"name": "TrueNAS", "host": "nas", **FIELDS}
+
+        failed = await _configure(hass, flow, {**fields, "api_key": "wrong"})
+        assert failed["errors"] == {"host": "invalid_key"}
+
+        result = await _configure(hass, flow, {**fields, "api_key": "good"})
+        assert result["type"] == "create_entry"
+        assert result["title"] == "TrueNAS"
+        assert result["data"]["api_key"] == "good"
+        assert result["result"].unique_id == SYSTEM_A
+
+    run_in_hass(scenario)
+
+
+def test_reconfigure_recovers_from_an_error(run_in_hass):
+    """A wrong key can be corrected in the form."""
+
+    async def scenario(hass, server):
+        server.results["system.global.id"] = SYSTEM_A
+        entry = await async_add_entry(hass)
+        server.valid_keys.add("new")
+        flow = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": entry.entry_id,
+            },
+        )
+        fields = {"host": "new-host", **FIELDS}
+
+        failed = await _configure(hass, flow, {**fields, "api_key": "wrong"})
+        assert failed["errors"] == {"host": "invalid_key"}
+        assert entry.data["host"] == "nas"
+
+        result = await _configure(hass, flow, {**fields, "api_key": "new"})
+        assert result["reason"] == "reconfigure_successful"
+        assert entry.data["host"] == "new-host"
+        assert entry.unique_id == SYSTEM_A
+
+    run_in_hass(scenario)
+
+
+def test_reauth_recovers_from_an_error(run_in_hass):
+    """A wrong key can be corrected in the form."""
+
+    async def scenario(hass, server):
+        server.results["system.global.id"] = SYSTEM_A
+        entry = await async_add_entry(hass)
+        server.valid_keys.add("new")
+        flow = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_REAUTH,
+                "entry_id": entry.entry_id,
+            },
+            data=entry.data,
+        )
+
+        failed = await _configure(hass, flow, {"api_key": "wrong"})
+        assert failed["errors"] == {"base": "invalid_key"}
+
+        result = await _configure(hass, flow, {"api_key": "new"})
+        assert result["reason"] == "reauth_successful"
+        assert entry.data["api_key"] == "new"
+        assert entry.unique_id == SYSTEM_A
+
+    run_in_hass(scenario)

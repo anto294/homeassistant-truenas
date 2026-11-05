@@ -11,6 +11,10 @@
                     "verify_ssl": "Verifica il certificato SSL"
                 },
                 "data_description": {
+                    "name": "Usato negli ID delle entità. Non si può cambiare in seguito e ogni voce deve averne uno proprio.",
+                    "host": "Indirizzo di TrueNAS, con la porta se non è la 443. L'integrazione si collega in HTTPS.",
+                    "api_key": "Creala nell'interfaccia web di TrueNAS: menu utente → API Keys → Add.",
+                    "verify_ssl": "Controlla il certificato di TrueNAS. Disattivalo per un certificato autofirmato: qualcuno sulla tua rete potrebbe però intercettare la chiave.",
                     "access_level": "Sola lettura rifiuta le azioni, rimuove i pulsanti di installazione e gli interruttori dei cron, e tiene tutti i sensori. Usa una chiave API con il ruolo READONLY_ADMIN, così lo impone anche TrueNAS."
                 }
             },
@@ -23,8 +27,10 @@
                     "verify_ssl": "Verifica il certificato SSL"
                 },
                 "data_description": {
+                    "host": "Indirizzo di TrueNAS, con la porta se non è la 443. L'integrazione si collega in HTTPS.",
                     "api_key": "Lascia vuoto per mantenere la chiave attuale.",
-                    "access_level": "Sola lettura rifiuta le azioni, rimuove i pulsanti di installazione e gli interruttori dei cron, e tiene tutti i sensori. Usa una chiave API con il ruolo READONLY_ADMIN, così lo impone anche TrueNAS."
+                    "access_level": "Sola lettura rifiuta le azioni, rimuove i pulsanti di installazione e gli interruttori dei cron, e tiene tutti i sensori. Usa una chiave API con il ruolo READONLY_ADMIN, così lo impone anche TrueNAS.",
+                    "verify_ssl": "Controlla il certificato di TrueNAS. Disattivalo per un certificato autofirmato: qualcuno sulla tua rete potrebbe però intercettare la chiave."
                 }
             },
             "reauth_confirm": {
@@ -32,6 +38,9 @@
                 "description": "TrueNAS ha rifiutato la chiave API di {name}. Inseriscine una nuova.",
                 "data": {
                     "api_key": "Chiave API"
+                },
+                "data_description": {
+                    "api_key": "La nuova chiave per questo sistema TrueNAS. Creala nell'interfaccia web di TrueNAS: menu utente → API Keys → Add."
                 }
             }
         },

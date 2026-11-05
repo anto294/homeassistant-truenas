@@ -1,7 +1,7 @@
 # TrueNAS Link for Home Assistant
 
 [![GitHub release](https://img.shields.io/github/v/release/anto294/homeassistant-truenas?style=plastic)](https://github.com/anto294/homeassistant-truenas/releases)
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=plastic)](https://hacs.xyz/docs/faq/custom_repositories/)
+[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=plastic)](https://github.com/hacs/integration)
 [![CI](https://img.shields.io/github/actions/workflow/status/anto294/homeassistant-truenas/ci.yml?style=plastic)](https://github.com/anto294/homeassistant-truenas/actions)
 ![Downloads](https://img.shields.io/github/downloads/anto294/homeassistant-truenas/total?style=plastic)
 
@@ -47,11 +47,7 @@ TrueNAS CORE and SCALE releases before 25.04 are not supported, because they do 
 
 [![Open your Home Assistant instance and open this repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=anto294&repository=homeassistant-truenas&category=integration)
 
-Or add the repository manually:
-
-1. In Home Assistant, open **HACS**, then the three-dot menu → **Custom repositories**.
-2. Add `https://github.com/anto294/homeassistant-truenas` with type **Integration**.
-3. Search for **TrueNAS Link**, download it and restart Home Assistant.
+Or, in Home Assistant, open **HACS**, search for **TrueNAS Link**, download it and restart Home Assistant.
 
 ### Manual
 

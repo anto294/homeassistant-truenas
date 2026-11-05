@@ -25,6 +25,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- An empty **System** device that stays behind after renaming TrueNAS can now be deleted.
 - The setup and Reconfigure forms now give the right error. A refused connection gave a
   generic message, and with a port such as 8404 even "API not found", because the
   errors were recognized by text that never appeared in them or that held the address.

@@ -216,6 +216,8 @@ logger:
 
 When TrueNAS cannot be reached, the log says so once, and once more when it is back. The cause is only in the debug log.
 
+After you rename TrueNAS, an empty **System** device stays next to the new one, because a device's identifier holds the hostname. To remove it, open it in **Settings → Devices & services**, then three-dot menu → **Delete**.
+
 You can also download diagnostics from the integration's page (sensitive data is redacted) and attach them to an [issue](https://github.com/anto294/homeassistant-truenas/issues).
 
 ## Removal

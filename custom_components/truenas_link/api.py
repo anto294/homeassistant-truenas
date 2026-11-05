@@ -5,7 +5,7 @@ import errno
 import re
 import socket
 import ssl
-from logging import DEBUG, ERROR, WARNING, getLogger
+from logging import DEBUG, getLogger
 from typing import Any
 
 import json
@@ -102,7 +102,6 @@ class TrueNASAPI(object):
         self._ws: ClientConnection | None = None
         self._connected = False
         self._error = ""
-        self._error_logged = False
         # What each method last failed with, to log a repeated failure once
         self._failed_methods: dict[str, str] = {}
         # Set by connection_test
@@ -128,11 +127,9 @@ class TrueNASAPI(object):
                 )
             except Exception as e:
                 self._error = self._connect_error_code(e)
-
-                if not self._error_logged:
-                    _LOGGER.error("TrueNAS %s failed to connect (%s)", self._host, e)
-
-                self._error_logged = True
+                # The coordinator logs that TrueNAS went away, and that it is back,
+                # and the forms show the code, so this is only for the details
+                _LOGGER.debug("TrueNAS %s failed to connect (%s)", self._host, e)
                 return False
 
             try:
@@ -154,15 +151,11 @@ class TrueNASAPI(object):
                 self._abort()
                 raise
             except Exception as e:
-                if not self._error_logged:
-                    _LOGGER.error("TrueNAS %s failed to login (%s)", self._host, e)
-
+                _LOGGER.debug("TrueNAS %s failed to login (%s)", self._host, e)
                 self._error = ERROR_CANNOT_CONNECT
                 await self.disconnect()
-                self._error_logged = True
                 return False
 
-            self._error_logged = False
             return self._connected
 
     # ---------------------------
@@ -312,9 +305,15 @@ class TrueNASAPI(object):
             except TrueNASRequestError as e:
                 self._log_failed_method(service, str(e))
             except TrueNASConnectionError as e:
-                self._log_failed_method(service, str(e), WARNING)
+                # The poll fails because of this, and the coordinator logs that
+                _LOGGER.debug(
+                    'TrueNAS %s unable to fetch data "%s" (%s)',
+                    self._host,
+                    service,
+                    e,
+                )
                 await self.disconnect()
-                # The reason is in the log. This is a code the forms can show.
+                # The reason is in the debug log. This is a code the forms can show.
                 self._error = ERROR_CANNOT_CONNECT
             else:
                 if self._failed_methods.pop(service, None) is not None:
@@ -329,12 +328,11 @@ class TrueNASAPI(object):
     # ---------------------------
     #   _log_failed_method
     # ---------------------------
-    def _log_failed_method(self, service: str, reason: str, level: int = ERROR) -> None:
+    def _log_failed_method(self, service: str, reason: str) -> None:
         """Log why a polled method failed, unless it was already logged.
 
-        A method that TrueNAS refuses or leaves without an answer fails on every
-        poll, so this would fill the log. A failure with another reason is logged
-        again, and query() logs when the method works again.
+        A method that TrueNAS refuses fails on every poll, so this would fill the
+        log. A failure with another reason is logged again.
         """
         if self._failed_methods.get(service) == reason:
             _LOGGER.debug(
@@ -343,9 +341,7 @@ class TrueNASAPI(object):
             return
 
         self._failed_methods[service] = reason
-        _LOGGER.log(
-            level, "TrueNAS %s query (%s) error: %s", self._host, service, reason
-        )
+        _LOGGER.error("TrueNAS %s query (%s) error: %s", self._host, service, reason)
 
     # ---------------------------
     #   call

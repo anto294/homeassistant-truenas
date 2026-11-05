@@ -15,6 +15,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   unknown CPU temperature, not 0 °C. **Automations that compare these sensors with a
   number do not trigger on unknown, so check any that relied on 0.** A 0 that TrueNAS
   really reports stays 0, and if a query fails the last values stay, as before.
+- **A lost connection now logs one message, and one when it is back.** It used to log up
+  to three, from different places. The cause of the failure is now in the debug log, and
+  the forms no longer log an error that they already show.
 - `websockets` is now pinned to 17.4, instead of any version from 15.0.1 on.
 - The README now explains installing, testing pre-releases and removing through the
   Marketplace, which replaced HACS in Home Assistant 2026.11, and warns that installing a

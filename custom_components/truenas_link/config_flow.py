@@ -174,7 +174,8 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
             self._hostname = api.hostname
             return None
 
-        _LOGGER.error("TrueNAS connection error (%s)", errorcode)
+        # The form shows this as a message
+        _LOGGER.debug("TrueNAS connection error (%s)", errorcode)
         return errorcode
 
     async def _async_abort_if_other_system(self, entry: ConfigEntry) -> None:

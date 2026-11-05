@@ -87,5 +87,71 @@
         "scrub_boot_pool": {
             "message": "Le azioni di scrub non sono disponibili per il pool di avvio {name}."
         }
+    },
+    "entity": {
+        "sensor": {
+            "system_uptime": {
+                "name": "Tempo di attività"
+            },
+            "system_cpu_temperature": {
+                "name": "Temperatura"
+            },
+            "system_load_shortterm": {
+                "name": "Carico CPU a breve termine"
+            },
+            "system_load_midterm": {
+                "name": "Carico CPU a medio termine"
+            },
+            "system_load_longterm": {
+                "name": "Carico CPU a lungo termine"
+            },
+            "system_cpu_usage": {
+                "name": "Utilizzo CPU"
+            },
+            "system_memory_usage": {
+                "name": "Utilizzo memoria"
+            },
+            "system_cache_size-arc_value": {
+                "name": "Dimensione ARC"
+            },
+            "system_alerts": {
+                "name": "Avvisi"
+            },
+            "pool_free": {
+                "name": "{name} spazio libero"
+            },
+            "pool_scan": {
+                "name": "{name} scansione",
+                "state": {
+                    "idle": "Inattivo",
+                    "scrubbing": "Scrub in corso",
+                    "paused": "In pausa",
+                    "resilvering": "Resilver in corso"
+                }
+            },
+            "pool_last_scrub": {
+                "name": "{name} ultimo scrub"
+            },
+            "pool_errors": {
+                "name": "{name} errori"
+            },
+            "traffic_rx": {
+                "name": "{name} RX"
+            },
+            "traffic_tx": {
+                "name": "{name} TX"
+            }
+        },
+        "binary_sensor": {
+            "system_alerts_critical": {
+                "name": "Avvisi critici"
+            },
+            "system_reboot_required": {
+                "name": "Riavvio richiesto"
+            },
+            "pool_healthy": {
+                "name": "{name} integro"
+            }
+        }
     }
 }

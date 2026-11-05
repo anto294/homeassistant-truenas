@@ -28,8 +28,8 @@ class TrueNASSwitchEntityDescription(SwitchEntityDescription):
 SENSOR_TYPES: tuple[TrueNASSwitchEntityDescription, ...] = (
     TrueNASSwitchEntityDescription(
         key="cronjob",
+        translation_key="cronjob",
         name="",
-        icon="mdi:calendar-clock",
         # Off until the user turns the entity on. As a config entity it is
         # not exposed to voice assistants or switched by area and device
         # targets, such as "turn off the living room".

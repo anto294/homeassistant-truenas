@@ -1,0 +1,109 @@
+{
+    "entity": {
+        "sensor": {
+            "system_uptime": {
+                "default": "mdi:clock-outline"
+            },
+            "system_cpu_temperature": {
+                "default": "mdi:thermometer"
+            },
+            "system_load_shortterm": {
+                "default": "mdi:gauge"
+            },
+            "system_load_midterm": {
+                "default": "mdi:gauge"
+            },
+            "system_load_longterm": {
+                "default": "mdi:gauge"
+            },
+            "system_cpu_usage": {
+                "default": "mdi:cpu-64-bit"
+            },
+            "system_memory_usage": {
+                "default": "mdi:memory"
+            },
+            "system_cache_size-arc_value": {
+                "default": "mdi:memory"
+            },
+            "system_alerts": {
+                "default": "mdi:bell-alert-outline"
+            },
+            "dataset": {
+                "default": "mdi:database"
+            },
+            "disk": {
+                "default": "mdi:harddisk"
+            },
+            "pool_free": {
+                "default": "mdi:database-settings"
+            },
+            "pool_scan": {
+                "default": "mdi:database-search"
+            },
+            "pool_last_scrub": {
+                "default": "mdi:database-clock"
+            },
+            "pool_errors": {
+                "default": "mdi:database-alert"
+            },
+            "cloudsync": {
+                "default": "mdi:cloud-upload"
+            },
+            "replication": {
+                "default": "mdi:transfer"
+            },
+            "snapshottask": {
+                "default": "mdi:checkbox-marked-circle-plus-outline"
+            },
+            "traffic_rx": {
+                "default": "mdi:download-network-outline"
+            },
+            "traffic_tx": {
+                "default": "mdi:upload-network-outline"
+            }
+        },
+        "binary_sensor": {
+            "system_reboot_required": {
+                "default": "mdi:restart-alert",
+                "state": {
+                    "off": "mdi:restart"
+                }
+            },
+            "pool_healthy": {
+                "default": "mdi:database",
+                "state": {
+                    "off": "mdi:database-off"
+                }
+            },
+            "vm": {
+                "default": "mdi:server",
+                "state": {
+                    "off": "mdi:server-off"
+                }
+            },
+            "container": {
+                "default": "mdi:package-variant",
+                "state": {
+                    "off": "mdi:package-variant-remove"
+                }
+            },
+            "service": {
+                "default": "mdi:cog",
+                "state": {
+                    "off": "mdi:cog-off"
+                }
+            },
+            "app": {
+                "default": "mdi:server",
+                "state": {
+                    "off": "mdi:server-off"
+                }
+            }
+        },
+        "switch": {
+            "cronjob": {
+                "default": "mdi:calendar-clock"
+            }
+        }
+    }
+}

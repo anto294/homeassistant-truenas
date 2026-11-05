@@ -28,6 +28,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Changed
 
+- **Entity names are now translated**, for now in English and Italian, so they may
+  look different in your language. Entity IDs do not change, in any language.
+  Names you gave to entities yourself stay. Icons moved to `icons.json`, so the
+  `icon` attribute is gone from these entities' state: templates that read it need
+  another source.
 - **Entities of items deleted from TrueNAS are now removed, which loses their
   customizations.** An item that TrueNAS stops listing becomes unavailable at once,
   and its entities are removed after about an hour (60 successful updates). If it

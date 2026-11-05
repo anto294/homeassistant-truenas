@@ -35,6 +35,7 @@ from .const import (
     DEFAULT_HOST,
     DEFAULT_SSL_VERIFY,
     DOMAIN,
+    LEGACY_ACCESS_LEVEL,
 )
 from .api import TrueNASAPI
 
@@ -84,7 +85,7 @@ def _reconfigure_schema(truenas_config: Mapping[str, Any]) -> vol.Schema:
         vol.Required(CONF_API_KEY, default=truenas_config.get(CONF_API_KEY) or ""): str,
         vol.Required(
             CONF_ACCESS_LEVEL,
-            default=truenas_config.get(CONF_ACCESS_LEVEL) or DEFAULT_ACCESS_LEVEL,
+            default=truenas_config.get(CONF_ACCESS_LEVEL) or LEGACY_ACCESS_LEVEL,
         ): _access_level_selector(),
         vol.Required(
             CONF_VERIFY_SSL,

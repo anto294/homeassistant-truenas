@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from .const import ACCESS_LEVEL_READ_ONLY, CONF_ACCESS_LEVEL, DEFAULT_ACCESS_LEVEL
+from .const import ACCESS_LEVEL_READ_ONLY, CONF_ACCESS_LEVEL, LEGACY_ACCESS_LEVEL
 
 
 # ---------------------------
@@ -32,6 +32,5 @@ def format_attribute(attr: str) -> str:
 def is_read_only(entry_data: Mapping[str, Any]) -> bool:
     """Return whether a config entry's data selects the read-only access level."""
     return (
-        entry_data.get(CONF_ACCESS_LEVEL, DEFAULT_ACCESS_LEVEL)
-        == ACCESS_LEVEL_READ_ONLY
+        entry_data.get(CONF_ACCESS_LEVEL, LEGACY_ACCESS_LEVEL) == ACCESS_LEVEL_READ_ONLY
     )

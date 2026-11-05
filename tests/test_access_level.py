@@ -43,13 +43,13 @@ def test_is_read_only(data, expected):
     assert is_read_only(data) is expected
 
 
-def test_setup_form_defaults_to_administrator_and_accepts_read_only():
-    """The setup form offers both levels and rejects anything else."""
+def test_setup_form_defaults_to_read_only_and_accepts_administrator():
+    """New entries start read-only; the form rejects unknown levels."""
     schema = config_flow._base_schema({})
 
-    assert schema(FORM)[CONF_ACCESS_LEVEL] == ACCESS_LEVEL_ADMIN
-    chosen = {**FORM, CONF_ACCESS_LEVEL: ACCESS_LEVEL_READ_ONLY}
-    assert schema(chosen)[CONF_ACCESS_LEVEL] == ACCESS_LEVEL_READ_ONLY
+    assert schema(FORM)[CONF_ACCESS_LEVEL] == ACCESS_LEVEL_READ_ONLY
+    chosen = {**FORM, CONF_ACCESS_LEVEL: ACCESS_LEVEL_ADMIN}
+    assert schema(chosen)[CONF_ACCESS_LEVEL] == ACCESS_LEVEL_ADMIN
     with pytest.raises(vol.Invalid):
         schema({**FORM, CONF_ACCESS_LEVEL: "root"})
 

@@ -39,6 +39,14 @@ pool_scrub_stop:
       integration: truenas_link
       domain: sensor
 
+replication_run:
+  name: Replication Run
+  description: Run a Replication Task (Target Replication Sensor)
+  target:
+    entity:
+      integration: truenas_link
+      domain: sensor
+
 dataset_snapshot:
   name: Dataset Snapshot
   description: Create a Dataset Snapshot

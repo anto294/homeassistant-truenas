@@ -9,7 +9,7 @@ from typing import Any, Callable
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ATTRIBUTION, CONF_HOST, CONF_NAME
 from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import (
     entity_platform as ep,
     entity_registry as er,
@@ -20,6 +20,7 @@ from homeassistant.helpers.service import remove_entity_service_fields
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
+from .api import TrueNASConnectionError, TrueNASRequestError
 from .const import (
     ATTRIBUTION,
     DOMAIN,
@@ -81,6 +82,34 @@ def build_entity_id(domain: str, inst: str, group: Any, name: Any) -> str:
     """
     parts = [slugify(str(part).lower()) for part in (inst, group, name)]
     return f"{domain}.{'_'.join(part for part in parts if part)}"
+
+
+# ---------------------------
+#   invalid_state_error
+# ---------------------------
+def invalid_state_error(name: Any, state: Any, action: str) -> ServiceValidationError:
+    """Return the error for an action that does not apply to the current state."""
+    return ServiceValidationError(
+        translation_domain=DOMAIN,
+        translation_key="invalid_state",
+        translation_placeholders={
+            "name": str(name),
+            "state": str(state),
+            "action": action,
+        },
+    )
+
+
+# ---------------------------
+#   invalid_response_error
+# ---------------------------
+def invalid_response_error(name: Any) -> HomeAssistantError:
+    """Return the error for an answer an action cannot use."""
+    return HomeAssistantError(
+        translation_domain=DOMAIN,
+        translation_key="action_invalid_response",
+        translation_placeholders={"name": str(name)},
+    )
 
 
 # ---------------------------
@@ -205,6 +234,52 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
     """Define entity."""
 
     _attr_has_entity_name = True
+
+    async def _async_call(
+        self,
+        method: str,
+        params: Any = {},
+        *,
+        false_is_failure: bool = False,
+        may_disconnect: bool = False,
+    ) -> Any:
+        """Return the result of an action's call to TrueNAS.
+
+        Raise a translated HomeAssistantError if TrueNAS cannot be reached or
+        refuses. false_is_failure is for methods that report a failure by
+        returning false. may_disconnect is for methods that stop TrueNAS, which
+        can drop the connection before answering: once the request has gone
+        out, that counts as success.
+        """
+        try:
+            result = await self.hass.async_add_executor_job(
+                self.coordinator.api.call, method, params
+            )
+        except TrueNASConnectionError as err:
+            if may_disconnect and err.request_sent:
+                _LOGGER.debug("Connection closed while running %s (%s)", method, err)
+                return None
+
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_unreachable",
+                translation_placeholders={"method": method},
+            ) from err
+        except TrueNASRequestError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_rejected",
+                translation_placeholders={"method": method, "reason": str(err)},
+            ) from err
+
+        if false_is_failure and result is False:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"method": method},
+            )
+
+        return result
 
     def __init__(
         self,

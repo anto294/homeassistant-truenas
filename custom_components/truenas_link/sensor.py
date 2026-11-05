@@ -2,25 +2,31 @@
 
 from __future__ import annotations
 
-from logging import getLogger
 from datetime import date, datetime
 from decimal import Decimal
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import BOOT_POOL_NAMES, SCAN_IDLE, SCAN_PAUSED, SCAN_SCRUBBING
+from .const import BOOT_POOL_NAMES, DOMAIN, SCAN_IDLE, SCAN_PAUSED, SCAN_SCRUBBING
 from .coordinator import TrueNASCoordinator
-from .entity import TrueNASEntity, async_add_entities
+from .entity import (
+    TrueNASEntity,
+    async_add_entities,
+    invalid_response_error,
+    invalid_state_error,
+)
 from .sensor_types import (
     SENSOR_SERVICES,
     SENSOR_TYPES,
 )
 
-_LOGGER = getLogger(__name__)
+# Job states in which a task is already running
+JOB_ACTIVE_STATES = ("WAITING", "RUNNING")
 
 
 # ---------------------------
@@ -88,19 +94,15 @@ class TrueNASUptimeSensor(TrueNASSensor):
     """Define an TrueNAS Uptime sensor."""
 
     async def restart(self) -> None:
-        """Restart TrueNAS systen."""
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "system.reboot",
-            ["Home Assistant Integration"],
+        """Restart TrueNAS system."""
+        await self._async_call(
+            "system.reboot", ["Home Assistant Integration"], may_disconnect=True
         )
 
     async def stop(self) -> None:
-        """Shutdown TrueNAS systen."""
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "system.shutdown",
-            ["Home Assistant Integration"],
+        """Shutdown TrueNAS system."""
+        await self._async_call(
+            "system.shutdown", ["Home Assistant Integration"], may_disconnect=True
         )
 
 
@@ -120,17 +122,16 @@ class TrueNASPoolScanSensor(TrueNASSensor):
         """
         name = self._data["name"]
         if name in BOOT_POOL_NAMES:
-            _LOGGER.warning("Scrub actions are not available for %s", name)
-            return
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="scrub_boot_pool",
+                translation_placeholders={"name": name},
+            )
 
         if self._data["scan_status"] not in allowed:
-            _LOGGER.warning(
-                "Pool %s is %s, cannot %s scrub",
-                name,
-                self._data["scan_status"],
-                action.lower(),
+            raise invalid_state_error(
+                name, self._data["scan_status"], f"{action.lower()} scrub"
             )
-            return
 
         if self.coordinator.version_at_least(27, 0):
             # Without a threshold of 0, START does nothing and reports no
@@ -141,9 +142,7 @@ class TrueNASPoolScanSensor(TrueNASSensor):
             method = "pool.scrub.scrub"
             params = [name, legacy_action]
 
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query, method, params
-        )
+        await self._async_call(method, params)
         await self.coordinator.async_refresh()
 
     async def start(self) -> None:
@@ -167,33 +166,16 @@ class TrueNASReplicationSensor(TrueNASSensor):
 
     async def start(self) -> None:
         """Run the replication task, unless it is already running."""
-        task = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "replication.get_instance",
-            [self._data["id"]],
-        )
+        task = await self._async_call("replication.get_instance", [self._data["id"]])
         if not isinstance(task, dict):
-            _LOGGER.error(
-                "Replication task %s (%s) invalid",
-                self._data["name"],
-                self._data["id"],
-            )
-            return
+            raise invalid_response_error(self._data["name"])
 
         # job is null if the task has never run
-        if (task.get("job") or {}).get("state") in ("WAITING", "RUNNING"):
-            _LOGGER.warning(
-                "Replication task %s (%s) is already running",
-                self._data["name"],
-                self._data["id"],
-            )
-            return
+        state = (task.get("job") or {}).get("state")
+        if state in JOB_ACTIVE_STATES:
+            raise invalid_state_error(self._data["name"], state, "replication.run")
 
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "replication.run",
-            [self._data["id"]],
-        )
+        await self._async_call("replication.run", [self._data["id"]])
         await self.coordinator.async_refresh()
 
 
@@ -212,10 +194,8 @@ class TrueNASDatasetSensor(TrueNASSensor):
             if self.coordinator.version_at_least(25, 10)
             else "zfs.snapshot.create"
         )
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            method,
-            {"dataset": f"{self._data['name']}", "name": f"custom-{ts}"},
+        await self._async_call(
+            method, {"dataset": f"{self._data['name']}", "name": f"custom-{ts}"}
         )
 
 
@@ -225,66 +205,32 @@ class TrueNASDatasetSensor(TrueNASSensor):
 class TrueNASClousyncSensor(TrueNASSensor):
     """Define an TrueNAS Cloudsync sensor."""
 
+    async def _job_state(self) -> str | None:
+        """Return the state of the task's job, None if the task has never run."""
+        task = await self._async_call("cloudsync.get_instance", [self._data["id"]])
+        if not isinstance(task, dict) or "job" not in task:
+            raise invalid_response_error(self._data["description"])
+
+        return (task["job"] or {}).get("state")
+
     async def start(self) -> None:
         """Run cloudsync job."""
-        tmp_job = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "cloudsync.get_instance",
-            [self._data["id"]],
-        )
-
-        if "job" not in tmp_job:
-            _LOGGER.error(
-                "Clousync job %s (%s) invalid",
-                self._data["description"],
-                self._data["id"],
+        state = await self._job_state()
+        if state in JOB_ACTIVE_STATES:
+            raise invalid_state_error(
+                self._data["description"], state, "cloudsync.sync"
             )
-            return
-        if "state" in tmp_job["job"] and tmp_job["job"]["state"] in [
-            "WAITING",
-            "RUNNING",
-        ]:
-            _LOGGER.warning(
-                "Clousync job %s (%s) is already running",
-                self._data["description"],
-                self._data["id"],
-            )
-            return
 
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "cloudsync.sync",
-            [self._data["id"]],
-        )
+        await self._async_call("cloudsync.sync", [self._data["id"]])
 
     async def stop(self) -> None:
         """Abort cloudsync job."""
-        tmp_job = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "cloudsync.get_instance",
-            [self._data["id"]],
-        )
-
-        if "job" not in tmp_job:
-            _LOGGER.error(
-                "Clousync job %s (%s) invalid",
-                self._data["description"],
-                self._data["id"],
+        state = await self._job_state()
+        if state not in JOB_ACTIVE_STATES:
+            raise invalid_state_error(
+                self._data["description"], state or "idle", "cloudsync.abort"
             )
-            return
-        if "state" in tmp_job["job"] and tmp_job["job"]["state"] not in [
-            "WAITING",
-            "RUNNING",
-        ]:
-            _LOGGER.warning(
-                "Clousync job %s (%s) is not running",
-                self._data["description"],
-                self._data["id"],
-            )
-            return
 
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "cloudsync.abort",
-            [self._data["id"]],
+        await self._async_call(
+            "cloudsync.abort", [self._data["id"]], false_is_failure=True
         )

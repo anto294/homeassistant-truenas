@@ -81,10 +81,8 @@ class TrueNASCronJobSwitch(TrueNASEntity, SwitchEntity):
 
     async def _set_enabled(self, enabled: bool) -> None:
         """Enable or disable the cron job."""
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "cronjob.update",
-            [self._data["id"], {"enabled": enabled}],
+        await self._async_call(
+            "cronjob.update", [self._data["id"], {"enabled": enabled}]
         )
         await self.coordinator.async_refresh()
 

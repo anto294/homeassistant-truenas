@@ -6,6 +6,7 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
+from homeassistant.exceptions import ServiceValidationError
 import pytest
 
 from custom_components.truenas_link.sensor import TrueNASPoolScanSensor
@@ -16,7 +17,7 @@ def _sensor(status="idle", name="tank", version=(25, 10)):
     sensor = TrueNASPoolScanSensor.__new__(TrueNASPoolScanSensor)
     sensor._data = {"name": name, "scan_status": status}
     sensor.coordinator = SimpleNamespace(
-        api=SimpleNamespace(query=MagicMock()),
+        api=SimpleNamespace(call=MagicMock()),
         version_at_least=lambda major, minor=0: version >= (major, minor),
         async_refresh=AsyncMock(),
     )
@@ -54,7 +55,7 @@ def test_action_uses_the_method_of_the_running_version(
         )
     else:
         expected = ("pool.scrub.scrub", ["tank", legacy])
-    sensor.coordinator.api.query.assert_called_once_with(*expected)
+    sensor.coordinator.api.call.assert_called_once_with(*expected)
     sensor.coordinator.async_refresh.assert_awaited_once()
 
 
@@ -75,9 +76,11 @@ def test_action_is_refused_in_the_wrong_state(status, method):
     """Nothing is sent to TrueNAS if the action does not apply."""
     sensor = _sensor(status)
 
-    asyncio.run(getattr(sensor, method)())
+    with pytest.raises(ServiceValidationError) as err:
+        asyncio.run(getattr(sensor, method)())
 
-    sensor.coordinator.api.query.assert_not_called()
+    assert err.value.translation_key == "invalid_state"
+    sensor.coordinator.api.call.assert_not_called()
 
 
 @pytest.mark.parametrize("name", ["boot-pool", "freenas-boot"])
@@ -85,6 +88,8 @@ def test_boot_pool_is_refused(name):
     """The boot pool has no scrub actions."""
     sensor = _sensor(name=name)
 
-    asyncio.run(sensor.start())
+    with pytest.raises(ServiceValidationError) as err:
+        asyncio.run(sensor.start())
 
-    sensor.coordinator.api.query.assert_not_called()
+    assert err.value.translation_key == "scrub_boot_pool"
+    sensor.coordinator.api.call.assert_not_called()

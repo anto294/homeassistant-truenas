@@ -90,7 +90,7 @@ def _switch(enabled=True):
     switch = TrueNASCronJobSwitch.__new__(TrueNASCronJobSwitch)
     switch._data = {"id": 3, "enabled": enabled}
     switch.coordinator = SimpleNamespace(
-        api=SimpleNamespace(query=MagicMock()), async_refresh=AsyncMock()
+        api=SimpleNamespace(call=MagicMock()), async_refresh=AsyncMock()
     )
 
     async def run_job(func, *args):
@@ -105,14 +105,14 @@ def test_switch_only_sends_enabled():
     switch = _switch()
 
     asyncio.run(switch.async_turn_off())
-    switch.coordinator.api.query.assert_called_once_with(
+    switch.coordinator.api.call.assert_called_once_with(
         "cronjob.update", [3, {"enabled": False}]
     )
     switch.coordinator.async_refresh.assert_awaited_once()
 
-    switch.coordinator.api.query.reset_mock()
+    switch.coordinator.api.call.reset_mock()
     asyncio.run(switch.async_turn_on())
-    switch.coordinator.api.query.assert_called_once_with(
+    switch.coordinator.api.call.assert_called_once_with(
         "cronjob.update", [3, {"enabled": True}]
     )
 

@@ -14,9 +14,9 @@ def test_virt_instance_stop_is_a_clean_shutdown():
     sensor = TrueNASVMBinarySensor.__new__(TrueNASVMBinarySensor)
     sensor._data = {"id": "win11", "name": "win11"}
 
-    query = MagicMock(return_value={"status": "RUNNING"})
+    call = MagicMock(return_value={"status": "RUNNING"})
     sensor.coordinator = SimpleNamespace(
-        api=SimpleNamespace(query=query), version_at_least=lambda *_: False
+        api=SimpleNamespace(call=call), version_at_least=lambda *_: False
     )
 
     async def run_job(func, *args):
@@ -31,6 +31,6 @@ def test_virt_instance_stop_is_a_clean_shutdown():
 
     asyncio.run(sensor.stop())
 
-    query.assert_called_once_with(
+    call.assert_called_once_with(
         "virt.instance.stop", ["win11", {"timeout": 60, "force": False}]
     )

@@ -56,6 +56,24 @@
     "exceptions": {
         "read_only_action": {
             "message": "{entity} appartiene a una voce TrueNAS con accesso in sola lettura. Per usare le sue azioni, imposta il livello di accesso su Amministratore con Riconfigura."
+        },
+        "action_unreachable": {
+            "message": "Impossibile raggiungere TrueNAS per eseguire {method}."
+        },
+        "action_rejected": {
+            "message": "TrueNAS ha rifiutato {method}: {reason}"
+        },
+        "action_failed": {
+            "message": "TrueNAS non è riuscito a completare {method}."
+        },
+        "action_invalid_response": {
+            "message": "TrueNAS ha restituito dati non utilizzabili per {name}."
+        },
+        "invalid_state": {
+            "message": "{name} è in stato {state}, quindi {action} non è applicabile."
+        },
+        "scrub_boot_pool": {
+            "message": "Le azioni di scrub non sono disponibili per il pool di avvio {name}."
         }
     }
 }

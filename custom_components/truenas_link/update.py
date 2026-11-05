@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from logging import getLogger
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -16,10 +15,9 @@ from homeassistant.components.update import (
 )
 
 from .coordinator import TrueNASCoordinator
-from .entity import TrueNASEntity, async_add_entities
+from .entity import TrueNASEntity, async_add_entities, invalid_state_error
 from .update_types import SENSOR_SERVICES, SENSOR_TYPES
 
-_LOGGER = getLogger(__name__)
 DEVICE_UPDATE = "device_update"
 
 
@@ -86,11 +84,10 @@ class TrueNASUpdate(TrueNASEntity, UpdateEntity):
             if self.coordinator.version_at_least(25, 10)
             else "update.update"
         )
-        self._data["update_jobid"] = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            method,
-            {"reboot": True},
-        )
+        job_id = await self._async_call(method, {"reboot": True})
+        if job_id is not None:
+            self._data["update_jobid"] = job_id
+
         await self.coordinator.async_refresh()
 
     @property
@@ -144,18 +141,15 @@ class TrueNASAppUpdate(TrueNASEntity, UpdateEntity):
 
     async def async_install(self, version: str, backup: bool, **kwargs: Any) -> None:
         """Install an update."""
-        if self.coordinator.data["app"][self._data["id"]]["state"] != "RUNNING":
-            _LOGGER.error(
-                "In order to upgrade an app %s, it must not be in stopped state.",
-                self._data["id"],
-            )
-            return
+        state = self.coordinator.data["app"][self._data["id"]]["state"]
+        if state != "RUNNING":
+            # An app must be running to be upgraded
+            raise invalid_state_error(self._data["id"], state, "upgrade")
 
-        self._data["update_jobid"] = await self.hass.async_add_executor_job(
-            self.coordinator.api.query,
-            "app.upgrade",
-            [self._data["id"]],
-        )
+        job_id = await self._async_call("app.upgrade", [self._data["id"]])
+        if job_id is not None:
+            self._data["update_jobid"] = job_id
+
         await self.coordinator.async_refresh()
 
     @property

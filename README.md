@@ -61,6 +61,12 @@ You are then offered a pre-release if it is newer than the latest stable release
 
 Download `truenas_link.zip` from the [latest release](https://github.com/anto294/homeassistant-truenas/releases/latest), extract it into `config/custom_components/truenas_link/` and restart Home Assistant.
 
+### Updating
+
+The Marketplace offers a new version as an update under **Settings → Updates**. After you install it, restart Home Assistant to apply it: a repair under **Settings → System → Repairs** reminds you and can restart it for you. After a manual installation, replace the contents of the folder and restart.
+
+Check the [changelog](CHANGELOG.md) first, as it says what to look at before you upgrade.
+
 ## Configuration
 
 1. In the TrueNAS web UI, create an API key for Home Assistant (user menu → **API Keys** → **Add**).
@@ -245,9 +251,9 @@ Version 2.0 renamed the domain from `truenas` to `truenas_link`. Home Assistant 
 2. Delete those entries (three-dot menu → **Delete**).
 3. Install the new version:
    - **From 1.x of this integration, on Home Assistant 2026.11 or later:** your HACS content moved to the Marketplace when Home Assistant updated. In **Settings → Marketplace**, open **TrueNAS Link** → three-dot menu → **Uninstall**, then install it again. Do not use **Update**, because the domain has changed. If `config/custom_components/truenas/` is still there, delete it.
-   - **From 1.x of this integration, on an older Home Assistant that still has HACS:** in HACS, open **TrueNAS Link** → three-dot menu → **Remove** (this also deletes `config/custom_components/truenas/`). Do not use **Update**: HACS keeps the old domain, and the download (and the repository refresh) fails with "No manifest.json file found custom_components/truenas/manifest.json". Then either update Home Assistant and install from the Marketplace, or download it again from HACS, which only offers releases before 2.1: those are the last for your version of Home Assistant.
+   - **From 1.x of this integration, on an older Home Assistant that still has HACS:** in HACS, open **TrueNAS Link** → three-dot menu → **Remove** (this also deletes `config/custom_components/truenas/`). Do not use **Update**: HACS keeps the old domain, and the download (and the repository refresh) fails with "No manifest.json file found custom_components/truenas/manifest.json". Then either update Home Assistant to 2026.11 or later and install from the Marketplace, or download version 2.0.1 from HACS, the last release for your version of Home Assistant.
    - **From the upstream integration, on Home Assistant 2026.11 or later:** install TrueNAS Link as described above, then uninstall the upstream **TrueNAS** integration in the Marketplace. If `config/custom_components/truenas/` is still there and no other integration uses it, delete it.
-   - **From the upstream integration, on an older Home Assistant that still has HACS:** remove the upstream **TrueNAS** integration in HACS, and delete the same folder if it is still there. Then update Home Assistant and install from the Marketplace, or download a release before 2.1 from HACS.
+   - **From the upstream integration, on an older Home Assistant that still has HACS:** remove the upstream **TrueNAS** integration in HACS, and delete the same folder if it is still there. Then either update Home Assistant to 2026.11 or later and install from the Marketplace, or download version 2.0.1 from HACS, the last release for your version of Home Assistant.
 4. Restart Home Assistant.
 5. Add **TrueNAS Link** with the same host and API key as before (see [Configuration](#configuration)).
 6. In automations and scripts, replace `truenas.` actions with `truenas_link.` (for example `truenas.vm_start` becomes `truenas_link.vm_start`).

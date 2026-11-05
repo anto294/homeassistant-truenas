@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List
 from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
     BinarySensorEntityDescription,
 )
 
@@ -88,6 +89,8 @@ class TrueNASBinarySensorEntityDescription(BinarySensorEntityDescription):
     ha_connection: str | None = None
     ha_connection_value: str | None = None
     data_path: str | None = None
+    # Only for entities without data_reference: created if this value exists
+    data_attribute: str | None = None
     data_is_on: str = "available"
     data_name: str | None = None
     data_uid: str | None = None
@@ -97,6 +100,20 @@ class TrueNASBinarySensorEntityDescription(BinarySensorEntityDescription):
 
 
 SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
+    TrueNASBinarySensorEntityDescription(
+        key="system_alerts_critical",
+        name="Critical alerts",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=None,
+        ha_group="System",
+        data_path="system_info",
+        data_attribute="alerts_critical",
+        data_is_on="alerts_critical",
+        data_name="",
+        data_uid="",
+        data_reference="",
+        data_attributes_list=["alert_messages"],
+    ),
     TrueNASBinarySensorEntityDescription(
         key="pool_healthy",
         name="healthy",

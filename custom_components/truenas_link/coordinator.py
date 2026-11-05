@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import logging
 import re
 
@@ -24,6 +25,12 @@ from .const import DOMAIN
 from .helper import is_read_only
 
 _LOGGER = logging.getLogger(__name__)
+
+# alert.list levels that need attention right away (AlertLevel in middleware)
+CRITICAL_ALERT_LEVELS = ("CRITICAL", "ALERT", "EMERGENCY")
+# Keeps the attribute well under the recorder's 16 KiB limit
+MAX_ALERT_MESSAGES = 20
+MAX_ALERT_MESSAGE_LENGTH = 255
 
 # First "<major>.<minor>" pair in a TrueNAS version string
 _VERSION_RE = re.compile(r"(\d+)\.(\d+)")
@@ -100,6 +107,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         jobs = [
             self.get_systeminfo,
             self.get_systemstats,
+            self.get_alerts,
             self.get_service,
             self.get_disk,
             self.get_dataset,
@@ -373,6 +381,33 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
                 },
             ],
         )
+
+    # ---------------------------
+    #   get_alerts
+    # ---------------------------
+    def get_alerts(self) -> None:
+        """Get the active (not dismissed) TrueNAS alerts."""
+        alerts = self.api.query("alert.list")
+        if not isinstance(alerts, list):
+            # Keep the last values. Without any, the entities are not created.
+            return
+
+        active = [alert for alert in alerts if not alert.get("dismissed")]
+        messages = []
+        for alert in active[:MAX_ALERT_MESSAGES]:
+            # "text" is a template with placeholders, "formatted" may have HTML
+            text = alert.get("formatted") or alert.get("text") or ""
+            text = html.unescape(re.sub(r"<[^>]+>", "", text))
+            messages.append(
+                f"{alert.get('level', 'UNKNOWN')}: {text}"[:MAX_ALERT_MESSAGE_LENGTH]
+            )
+
+        system_info = self.ds["system_info"]
+        system_info["alerts_active"] = len(active)
+        system_info["alerts_critical"] = any(
+            alert.get("level") in CRITICAL_ALERT_LEVELS for alert in active
+        )
+        system_info["alert_messages"] = messages
 
     # ---------------------------
     #   get_systemstats

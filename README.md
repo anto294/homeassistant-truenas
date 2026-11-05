@@ -25,15 +25,6 @@ Targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.
 - [Translations](#translations)
 - [Credits and license](#credits-and-license)
 
-## Differences from upstream
-
-- Has its own `truenas_link` domain, so it can be installed next to the upstream `truenas` integration.
-- Reads the TrueNAS version on every update and calls the API methods of that release, so it keeps working after an in-place TrueNAS upgrade without reconfiguration.
-- Supports TrueNAS 25.10 (`vm.*`, `update.status`, `update.run`, `pool.snapshot.create`) and 27.0 (`container.*`).
-- Adds container entities and the `container_start` / `container_stop` actions on TrueNAS 27.0.
-- Keeps the last known VM, container and memory values when a single query fails or returns no samples, instead of making entities unavailable.
-- Handles `null` values that newer TrueNAS releases return for reporting data and app versions.
-
 ## Requirements
 
 | Component | Minimum version |
@@ -183,6 +174,15 @@ You can also download diagnostics from the integration's page (sensitive data is
 Available in English, Italian, Portuguese (Brazil), Russian, Slovak and Spanish.
 
 English strings live in `custom_components/truenas_link/strings.json` and `custom_components/truenas_link/translations/en.json`. To add or improve a language, open a pull request that adds or updates the matching file in [`custom_components/truenas_link/translations/`](custom_components/truenas_link/translations/).
+
+## Differences from upstream
+
+- Has its own `truenas_link` domain, so it can be installed next to the upstream `truenas` integration.
+- Reads the TrueNAS version on every update and calls the API methods of that release, so it keeps working after an in-place TrueNAS upgrade without reconfiguration.
+- Supports TrueNAS 25.10 (`vm.*`, `update.status`, `update.run`, `pool.snapshot.create`) and 27.0 (`container.*`).
+- Adds container entities and the `container_start` / `container_stop` actions on TrueNAS 27.0.
+- Keeps the last known VM, container and memory values when a single query fails or returns no samples, instead of making entities unavailable.
+- Handles `null` values that newer TrueNAS releases return for reporting data and app versions.
 
 ## Credits and license
 

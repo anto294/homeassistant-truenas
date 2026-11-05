@@ -25,6 +25,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- The errors of a rejected API key and of a failed update are now translated, which
+  also fixes the "TrueNas" typo in the log.
 - The uptime sensor no longer changes state on every update. Its time went back and
   forth by a second, without any reboot, which also filled the history. A real reboot
   still updates it.

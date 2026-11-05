@@ -105,6 +105,12 @@
         },
         "scrub_boot_pool": {
             "message": "Действия scrub недоступны для загрузочного пула {name}."
+        },
+        "api_key_rejected": {
+            "message": "TrueNAS {host} отклонил ключ API."
+        },
+        "update_failed": {
+            "message": "Не удалось получить данные от TrueNAS {host}: ошибка подключения."
         }
     },
     "entity": {

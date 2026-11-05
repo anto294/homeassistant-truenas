@@ -105,6 +105,12 @@
         },
         "scrub_boot_pool": {
             "message": "Scrub actions are not available for the boot pool {name}."
+        },
+        "api_key_rejected": {
+            "message": "TrueNAS {host} rejected the API key."
+        },
+        "update_failed": {
+            "message": "Could not get data from TrueNAS {host}: the connection failed."
         }
     },
     "entity": {

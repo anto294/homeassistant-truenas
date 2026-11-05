@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import logging
 
+import pytest
+
 from custom_components.truenas_link.const import DOMAIN, TO_REDACT
 from custom_components.truenas_link.apiparser import parse_api
 from custom_components.truenas_link.diagnostics import (
@@ -15,6 +17,21 @@ from custom_components.truenas_link.helper import redact_secrets
 from .conftest import async_add_entry
 
 API_LOGGER = "custom_components.truenas_link.api"
+PARSER_LOGGER = "custom_components.truenas_link.apiparser"
+FAKE_SECRET = "finto-valore-test"
+APP = {
+    "id": "scrutiny",
+    "name": "scrutiny",
+    "state": "RUNNING",
+    "human_version": "1.0",
+    "version": "1.0",
+    "latest_version": "1.0",
+    "upgrade_available": False,
+    "image_updates_available": False,
+    "custom_app": False,
+    "portals": {},
+    "notes": f"Default Credentials\nPassword: {FAKE_SECRET}",
+}
 JOB = {
     "state": "RUNNING",
     "time_started": {"$date": 1000},
@@ -205,3 +222,86 @@ def test_diagnostics_hide_what_identifies_the_system(run_in_hass):
         assert ds["system_info"]["hostname"] == "my-nas"
 
     run_in_hass(scenario)
+
+
+def test_app_notes_stay_out_of_logs_entities_and_diagnostics(run_in_hass, caplog):
+    """App notes can list credentials, so they appear nowhere, and the app works."""
+
+    async def scenario(hass, server):
+        server.results["app.query"] = [APP]
+
+        with caplog.at_level(logging.DEBUG):
+            entry = await async_add_entry(hass)
+
+        # Both loggers did log this response, without its notes
+        logged = [
+            record.getMessage()
+            for record in caplog.records
+            if record.name in (API_LOGGER, PARSER_LOGGER)
+            and "scrutiny" in record.getMessage()
+        ]
+        assert {API_LOGGER, PARSER_LOGGER} <= {
+            record.name
+            for record in caplog.records
+            if "scrutiny" in record.getMessage()
+        }
+        assert logged
+        assert FAKE_SECRET not in caplog.text
+
+        ds = hass.data[DOMAIN][entry.entry_id].ds
+        assert ds["app"]["scrutiny"]["name"] == "scrutiny"
+        assert "notes" not in ds["app"]["scrutiny"]
+        assert FAKE_SECRET not in json.dumps(ds, default=str)
+
+        states = hass.states.async_all()
+        assert any("scrutiny" in state.entity_id for state in states)
+        for state in states:
+            assert FAKE_SECRET not in str(state.state)
+            assert FAKE_SECRET not in str(state.attributes)
+
+        diagnostics = await async_get_config_entry_diagnostics(hass, entry)
+        assert FAKE_SECRET not in json.dumps(diagnostics, default=str)
+
+    run_in_hass(scenario)
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "notes",
+        "Notes",
+        "comments",
+        "description",
+        "user_properties",
+        "command",
+        "command_line_args",
+        "environment",
+        "initenv",
+        "vnc_password",
+        "credentials",
+        "arguments",
+        "logs_excerpt",
+        "exception",
+        "args",
+        "formatted",
+        "text",
+    ],
+)
+@pytest.mark.parametrize(
+    "value", [FAKE_SECRET, {"nested": FAKE_SECRET}, [FAKE_SECRET]], ids=str
+)
+def test_free_text_fields_stay_out_of_both_debug_logs(
+    connected_api, caplog, field, value
+):
+    """A field is hidden as a whole, at any depth, and the data stays complete."""
+    response = {"name": "visible-name", "details": [{field: value}]}
+    api, _ = connected_api(lambda request: {"id": 0, "result": response})
+
+    with caplog.at_level(logging.DEBUG):
+        result = api.query("some.query")
+        parse_api(data={}, source=result, key="name", vals=[{"name": "name"}])
+
+    assert result == response
+    assert {API_LOGGER, PARSER_LOGGER} <= {record.name for record in caplog.records}
+    assert "visible-name" in caplog.text
+    assert FAKE_SECRET not in caplog.text

@@ -7,6 +7,15 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Security
+
+- The debug log showed text fields in full, because it hid values by field name
+  only. An app's notes, for one, can list its default credentials. It now hides
+  app notes, descriptions and comments, environment variables, command-line
+  arguments, job output and alert text. Diagnostics hide them too. Text in a
+  field the integration does not know about can still reach the debug log, so
+  check a log before sharing it.
+
 ## [2.1.0b1] - 2026-11-05
 
 Pre-release for testing ahead of 2.1.0. It has not been tested on a real TrueNAS

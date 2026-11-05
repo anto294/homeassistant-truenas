@@ -301,11 +301,11 @@ def test_graphs_without_samples_or_a_name(run_in_hass):
 
         await _refresh(hass, coordinator)
 
-        assert info["cpu_temperature"] == 0.0
+        assert info["cpu_temperature"] is None
         # Kept, because 0 free would mean 100% used
         assert info["memory-free_value"] == free
-        assert coordinator.ds["interface"]["eno1"]["rx"] == 0.0
-        assert coordinator.ds["interface"]["eno1"]["tx"] == 0.0
+        assert coordinator.ds["interface"]["eno1"]["rx"] is None
+        assert coordinator.ds["interface"]["eno1"]["tx"] is None
 
     run_in_hass(scenario)
 

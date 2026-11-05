@@ -7,11 +7,11 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import TrueNASConfigEntry
 from .entity import TrueNASEntity, async_add_entities
-from .switch_types import SENSOR_SERVICES, SENSOR_TYPES
+from .switch_types import SENSOR_TYPES
 
 # One action at a time per platform. Data comes from the coordinator, but these
 # platforms also send actions, which first check the state on TrueNAS and then act:
@@ -55,7 +55,7 @@ def async_remove_switches(
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: TrueNASConfigEntry,
-    _async_add_entities: AddEntitiesCallback,
+    add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up switches for TrueNAS component."""
     if config_entry.runtime_data.read_only:
@@ -65,9 +65,7 @@ async def async_setup_entry(
     dispatcher = {
         "TrueNASCronJobSwitch": TrueNASCronJobSwitch,
     }
-    await async_add_entities(
-        hass, config_entry, dispatcher, SENSOR_TYPES, SENSOR_SERVICES
-    )
+    await async_add_entities(config_entry, add_entities, dispatcher, SENSOR_TYPES)
 
 
 # ---------------------------

@@ -9,7 +9,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import BOOT_POOL_NAMES, DOMAIN, SCAN_IDLE, SCAN_PAUSED, SCAN_SCRUBBING
 from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
@@ -19,10 +19,7 @@ from .entity import (
     invalid_response_error,
     invalid_state_error,
 )
-from .sensor_types import (
-    SENSOR_SERVICES,
-    SENSOR_TYPES,
-)
+from .sensor_types import SENSOR_TYPES
 
 # One action at a time per platform. Data comes from the coordinator, but these
 # platforms also send actions, which first check the state on TrueNAS and then act:
@@ -39,7 +36,7 @@ JOB_ACTIVE_STATES = ("WAITING", "RUNNING")
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: TrueNASConfigEntry,
-    _async_add_entities: AddEntitiesCallback,
+    add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up entry for TrueNAS component."""
     dispatcher = {
@@ -50,9 +47,7 @@ async def async_setup_entry(
         "TrueNASPoolScanSensor": TrueNASPoolScanSensor,
         "TrueNASReplicationSensor": TrueNASReplicationSensor,
     }
-    await async_add_entities(
-        hass, config_entry, dispatcher, SENSOR_TYPES, SENSOR_SERVICES
-    )
+    await async_add_entities(config_entry, add_entities, dispatcher, SENSOR_TYPES)
 
 
 # ---------------------------

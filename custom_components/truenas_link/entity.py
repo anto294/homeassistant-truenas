@@ -7,9 +7,9 @@ from logging import getLogger
 from typing import Any, Callable
 
 from homeassistant.const import ATTR_ATTRIBUTION, CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.core import ServiceCall, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_platform as ep
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.service import remove_entity_service_fields
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -21,7 +21,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
-from .helper import format_attribute, is_read_only
+from .helper import format_attribute
 
 _LOGGER = getLogger(__name__)
 
@@ -102,10 +102,9 @@ def invalid_response_error(name: Any) -> HomeAssistantError:
 def entity_service_handler(method: str) -> Callable:
     """Return the handler of an entity service that runs the entity's `method`.
 
-    An action can still reach an entity with read-only access: services are
-    shared by all entries of the integration, so another entry with
-    Administrator access keeps them registered. Refuse it here, because the
-    API key of that entity may well be allowed to do it.
+    Actions are registered once for the whole integration, whatever its entries'
+    access levels, so this is what stops one from reaching an entity with read-only
+    access. The API key of that entity may well be allowed to do it.
     """
 
     async def handler(entity: TrueNASEntity, call: ServiceCall) -> None:
@@ -123,50 +122,15 @@ def entity_service_handler(method: str) -> Callable:
 
 
 # ---------------------------
-#   async_update_services
-# ---------------------------
-def async_update_services(
-    hass: HomeAssistant,
-    platform: ep.EntityPlatform,
-    services: Sequence[Sequence[Any]],
-) -> None:
-    """Offer the platform's actions only if an entry can use them.
-
-    Home Assistant keeps entity services after a config entry is unloaded,
-    so switching the last Administrator entry to read-only has to remove them.
-    """
-    has_admin_entry = any(
-        not entry.disabled_by and not is_read_only(entry.data)
-        for entry in hass.config_entries.async_entries(DOMAIN)
-    )
-    for service in services:
-        if has_admin_entry:
-            platform.async_register_entity_service(
-                service[0], service[1], entity_service_handler(service[2])
-            )
-        elif hass.services.has_service(DOMAIN, service[0]):
-            hass.services.async_remove(DOMAIN, service[0])
-
-
-# ---------------------------
 #   async_add_entities
 # ---------------------------
 async def async_add_entities(
-    hass: HomeAssistant,
     config_entry: TrueNASConfigEntry,
+    add_entities: AddConfigEntryEntitiesCallback,
     dispatcher: dict[str, Callable],
     descriptions: Sequence[Any],
-    services: Sequence[Sequence[Any]],
-):
-    """Add the platform's entities and register its entity services.
-
-    descriptions are the platform's entity descriptions (SENSOR_TYPES) and
-    services its [service, schema, method_name] entries (SENSOR_SERVICES).
-    """
-    platform = ep.async_get_current_platform()
-
-    async_update_services(hass, platform, services)
-
+) -> None:
+    """Add the platform's entities, now and whenever TrueNAS has new items."""
     coordinator = config_entry.runtime_data
     known: set[tuple[str, Any]] = set()
 
@@ -208,12 +172,9 @@ async def async_add_entities(
     def async_add_new_entities() -> None:
         """Add what appeared on TrueNAS since the last update."""
         if coordinator.last_update_success and (new := async_new_entities()):
-            _LOGGER.debug("Add %s entities", len(new))
-            config_entry.async_create_task(hass, platform.async_add_entities(new))
+            add_entities(new)
 
-    # Directly, so the entities exist when the platform setup ends
-    await platform.async_add_entities(async_new_entities())
-
+    add_entities(async_new_entities())
     config_entry.async_on_unload(coordinator.async_add_listener(async_add_new_entities))
 
 

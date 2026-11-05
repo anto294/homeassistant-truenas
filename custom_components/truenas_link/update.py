@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from homeassistant.components.update import (
     UpdateDeviceClass,
@@ -15,7 +15,7 @@ from homeassistant.components.update import (
 
 from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
 from .entity import TrueNASEntity, async_add_entities, invalid_state_error
-from .update_types import SENSOR_SERVICES, SENSOR_TYPES
+from .update_types import SENSOR_TYPES
 
 # One action at a time per platform. Data comes from the coordinator, but these
 # platforms also send actions, which first check the state on TrueNAS and then act:
@@ -31,16 +31,14 @@ DEVICE_UPDATE = "device_update"
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: TrueNASConfigEntry,
-    _async_add_entities: AddEntitiesCallback,
+    add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up device tracker for TrueNAS component."""
     dispatcher = {
         "TrueNASUpdate": TrueNASUpdate,
         "TrueNASAppUpdate": TrueNASAppUpdate,
     }
-    await async_add_entities(
-        hass, config_entry, dispatcher, SENSOR_TYPES, SENSOR_SERVICES
-    )
+    await async_add_entities(config_entry, add_entities, dispatcher, SENSOR_TYPES)
 
 
 # ---------------------------

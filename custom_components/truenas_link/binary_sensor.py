@@ -4,12 +4,9 @@ from __future__ import annotations
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .binary_sensor_types import (
-    SENSOR_SERVICES,
-    SENSOR_TYPES,
-)
+from .binary_sensor_types import SENSOR_TYPES
 from .coordinator import TrueNASConfigEntry
 from .entity import (
     TrueNASEntity,
@@ -33,7 +30,7 @@ VIRT_STOP_TIMEOUT = 60
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: TrueNASConfigEntry,
-    _async_add_entities: AddEntitiesCallback,
+    add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up device tracker for OpenMediaVault component."""
     dispatcher = {
@@ -43,9 +40,7 @@ async def async_setup_entry(
         "TrueNASServiceBinarySensor": TrueNASServiceBinarySensor,
         "TrueNASAppBinarySensor": TrueNASAppBinarySensor,
     }
-    await async_add_entities(
-        hass, config_entry, dispatcher, SENSOR_TYPES, SENSOR_SERVICES
-    )
+    await async_add_entities(config_entry, add_entities, dispatcher, SENSOR_TYPES)
 
 
 # ---------------------------

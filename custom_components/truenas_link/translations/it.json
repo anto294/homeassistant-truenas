@@ -11,7 +11,7 @@
                     "verify_ssl": "Verifica il certificato SSL"
                 },
                 "data_description": {
-                    "access_level": "Sola lettura rimuove le azioni, i pulsanti di installazione e gli interruttori dei cron, e tiene tutti i sensori. Usa una chiave API con il ruolo READONLY_ADMIN, così lo impone anche TrueNAS."
+                    "access_level": "Sola lettura rifiuta le azioni, rimuove i pulsanti di installazione e gli interruttori dei cron, e tiene tutti i sensori. Usa una chiave API con il ruolo READONLY_ADMIN, così lo impone anche TrueNAS."
                 }
             },
             "reconfigure": {
@@ -24,7 +24,7 @@
                 },
                 "data_description": {
                     "api_key": "Lascia vuoto per mantenere la chiave attuale.",
-                    "access_level": "Sola lettura rimuove le azioni, i pulsanti di installazione e gli interruttori dei cron, e tiene tutti i sensori. Usa una chiave API con il ruolo READONLY_ADMIN, così lo impone anche TrueNAS."
+                    "access_level": "Sola lettura rifiuta le azioni, rimuove i pulsanti di installazione e gli interruttori dei cron, e tiene tutti i sensori. Usa una chiave API con il ruolo READONLY_ADMIN, così lo impone anche TrueNAS."
                 }
             },
             "reauth_confirm": {

@@ -6,14 +6,48 @@ from __future__ import annotations
 from logging import getLogger
 
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers.service import async_register_platform_entity_service
+from homeassistant.helpers.typing import ConfigType
 
+from . import binary_sensor_types, sensor_types
 from .const import DOMAIN, PLATFORMS
 from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
-from .entity import system_device_info
+from .entity import entity_service_handler, system_device_info
 from .stale import async_can_remove_device, async_remove_stale_entities
 
 _LOGGER = getLogger(__name__)
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+# Actions by the domain of the entities they target
+ACTIONS = (
+    ("sensor", sensor_types.SENSOR_SERVICES),
+    ("binary_sensor", binary_sensor_types.SENSOR_SERVICES),
+)
+
+
+# ---------------------------
+#   async_setup
+# ---------------------------
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the actions, once, whatever entries there are or their state.
+
+    So automations using them can be validated even when TrueNAS is unreachable.
+    Each action checks the access level of the entity it runs on.
+    """
+    for entity_domain, actions in ACTIONS:
+        for name, schema, method in actions:
+            async_register_platform_entity_service(
+                hass,
+                DOMAIN,
+                name,
+                entity_domain=entity_domain,
+                func=entity_service_handler(method),
+                schema=schema,
+            )
+
+    return True
 
 
 # ---------------------------

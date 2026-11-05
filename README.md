@@ -74,10 +74,10 @@ If TrueNAS Link does not appear in the list, clear your browser cache.
 
 New entries start as Read-only, so actions are always a deliberate choice. Entries created before this option stay on Administrator.
 
-With Read-only, whatever cannot work is gone:
+With Read-only, whatever cannot work is refused or gone:
 
 - Cron job switches are not created, and switching an entry to Read-only removes them and the **Cron jobs** device.
-- Actions are removed from Home Assistant, unless another TrueNAS entry has Administrator access. In that case, calling one on a read-only entity gives an error.
+- Actions stay listed in Home Assistant, because they belong to the integration and not to an entry, but calling one on a read-only entity gives an error and sends nothing to TrueNAS.
 - Update entities stay, because they still show that an update is available, but they have no install button.
 
 All sensors and binary sensors stay, because they only read data.

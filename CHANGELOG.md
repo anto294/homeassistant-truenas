@@ -21,6 +21,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- On TrueNAS 25.04, stopping a VM cut its power immediately. It now gets 60
+  seconds to shut down cleanly. If it does not, it keeps running.
 - The 2.0.0 upgrade steps (README and changelog) told 1.x users to update
   the integration in HACS. That fails, because HACS keeps the old domain:
   the download and the repository refresh stop with "No manifest.json file

@@ -34,15 +34,17 @@ def async_remove_switches(
     entity_registry = er.async_get(hass)
     device_registry = dr.async_get(hass)
 
-    device_ids = set()
+    device_ids: set[str] = set()
     for entity in er.async_entries_for_config_entry(
         entity_registry, config_entry.entry_id
     ):
         if entity.domain == "switch":
-            device_ids.add(entity.device_id)
+            if entity.device_id:
+                device_ids.add(entity.device_id)
+
             entity_registry.async_remove(entity.entity_id)
 
-    for device_id in device_ids - {None}:
+    for device_id in device_ids:
         if not er.async_entries_for_device(
             entity_registry, device_id, include_disabled_entities=True
         ):
@@ -83,7 +85,7 @@ class TrueNASCronJobSwitch(TrueNASEntity, SwitchEntity):
     @property
     def is_on(self) -> bool:
         """Return true if the cron job is enabled."""
-        return self._data["enabled"]
+        return bool(self._data["enabled"])
 
     async def _set_enabled(self, enabled: bool) -> None:
         """Enable or disable the cron job."""

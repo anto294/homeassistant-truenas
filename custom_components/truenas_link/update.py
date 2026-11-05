@@ -54,9 +54,9 @@ class TrueNASUpdate(TrueNASEntity, UpdateEntity):
     def __init__(
         self,
         coordinator: TrueNASCoordinator,
-        entity_description,
-        uid: str | None = None,
-    ):
+        entity_description: Any,
+        uid: Any = None,
+    ) -> None:
         """Set up device update entity."""
         super().__init__(coordinator, entity_description, uid)
 
@@ -68,17 +68,19 @@ class TrueNASUpdate(TrueNASEntity, UpdateEntity):
     @property
     def installed_version(self) -> str:
         """Version installed and in use."""
-        return self._data["version"]
+        return str(self._data["version"])
 
     @property
     def latest_version(self) -> str:
         """Latest version available for install."""
-        return self._data["update_version"]
+        return str(self._data["update_version"])
 
     async def options_updated(self) -> None:
         """No action needed."""
 
-    async def async_install(self, version: str, backup: bool, **kwargs: Any) -> None:
+    async def async_install(
+        self, version: str | None, backup: bool, **kwargs: Any
+    ) -> None:
         """Install an update."""
         # Since 25.10 update.update only edits the update settings and the
         # download/apply job moved to update.run (same attrs, returns a job id).
@@ -94,15 +96,17 @@ class TrueNASUpdate(TrueNASEntity, UpdateEntity):
         await self.coordinator.async_refresh()
 
     @property
-    def in_progress(self) -> int:
-        """Update installation progress."""
-        if self._data["update_state"] != "RUNNING":
-            return False
+    def in_progress(self) -> bool:
+        """Return whether an update is being installed."""
+        return bool(self._data["update_state"] == "RUNNING")
 
-        if self._data["update_progress"] == 0:
-            self._data["update_progress"] = 1
+    @property
+    def update_percentage(self) -> int | None:
+        """Return the progress of the installation, starting from 1 when running."""
+        if not self.in_progress:
+            return None
 
-        return self._data["update_progress"]
+        return max(int(self._data["update_progress"]), 1)
 
 
 # ---------------------------
@@ -117,9 +121,9 @@ class TrueNASAppUpdate(TrueNASEntity, UpdateEntity):
     def __init__(
         self,
         coordinator: TrueNASCoordinator,
-        entity_description,
-        uid: str | None = None,
-    ):
+        entity_description: Any,
+        uid: Any = None,
+    ) -> None:
         """Set up device update entity."""
         super().__init__(coordinator, entity_description, uid)
 
@@ -129,21 +133,23 @@ class TrueNASAppUpdate(TrueNASEntity, UpdateEntity):
     @property
     def installed_version(self) -> str:
         """Version installed and in use."""
-        return self._data["version"]
+        return str(self._data["version"])
 
     @property
     def latest_version(self) -> str:
         """Latest version available for install."""
         if not self._data.get("running", True):
             # A stopped app cannot be upgraded, do not report a pending update
-            return self._data["version"]
+            return str(self._data["version"])
 
         # app.query returns latest_version null when no upgrade is available
         # (25.10) or when it cannot be determined (27.0); report the installed
         # version then instead of an unknown state.
-        return self._data["latest_version"] or self._data["version"]
+        return str(self._data["latest_version"] or self._data["version"])
 
-    async def async_install(self, version: str, backup: bool, **kwargs: Any) -> None:
+    async def async_install(
+        self, version: str | None, backup: bool, **kwargs: Any
+    ) -> None:
         """Install an update."""
         state = self.coordinator.data["app"][self._data["id"]]["state"]
         if state != "RUNNING":
@@ -164,4 +170,4 @@ class TrueNASAppUpdate(TrueNASEntity, UpdateEntity):
     @property
     def title(self) -> str | None:
         """Return the title of the entity."""
-        return self._data["name"]
+        return str(self._data["name"])

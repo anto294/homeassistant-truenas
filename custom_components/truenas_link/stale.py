@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import slugify
@@ -11,7 +13,7 @@ from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
 
 # Per-item descriptions, with the domain of their platform: unique ids are only
 # unique within one
-_ITEM_DESCRIPTIONS = tuple(
+_ITEM_DESCRIPTIONS: tuple[tuple[str, Any], ...] = tuple(
     (domain, description)
     for domain, descriptions in (
         ("sensor", sensor_types.SENSOR_TYPES),
@@ -29,7 +31,7 @@ def _unique_id(coordinator: TrueNASCoordinator, key: str, reference: object) -> 
     return f"{coordinator.instance.lower()}-{key}-{slugify(str(reference).lower())}"
 
 
-def _description_of(coordinator: TrueNASCoordinator, entity: er.RegistryEntry):
+def _description_of(coordinator: TrueNASCoordinator, entity: er.RegistryEntry) -> Any:
     """Return the per-item description a registry entry belongs to, if any."""
     prefix = coordinator.instance.lower()
     for domain, description in _ITEM_DESCRIPTIONS:

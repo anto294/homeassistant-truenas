@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -11,12 +11,12 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import (
+    EntityCategory,
     PERCENTAGE,
     UnitOfTemperature,
     UnitOfDataRate,
     UnitOfInformation,
 )
-from homeassistant.helpers.entity import EntityCategory
 
 from .const import (
     SCAN_IDLE,
@@ -123,7 +123,7 @@ DEVICE_ATTRIBUTES_DISK = [
 # The TrueNAS cpu graph (truenas_cpu_usage.cpu) only reports total usage per
 # core, with no system/user/nice/idle/iowait/softirq breakdown, so the CPU
 # sensor has no extra attributes.
-DEVICE_ATTRIBUTES_CPU = []
+DEVICE_ATTRIBUTES_CPU: list[str] = []
 
 # The memory graph (truenas_meminfo) only reports total and available; used is
 # derived from them. Cached/buffered memory is not available.
@@ -174,17 +174,17 @@ DEVICE_ATTRIBUTES_SNAPSHOTTASK = [
 ]
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class TrueNASSensorEntityDescription(SensorEntityDescription):
     """Class describing entities."""
 
-    ha_group: str | None = None
-    data_path: str | None = None
-    data_attribute: str | None = None
-    data_name: str | None = None
-    data_uid: str | None = None
-    data_reference: str | None = None
-    data_attributes_list: List = field(default_factory=lambda: [])
+    ha_group: str = ""
+    data_path: str = ""
+    data_attribute: str = ""
+    data_name: str = ""
+    data_uid: str = ""
+    data_reference: str = ""
+    data_attributes_list: list[str] = field(default_factory=list)
     func: str = "TrueNASSensor"
 
 
@@ -524,7 +524,7 @@ SENSOR_TYPES: tuple[TrueNASSensorEntityDescription, ...] = (
     ),
 )
 
-SENSOR_SERVICES = [
+SENSOR_SERVICES: list[list[Any]] = [
     [SERVICE_CLOUDSYNC_RUN, SCHEMA_SERVICE_CLOUDSYNC_RUN, "start"],
     [SERVICE_CLOUDSYNC_ABORT, SCHEMA_SERVICE_CLOUDSYNC_ABORT, "stop"],
     [SERVICE_DATASET_SNAPSHOT, SCHEMA_SERVICE_DATASET_SNAPSHOT, "snapshot"],

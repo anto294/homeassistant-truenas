@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import Any
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntityDescription,
@@ -79,23 +79,23 @@ DEVICE_ATTRIBUTES_APP = [
 ]
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class TrueNASBinarySensorEntityDescription(BinarySensorEntityDescription):
     """Class describing entities."""
 
-    ha_group: str | None = None
-    data_path: str | None = None
+    ha_group: str = ""
+    data_path: str = ""
     # Only for entities without data_reference: created if this value exists
-    data_attribute: str | None = None
+    data_attribute: str = ""
     data_is_on: str = "available"
-    data_name: str | None = None
-    data_uid: str | None = None
-    data_reference: str | None = None
-    data_attributes_list: List = field(default_factory=lambda: [])
+    data_name: str = ""
+    data_uid: str = ""
+    data_reference: str = ""
+    data_attributes_list: list[str] = field(default_factory=list)
     func: str = "TrueNASBinarySensor"
 
 
-SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
+SENSOR_TYPES: tuple[TrueNASBinarySensorEntityDescription, ...] = (
     TrueNASBinarySensorEntityDescription(
         key="system_alerts_critical",
         translation_key="system_alerts_critical",
@@ -202,7 +202,7 @@ SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
     ),
 )
 
-SENSOR_SERVICES = [
+SENSOR_SERVICES: list[list[Any]] = [
     [SERVICE_VM_START, SCHEMA_SERVICE_VM_START, "start"],
     [SERVICE_VM_STOP, SCHEMA_SERVICE_VM_STOP, "stop"],
     [SERVICE_CONTAINER_START, SCHEMA_SERVICE_CONTAINER_START, "start"],

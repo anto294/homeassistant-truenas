@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from logging import getLogger
-from typing import Any, Callable
+from typing import Any
 
 from homeassistant.const import ATTR_ATTRIBUTION, CONF_HOST, CONF_NAME
 from homeassistant.core import ServiceCall, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.entity import DeviceInfo, Entity
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.service import remove_entity_service_fields
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
@@ -99,7 +100,7 @@ def invalid_response_error(name: Any) -> HomeAssistantError:
 # ---------------------------
 #   entity_service_handler
 # ---------------------------
-def entity_service_handler(method: str) -> Callable:
+def entity_service_handler(method: str) -> Callable[..., Awaitable[None]]:
     """Return the handler of an entity service that runs the entity's `method`.
 
     Actions are registered once for the whole integration, whatever its entries'
@@ -127,7 +128,7 @@ def entity_service_handler(method: str) -> Callable:
 async def async_add_entities(
     config_entry: TrueNASConfigEntry,
     add_entities: AddConfigEntryEntitiesCallback,
-    dispatcher: dict[str, Callable],
+    dispatcher: Mapping[str, Callable[..., Entity]],
     descriptions: Sequence[Any],
 ) -> None:
     """Add the platform's entities, now and whenever TrueNAS has new items."""
@@ -187,6 +188,9 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
     _attr_has_entity_name = True
     # The domain of the platform, set by each platform's base class
     _platform_domain: str
+    # One of the platforms' descriptions, which add the same fields to their own base
+    # classes, so a common type would not fit what Home Assistant declares
+    entity_description: Any
 
     async def _async_call(
         self,
@@ -235,18 +239,19 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
     def __init__(
         self,
         coordinator: TrueNASCoordinator,
-        entity_description,
-        uid: str | None = None,
-    ):
+        entity_description: Any,
+        uid: Any = None,
+    ) -> None:
         """Initialize entity."""
         super().__init__(coordinator)
         self.entity_description = entity_description
         self._inst = coordinator.config_entry.data[CONF_NAME]
         self._config_entry = self.coordinator.config_entry
-        self._attr_extra_state_attributes = {ATTR_ATTRIBUTION: ATTRIBUTION}
         self._uid = uid
         if self._uid:
-            self._data = coordinator.data[self.entity_description.data_path][self._uid]
+            self._data: dict[str, Any] = coordinator.data[
+                self.entity_description.data_path
+            ][self._uid]
         else:
             self._data = coordinator.data[self.entity_description.data_path]
 
@@ -341,33 +346,33 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
     @property
     def extra_state_attributes(self) -> Mapping[str, Any]:
         """Return the state attributes."""
-        attributes = super().extra_state_attributes
+        attributes: dict[str, Any] = {ATTR_ATTRIBUTION: ATTRIBUTION}
         for variable in self.entity_description.data_attributes_list:
             if variable in self._data:
                 attributes[format_attribute(variable)] = self._data[variable]
 
         return attributes
 
-    async def start(self):
+    async def start(self) -> None:
         """Run function."""
         raise NotImplementedError()
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stop function."""
         raise NotImplementedError()
 
-    async def pause(self):
+    async def pause(self) -> None:
         """Pause function."""
         raise NotImplementedError()
 
-    async def restart(self):
+    async def restart(self) -> None:
         """Restart function."""
         raise NotImplementedError()
 
-    async def reload(self):
+    async def reload(self) -> None:
         """Reload function."""
         raise NotImplementedError()
 
-    async def snapshot(self):
+    async def snapshot(self) -> None:
         """Snapshot function."""
         raise NotImplementedError()

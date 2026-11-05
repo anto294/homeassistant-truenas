@@ -205,6 +205,9 @@ class TrueNASAPI(object):
     # ---------------------------
     async def _receive(self) -> str | bytes:
         """Return the next message, or raise TimeoutError if none comes in time."""
+        if self._ws is None:
+            raise ConnectionError("not connected")
+
         async with asyncio.timeout(RESPONSE_TIMEOUT):
             return await self._ws.recv()
 
@@ -218,7 +221,7 @@ class TrueNASAPI(object):
     # ---------------------------
     #   connection_test
     # ---------------------------
-    async def connection_test(self) -> tuple:
+    async def connection_test(self) -> tuple[bool, str]:
         """Return whether a connection and a query work, and the error code."""
         try:
             await self.connect()
@@ -248,9 +251,7 @@ class TrueNASAPI(object):
     # ---------------------------
     #   query
     # ---------------------------
-    async def query(
-        self, service: str, params: dict[str, Any] | None = {}
-    ) -> list | None:
+    async def query(self, service: str, params: Any = {}) -> Any:
         """Retrieve data from TrueNAS, returning None if that fails.
 
         A successful call can also return None, so code that needs to know
@@ -313,9 +314,7 @@ class TrueNASAPI(object):
     # ---------------------------
     #   call
     # ---------------------------
-    async def call(
-        self, service: str, params: dict[str, Any] | list | None = {}
-    ) -> Any:
+    async def call(self, service: str, params: Any = {}) -> Any:
         """Return the result of a call, raising a TrueNASError if it fails."""
         if not self.connected():
             await self.connect()
@@ -353,6 +352,9 @@ class TrueNASAPI(object):
             payload["params"] = params
 
         try:
+            if self._ws is None:
+                raise ConnectionError("not connected")
+
             await self._ws.send(json.dumps(payload))
         except asyncio.CancelledError:
             self._abort()
@@ -362,8 +364,11 @@ class TrueNASAPI(object):
 
         try:
             message = await self._receive()
+            if not isinstance(message, str):
+                raise TypeError("TrueNAS sent binary data")
+
             is_object = message.startswith("{")
-            response = json.loads(message) if is_object else None
+            response: Any = json.loads(message) if is_object else None
         except asyncio.CancelledError:
             self._abort()
             raise
@@ -415,6 +420,6 @@ class TrueNASAPI(object):
         return str(reason or redact_secrets(error))
 
     @property
-    def error(self):
+    def error(self) -> str:
         """Return error."""
         return self._error

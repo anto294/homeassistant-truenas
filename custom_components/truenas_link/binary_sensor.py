@@ -54,7 +54,7 @@ class TrueNASBinarySensor(TrueNASEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if device is on."""
-        return self._data[self.entity_description.data_is_on]
+        return bool(self._data[self.entity_description.data_is_on])
 
 
 # ---------------------------
@@ -91,9 +91,9 @@ class TrueNASVMBinarySensor(TrueNASBinarySensor):
         if state is None:
             raise invalid_response_error(self._data["name"])
 
-        return state
+        return str(state)
 
-    async def start(self, overcommit: bool = False):
+    async def start(self, overcommit: bool = False) -> None:
         """Start a VM."""
         state = await self._get_state()
         if state != "STOPPED":
@@ -106,7 +106,7 @@ class TrueNASVMBinarySensor(TrueNASBinarySensor):
         else:
             await self._async_call("virt.instance.start", [self._data["id"]])
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stop a VM."""
         state = await self._get_state()
         if state != "RUNNING":
@@ -147,9 +147,9 @@ class TrueNASContainerBinarySensor(TrueNASBinarySensor):
         if state is None:
             raise invalid_response_error(self._data["name"])
 
-        return state
+        return str(state)
 
-    async def start(self):
+    async def start(self) -> None:
         """Start a container."""
         state = await self._get_state()
         if state != "STOPPED":
@@ -157,7 +157,7 @@ class TrueNASContainerBinarySensor(TrueNASBinarySensor):
 
         await self._async_call("container.start", [self._data["container_id"]])
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stop a container."""
         state = await self._get_state()
         if state != "RUNNING":
@@ -182,7 +182,7 @@ class TrueNASServiceBinarySensor(TrueNASBinarySensor):
         if not isinstance(service, dict) or "state" not in service:
             raise invalid_response_error(self._data["service"])
 
-        return service["state"]
+        return str(service["state"])
 
     async def _run(self, action: str) -> None:
         """Run a service.* method, which returns false if it fails."""
@@ -199,7 +199,7 @@ class TrueNASServiceBinarySensor(TrueNASBinarySensor):
 
         await self._run(action)
 
-    async def start(self):
+    async def start(self) -> None:
         """Start a Service."""
         state = await self._get_state()
         if state != "STOPPED":
@@ -207,15 +207,15 @@ class TrueNASServiceBinarySensor(TrueNASBinarySensor):
 
         await self._run("start")
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stop a Service."""
         await self._run_if_not_stopped("stop")
 
-    async def restart(self):
+    async def restart(self) -> None:
         """Restart a Service."""
         await self._run_if_not_stopped("restart")
 
-    async def reload(self):
+    async def reload(self) -> None:
         """Reload a Service."""
         await self._run_if_not_stopped("reload")
 
@@ -232,9 +232,9 @@ class TrueNASAppBinarySensor(TrueNASBinarySensor):
         if not isinstance(app, dict) or "state" not in app:
             raise invalid_response_error(self._data["name"])
 
-        return app["state"]
+        return str(app["state"])
 
-    async def start(self):
+    async def start(self) -> None:
         """Start an App."""
         state = await self._get_state()
         if state == "RUNNING":
@@ -242,7 +242,7 @@ class TrueNASAppBinarySensor(TrueNASBinarySensor):
 
         await self._async_call("app.start", [self._data["id"]])
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stop an App."""
         state = await self._get_state()
         if state != "RUNNING":

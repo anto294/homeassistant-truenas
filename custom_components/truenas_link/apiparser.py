@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 from logging import getLogger
+from typing import Any
 
 from .helper import redact_secrets
 
@@ -19,7 +20,7 @@ def utc_from_timestamp(timestamp: float) -> datetime:
 # ---------------------------
 #   from_entry
 # ---------------------------
-def from_entry(entry, param, default="") -> str:
+def from_entry(entry: Any, param: str, default: Any = "") -> Any:
     """Validate and return str value an API dict."""
     if "/" in param:
         for tmp_param in param.split("/"):
@@ -48,7 +49,7 @@ def from_entry(entry, param, default="") -> str:
 # ---------------------------
 #   from_entry_bool
 # ---------------------------
-def from_entry_bool(entry, param, default=False) -> bool:
+def from_entry_bool(entry: Any, param: str, default: bool = False) -> bool:
     """Validate and return a bool value from an API dict."""
     if "/" in param:
         for tmp_param in param.split("/"):
@@ -72,19 +73,19 @@ def from_entry_bool(entry, param, default=False) -> bool:
     if not isinstance(ret, bool):
         ret = default
 
-    return ret
+    return bool(ret)
 
 
 # ---------------------------
 #   parse_api
 # ---------------------------
 def parse_api(
-    data=None,
-    source=None,
-    key=None,
-    vals=None,
-    ensure_vals=None,
-) -> dict:
+    data: Any = None,
+    source: Any = None,
+    key: str | None = None,
+    vals: list[dict[str, Any]] | None = None,
+    ensure_vals: list[dict[str, Any]] | None = None,
+) -> Any:
     """Get data from API."""
     debug = _LOGGER.getEffectiveLevel() == 10
     if type(source) == dict:
@@ -124,7 +125,7 @@ def parse_api(
 # ---------------------------
 #   fill_defaults
 # ---------------------------
-def fill_defaults(data, vals) -> dict:
+def fill_defaults(data: Any, vals: Any) -> Any:
     """Fill defaults if source is not present."""
     for val in vals:
         _name = val["name"]
@@ -147,7 +148,7 @@ def fill_defaults(data, vals) -> dict:
 # ---------------------------
 #   fill_vals
 # ---------------------------
-def fill_vals(data, entry, uid, vals) -> dict:
+def fill_vals(data: Any, entry: Any, uid: Any, vals: Any) -> Any:
     """Fill all data."""
     for val in vals:
         _name = val["name"]
@@ -189,7 +190,7 @@ def fill_vals(data, entry, uid, vals) -> dict:
 # ---------------------------
 #   fill_ensure_vals
 # ---------------------------
-def fill_ensure_vals(data, uid, ensure_vals) -> dict:
+def fill_ensure_vals(data: Any, uid: Any, ensure_vals: Any) -> Any:
     """Add required keys which are not available in data."""
     for val in ensure_vals:
         if uid:

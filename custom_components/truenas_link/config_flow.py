@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from logging import getLogger
 from typing import Any
 
-import voluptuous as vol
+import probatio as vol
 
 from homeassistant.config_entries import (
     ConfigEntry,
@@ -19,7 +19,7 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
@@ -121,7 +121,7 @@ def _reconfigure_schema(
 #   configured_instances
 # ---------------------------
 @callback
-def configured_instances(hass):
+def configured_instances(hass: HomeAssistant) -> set[str]:
     """Return a set of configured instances."""
     return {
         entry.data[CONF_NAME] for entry in hass.config_entries.async_entries(DOMAIN)

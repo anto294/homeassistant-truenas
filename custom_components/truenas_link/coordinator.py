@@ -11,6 +11,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from homeassistant.const import (
@@ -104,6 +105,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         super().__init__(
             self.hass,
             _LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=60),
         )
@@ -158,6 +160,9 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
         """Update TrueNAS data."""
         if not self.api.connected():
             await self.hass.async_add_executor_job(self.api.connect)
+            # Check it here: the next query() clears the error code
+            if self.api.error == "invalid_key":
+                raise ConfigEntryAuthFailed(f"TrueNAS {self.host} rejected the API key")
 
         jobs = [
             self.get_systeminfo,

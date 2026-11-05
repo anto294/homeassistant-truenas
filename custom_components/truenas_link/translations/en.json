@@ -25,6 +25,13 @@
                 "data_description": {
                     "access_level": "Read-only removes the actions, the install buttons and the cron job switches, and keeps every sensor. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too."
                 }
+            },
+            "reauth_confirm": {
+                "title": "Reauthenticate",
+                "description": "TrueNAS rejected the API key of {name}. Enter a new one.",
+                "data": {
+                    "api_key": "API key"
+                }
             }
         },
         "error": {
@@ -42,7 +49,8 @@
             "unknown_hostname": "Unknown hostname, check DNS."
         },
         "abort": {
-            "reconfigure_successful": "Reconfigure successful."
+            "reconfigure_successful": "Reconfigure successful.",
+            "reauth_successful": "Reauthentication successful."
         }
     },
     "selector": {

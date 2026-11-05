@@ -120,6 +120,20 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
         self.truenas_config: dict[str, Any] = {}
 
+    async def _async_connection_error(
+        self, host: str, api_key: str, verify_ssl: bool
+    ) -> str | None:
+        """Return the error code of a connection test, None if it worked."""
+        api = await self.hass.async_add_executor_job(
+            TrueNASAPI, host, api_key, verify_ssl
+        )
+        conn, errorcode = await self.hass.async_add_executor_job(api.connection_test)
+        if conn:
+            return None
+
+        _LOGGER.error("TrueNAS connection error (%s)", errorcode)
+        return errorcode
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -135,20 +149,13 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "name_exists"
 
             # Test connection
-            api = await self.hass.async_add_executor_job(
-                TrueNASAPI,
+            errorcode = await self._async_connection_error(
                 truenas_config[CONF_HOST],
                 truenas_config[CONF_API_KEY],
                 truenas_config[CONF_VERIFY_SSL],
             )
-
-            conn, errorcode = await self.hass.async_add_executor_job(
-                api.connection_test
-            )
-
-            if not conn:
+            if errorcode is not None:
                 errors[CONF_HOST] = errorcode
-                _LOGGER.error("TrueNAS connection error (%s)", errorcode)
 
             # Save instance
             if not errors:
@@ -173,20 +180,13 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
             truenas_config.update(user_input)
 
             # Test connection
-            api = await self.hass.async_add_executor_job(
-                TrueNASAPI,
+            errorcode = await self._async_connection_error(
                 truenas_config[CONF_HOST],
                 truenas_config[CONF_API_KEY],
                 truenas_config[CONF_VERIFY_SSL],
             )
-
-            conn, errorcode = await self.hass.async_add_executor_job(
-                api.connection_test
-            )
-
-            if not conn:
+            if errorcode is not None:
                 errors[CONF_HOST] = errorcode
-                _LOGGER.error("TrueNAS connection error (%s)", errorcode)
 
             # Save instance
             if not errors:
@@ -199,5 +199,38 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=_reconfigure_schema(reconfigure_entry.data),
+            errors=errors,
+        )
+
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> ConfigFlowResult:
+        """Start over with a new API key, because TrueNAS rejected the stored one."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask for a new API key, and store it if it works."""
+        reauth_entry = self._get_reauth_entry()
+        errors = {}
+
+        if user_input is not None:
+            errorcode = await self._async_connection_error(
+                reauth_entry.data[CONF_HOST],
+                user_input[CONF_API_KEY],
+                reauth_entry.data[CONF_VERIFY_SSL],
+            )
+            if errorcode is None:
+                return self.async_update_reload_and_abort(
+                    reauth_entry, data_updates=user_input
+                )
+
+            errors["base"] = errorcode
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema({vol.Required(CONF_API_KEY): str}),
+            description_placeholders={"name": reauth_entry.title},
             errors=errors,
         )

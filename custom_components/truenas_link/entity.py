@@ -100,21 +100,35 @@ def invalid_response_error(name: Any) -> HomeAssistantError:
 # ---------------------------
 #   entity_service_handler
 # ---------------------------
-def entity_service_handler(method: str) -> Callable[..., Awaitable[None]]:
+def entity_service_handler(method: str, target: str) -> Callable[..., Awaitable[None]]:
     """Return the handler of an entity service that runs the entity's `method`.
 
     Actions are registered once for the whole integration, whatever its entries'
     access levels, so this is what stops one from reaching an entity with read-only
     access. The API key of that entity may well be allowed to do it.
+
+    Home Assistant lets an action target any entity of the integration in its domain,
+    and methods share names: without the check of the class, cloudsync_abort on the
+    uptime sensor would run its stop method, which shuts TrueNAS down.
     """
 
     async def handler(entity: TrueNASEntity, call: ServiceCall) -> None:
-        """Run the method unless the entity's entry is read-only."""
+        """Run the method unless the entry is read-only or the action is not for it."""
         if entity.coordinator.read_only:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="read_only_action",
                 translation_placeholders={"entity": entity.entity_id},
+            )
+
+        if entity.entity_description.func != target:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="wrong_action_target",
+                translation_placeholders={
+                    "action": call.service,
+                    "entity": entity.entity_id,
+                },
             )
 
         await getattr(entity, method)(**remove_entity_service_fields(call))
@@ -352,27 +366,3 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
                 attributes[format_attribute(variable)] = self._data[variable]
 
         return attributes
-
-    async def start(self) -> None:
-        """Run function."""
-        raise NotImplementedError()
-
-    async def stop(self) -> None:
-        """Stop function."""
-        raise NotImplementedError()
-
-    async def pause(self) -> None:
-        """Pause function."""
-        raise NotImplementedError()
-
-    async def restart(self) -> None:
-        """Restart function."""
-        raise NotImplementedError()
-
-    async def reload(self) -> None:
-        """Reload function."""
-        raise NotImplementedError()
-
-    async def snapshot(self) -> None:
-        """Snapshot function."""
-        raise NotImplementedError()

@@ -20,6 +20,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - The setup, Reconfigure and reauthentication forms now mask the API key.
   Reconfigure no longer sends the stored key to the browser: leave the field
   empty to keep it.
+- **An action now runs only on entities it is meant for.** Actions used to run a
+  method of the same name on whatever entity they targeted, so
+  `truenas_link.cloudsync_abort` or `pool_scrub_stop` on the uptime sensor shut
+  TrueNAS down, and `vm_stop` on a service stopped that service. These calls now give
+  an error and send nothing to TrueNAS. An automation that relied on one needs the
+  right action.
 
 ### Added
 

@@ -120,7 +120,7 @@ Most entities expose extra details as attributes (for example pool scrub state, 
 
 ## Actions
 
-All actions target an entity of this integration, given as `target`, and need the Administrator access level. On a read-only entity they give an error and send nothing to TrueNAS. If the entity's entry is not loaded, for example because TrueNAS is unreachable at startup, the action does nothing and Home Assistant logs that the entity is not available.
+All actions target an entity of this integration, given as `target`, and need the Administrator access level. On a read-only entity, or on an entity the action is not meant for, they give an error and send nothing to TrueNAS. If the entity's entry is not loaded, for example because TrueNAS is unreachable at startup, the action does nothing and Home Assistant logs that the entity is not available.
 
 An action also gives an error if TrueNAS refuses it, cannot be reached, or if it does not apply, such as starting a running VM. In an automation, use `continue_on_error: true` on a step that may fail without stopping the rest. Actions that start a job only report failures in starting it.
 

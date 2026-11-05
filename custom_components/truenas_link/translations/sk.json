@@ -78,6 +78,9 @@
         "read_only_action": {
             "message": "{entity} patrí k položke TrueNAS s prístupom iba na čítanie. Ak chcete používať jej akcie, nastavte úroveň prístupu Správca cez opätovné nastavenie."
         },
+        "wrong_action_target": {
+            "message": "Akciu {action} nemožno použiť na {entity}. Do TrueNAS sa nič neodoslalo."
+        },
         "action_unreachable": {
             "message": "Nepodarilo sa spojiť s TrueNAS na spustenie {method}."
         },

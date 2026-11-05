@@ -35,16 +35,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register the actions, once, whatever entries there are or their state.
 
     So automations using them can be validated even when TrueNAS is unreachable.
-    Each action checks the access level of the entity it runs on.
+    Each action checks the access level and the class of the entity it runs on.
     """
     for entity_domain, actions in ACTIONS:
-        for name, schema, method in actions:
+        for name, schema, method, target in actions:
             async_register_platform_entity_service(
                 hass,
                 DOMAIN,
                 name,
                 entity_domain=entity_domain,
-                func=entity_service_handler(method),
+                func=entity_service_handler(method, target),
                 schema=schema,
             )
 

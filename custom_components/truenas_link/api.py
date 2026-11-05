@@ -1,7 +1,7 @@
 """TrueNAS API."""
 
 import asyncio
-from logging import DEBUG, getLogger
+from logging import DEBUG, ERROR, WARNING, getLogger
 from typing import Any
 
 import json
@@ -277,12 +277,7 @@ class TrueNASAPI(object):
             except TrueNASRequestError as e:
                 self._log_failed_method(service, str(e))
             except TrueNASConnectionError as e:
-                _LOGGER.warning(
-                    'TrueNAS %s unable to fetch data "%s" (%s)',
-                    self._host,
-                    service,
-                    e,
-                )
+                self._log_failed_method(service, str(e), WARNING)
                 await self.disconnect()
                 # The reason is in the log. This is a code the forms can show.
                 self._error = ERROR_CANNOT_CONNECT
@@ -299,11 +294,12 @@ class TrueNASAPI(object):
     # ---------------------------
     #   _log_failed_method
     # ---------------------------
-    def _log_failed_method(self, service: str, reason: str) -> None:
+    def _log_failed_method(self, service: str, reason: str, level: int = ERROR) -> None:
         """Log why a polled method failed, unless it was already logged.
 
-        A method that TrueNAS refuses fails on every poll, so this would fill the
-        log. A failure with another reason is logged again.
+        A method that TrueNAS refuses or leaves without an answer fails on every
+        poll, so this would fill the log. A failure with another reason is logged
+        again, and query() logs when the method works again.
         """
         if self._failed_methods.get(service) == reason:
             _LOGGER.debug(
@@ -312,7 +308,9 @@ class TrueNASAPI(object):
             return
 
         self._failed_methods[service] = reason
-        _LOGGER.error("TrueNAS %s query (%s) error: %s", self._host, service, reason)
+        _LOGGER.log(
+            level, "TrueNAS %s query (%s) error: %s", self._host, service, reason
+        )
 
     # ---------------------------
     #   call

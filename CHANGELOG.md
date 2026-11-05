@@ -79,6 +79,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- A query that TrueNAS left without an answer logged a warning on every update. It is
+  now logged once, and again when the query works.
 - Polling and actions no longer use a thread of Home Assistant's pool: the
   connection to TrueNAS is now asynchronous. Behavior stays the same, and cancelling
   an action, such as an automation restarting, closes the connection, so its late

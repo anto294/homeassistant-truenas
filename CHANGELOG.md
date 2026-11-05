@@ -7,6 +7,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- **Access level** option on the setup and Reconfigure forms: Administrator
+  or Read-only. With Read-only, all entities keep working, update entities
+  have no install button, and actions are no longer offered. Existing
+  entries stay on Administrator.
+
 ### Changed
 
 - TrueNAS Link is now in the HACS default repositories: search for it in
@@ -27,6 +34,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   entity descriptions and services to the shared entity setup explicitly
   instead of through module imports it looked up at runtime, an unused
   import is gone, and third-party GitHub Actions are pinned to commit SHAs.
+- Tests work with `DeviceInfo` as a dataclass (Home Assistant 2026.11).
 
 ## [2.0.1] - 2026-11-04
 

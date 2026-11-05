@@ -79,19 +79,6 @@ class TrueNASSensor(TrueNASEntity, SensorEntity):
         """Return the value reported by the sensor."""
         return self._data[self.entity_description.data_attribute]
 
-    @property
-    def native_unit_of_measurement(self) -> str | None:
-        """Return the unit the value is expressed in."""
-        if self.entity_description.native_unit_of_measurement:
-            if self.entity_description.native_unit_of_measurement.startswith("data__"):
-                uom = self.entity_description.native_unit_of_measurement[6:]
-                if uom in self._data:
-                    return self._data[uom]
-
-            return self.entity_description.native_unit_of_measurement
-
-        return None
-
 
 # ---------------------------
 #   TrueNASUptimeSensor

@@ -14,8 +14,6 @@ class TrueNASSwitchEntityDescription(SwitchEntityDescription):
     """Class describing entities."""
 
     ha_group: str | None = None
-    ha_connection: str | None = None
-    ha_connection_value: str | None = None
     data_path: str | None = None
     data_attribute: str | None = None
     data_name: str | None = None

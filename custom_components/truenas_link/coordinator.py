@@ -758,14 +758,8 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
     def _systemstats_process(self, arr, graph, t) -> None:
         """Store the mean values of the requested legend entries of a graph.
 
-        `arr` is a tuple of exact legend names. Upstream passed some of them
-        as plain strings, which made `in` a substring check ("size" matched
-        "arc_size"); a bare string is still wrapped, but it then only
-        matches that exact name, so always list the real legend entries.
+        `arr` is a tuple of exact legend names.
         """
-        if isinstance(arr, str):
-            arr = (arr,)
-
         tmp_mean = self._systemstats_mean(graph)
         if tmp_mean:
             for tmp_var in graph.get("legend") or []:
@@ -790,8 +784,6 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
             self.ds["system_info"][f"load_{tmp_var}"] = round(tmp_val, 2)
         elif t == "arcsize":
             self.ds["system_info"]["cache_size-arc_value"] = round(tmp_val, 2)
-        else:
-            self.ds["system_info"][tmp_var] = round(tmp_val, 2)
 
     # ---------------------------
     #   get_service

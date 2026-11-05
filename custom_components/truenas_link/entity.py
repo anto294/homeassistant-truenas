@@ -302,16 +302,13 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
         else:
             self._data = coordinator.data[self.entity_description.data_path]
 
-        dev_group = self.entity_description.ha_group
-        if self.entity_description.ha_group.startswith("data__"):
-            dev_group = self.entity_description.ha_group[6:]
-            if dev_group in self._data:
-                dev_group = self._data[dev_group]
-
         # From the English names in the descriptions, never the translated name
         # that the entity shows: entity ids must not depend on the language
         self.entity_id = build_entity_id(
-            self._platform_domain, self._inst, dev_group, self._english_name()
+            self._platform_domain,
+            self._inst,
+            self.entity_description.ha_group,
+            self._english_name(),
         )
         self._update_name()
 
@@ -378,31 +375,6 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return a description for device registry."""
-        dev_connection = DOMAIN
-        dev_connection_value = f"{self._inst}_{self.entity_description.ha_group}"
-        dev_group = self.entity_description.ha_group
-        if self.entity_description.ha_group == "System":
-            dev_connection_value = (
-                f"{self._inst}_{self.coordinator.data['system_info']['hostname']}"
-            )
-
-        if self.entity_description.ha_group.startswith("data__"):
-            dev_group = self.entity_description.ha_group[6:]
-            if dev_group in self._data:
-                dev_group = self._data[dev_group]
-                dev_connection_value = dev_group
-
-        if self.entity_description.ha_connection:
-            dev_connection = self.entity_description.ha_connection
-
-        if self.entity_description.ha_connection_value:
-            dev_connection_value = self.entity_description.ha_connection_value
-            if dev_connection_value.startswith("data__"):
-                dev_connection_value = f"{self._inst}_{dev_connection_value[6:]}"
-                dev_connection_value = (
-                    f"{self._inst}_{self._data[dev_connection_value]}"
-                )
-
         if self.entity_description.ha_group == "System":
             return system_device_info(self.coordinator)
 
@@ -410,8 +382,8 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
         # deprecated (removed in HA 2027.9), and mixing them with these
         # keys is an invalid device info on HA 2024.11.
         info = DeviceInfo(
-            connections={(dev_connection, f"{dev_connection_value}")},
-            name=dev_group,
+            connections={(DOMAIN, f"{self._inst}_{self.entity_description.ha_group}")},
+            name=self.entity_description.ha_group,
             model=f"{self.coordinator.data['system_info']['system_product']}",
             manufacturer=f"{self.coordinator.data['system_info']['system_manufacturer']}",
         )

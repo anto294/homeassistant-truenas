@@ -184,15 +184,6 @@ class TrueNASAPI(object):
         return self._connected
 
     # ---------------------------
-    #   reconnect
-    # ---------------------------
-    def reconnect(self) -> bool:
-        """Return connected boolean."""
-        self.disconnect()
-        self.connect()
-        return self._connected
-
-    # ---------------------------
     #   connected
     # ---------------------------
     def connected(self) -> bool:

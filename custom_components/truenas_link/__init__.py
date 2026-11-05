@@ -3,12 +3,51 @@
 from __future__ import annotations
 
 
+from logging import getLogger
+
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
-from .const import PLATFORMS
+from .const import DOMAIN, PLATFORMS
 from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
 from .entity import system_device_info
+
+_LOGGER = getLogger(__name__)
+
+
+# ---------------------------
+#   _async_set_missing_unique_id
+# ---------------------------
+async def _async_set_missing_unique_id(
+    hass: HomeAssistant,
+    config_entry: TrueNASConfigEntry,
+    coordinator: TrueNASCoordinator,
+) -> None:
+    """Give an entry made before entries had a unique id its system's id.
+
+    This needs no migration, so going back to an older version still works: an
+    older version ignores the id. Without the id, or with another entry already
+    holding it, the entry keeps working as before.
+    """
+    if config_entry.unique_id is not None:
+        return
+
+    system_id = await hass.async_add_executor_job(coordinator.api.read_system_id)
+    if system_id is None:
+        return
+
+    for other in hass.config_entries.async_entries(DOMAIN):
+        if other.unique_id == system_id:
+            _LOGGER.warning(
+                'The TrueNAS entries "%s" and "%s" connect to the same system. '
+                "Both keep working, but they poll it twice: remove one if you do "
+                "not need it",
+                config_entry.title,
+                other.title,
+            )
+            return
+
+    hass.config_entries.async_update_entry(config_entry, unique_id=system_id)
 
 
 # ---------------------------
@@ -25,6 +64,8 @@ async def async_setup_entry(
         # A setup retry starts over with a new coordinator and connection
         await hass.async_add_executor_job(coordinator.api.disconnect)
         raise
+
+    await _async_set_missing_unique_id(hass, config_entry, coordinator)
 
     # Register the parent "System" device first, so child devices (Disks,
     # VMs, Apps, ...) can link to its device id whatever platform is set up

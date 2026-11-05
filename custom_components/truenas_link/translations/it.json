@@ -52,7 +52,9 @@
         },
         "abort": {
             "reconfigure_successful": "Riconfigurazione completata.",
-            "reauth_successful": "Nuova autenticazione completata."
+            "reauth_successful": "Nuova autenticazione completata.",
+            "already_configured": "Questo sistema TrueNAS è già configurato.",
+            "unique_id_mismatch": "Questo è un altro sistema TrueNAS. Per aggiungerlo, usa Aggiungi voce."
         }
     },
     "selector": {

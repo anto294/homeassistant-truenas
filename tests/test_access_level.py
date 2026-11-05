@@ -75,7 +75,7 @@ def _flow():
     flow.hass = MagicMock()
     flow.hass.config_entries.async_entries.return_value = []
     flow.hass.async_add_executor_job = AsyncMock(
-        side_effect=[MagicMock(), (True, "")],
+        side_effect=[MagicMock(system_id=None), (True, "")],
     )
     return flow
 
@@ -94,7 +94,9 @@ def test_setup_stores_the_chosen_level():
 def test_reconfigure_stores_the_chosen_level():
     """The level picked in Reconfigure replaces the stored one."""
     flow = _flow()
-    entry = SimpleNamespace(data={**FORM, CONF_ACCESS_LEVEL: ACCESS_LEVEL_ADMIN})
+    entry = SimpleNamespace(
+        data={**FORM, CONF_ACCESS_LEVEL: ACCESS_LEVEL_ADMIN}, unique_id=None
+    )
     flow._get_reconfigure_entry = lambda: entry
     flow.async_update_reload_and_abort = MagicMock()
     user_input = {

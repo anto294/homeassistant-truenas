@@ -101,6 +101,7 @@ def _topology() -> dict[str, Any]:
 def _common(version: str) -> dict[str, Any]:
     """Return the answers of the methods every version has."""
     return {
+        "system.global.id": "9f3c1a7e5b2d4c6f8a0e1d2b3c4f5a6b",
         "system.info": {
             "version": version,
             "hostname": "nas",

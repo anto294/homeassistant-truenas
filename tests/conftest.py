@@ -101,14 +101,15 @@ class FakeTrueNAS:
     """A TrueNAS that hands out a FakeWebSocket per connection.
 
     Tests change `valid_keys` to revoke a key, `results` to answer a method
-    with something else than an empty list, and `unanswered` to leave a method
-    without an answer.
+    with something else than an empty list, `errors` to refuse a method, and
+    `unanswered` to leave a method without an answer.
     """
 
     def __init__(self) -> None:
         """Initialize a system that accepts the key "good"."""
         self.valid_keys = {"good"}
         self.results: dict[str, Any] = {
+            "system.global.id": "fake-system-id",
             "system.info": {
                 "version": "25.10.1",
                 "hostname": "nas",
@@ -117,15 +118,24 @@ class FakeTrueNAS:
                 "system_product": "product",
                 "system_manufacturer": "manufacturer",
                 "physmem": 1,
-            }
+            },
         }
         self.unanswered: set[str] = set()
+        # Methods TrueNAS answers with an error, and its reason
+        self.errors: dict[str, str] = {}
         self.sockets: list[FakeWebSocket] = []
 
     def _respond(self, request: dict[str, Any]) -> Any:
         """Answer one JSON-RPC request."""
         if request["method"] in self.unanswered:
             return NO_ANSWER
+
+        if request["method"] in self.errors:
+            return {
+                "jsonrpc": "2.0",
+                "id": request["id"],
+                "error": {"data": {"reason": self.errors[request["method"]]}},
+            }
 
         if request["method"] == "auth.login_with_api_key":
             result = request["params"][0] in self.valid_keys
@@ -224,4 +234,5 @@ async def async_add_entry(hass: HomeAssistant, **overrides: Any):
         },
     )
     await hass.async_block_till_done()
-    return hass.config_entries.async_entries(DOMAIN)[0]
+    # The entry this call added, if another one is already there
+    return hass.config_entries.async_entries(DOMAIN)[-1]

@@ -52,7 +52,9 @@
         },
         "abort": {
             "reconfigure_successful": "Reconfigure successful.",
-            "reauth_successful": "Reauthentication successful."
+            "reauth_successful": "Reauthentication successful.",
+            "already_configured": "This TrueNAS system is already configured.",
+            "unique_id_mismatch": "This is a different TrueNAS system. To add it, use Add entry instead."
         }
     },
     "selector": {

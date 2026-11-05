@@ -7,7 +7,11 @@
                     "name": "Name of the integration",
                     "host": "Host",
                     "api_key": "API key",
+                    "access_level": "Access level",
                     "verify_ssl": "Verify SSL certificate"
+                },
+                "data_description": {
+                    "access_level": "Read-only hides the actions and the install buttons. All entities stay available. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too."
                 }
             },
             "reconfigure": {
@@ -15,7 +19,11 @@
                 "data": {
                     "host": "Host",
                     "api_key": "API key",
+                    "access_level": "Access level",
                     "verify_ssl": "Verify SSL certificate"
+                },
+                "data_description": {
+                    "access_level": "Read-only hides the actions and the install buttons. All entities stay available. Use an API key with the READONLY_ADMIN role so that TrueNAS enforces it too."
                 }
             }
         },
@@ -35,6 +43,19 @@
         },
         "abort": {
             "reconfigure_successful": "Reconfigure successful."
+        }
+    },
+    "selector": {
+        "access_level": {
+            "options": {
+                "admin": "Administrator (entities, actions and updates)",
+                "read_only": "Read-only (entities only)"
+            }
+        }
+    },
+    "exceptions": {
+        "read_only_action": {
+            "message": "{entity} belongs to a TrueNAS entry with read-only access. To use its actions, set the access level to Administrator with Reconfigure."
         }
     }
 }

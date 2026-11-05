@@ -21,6 +21,7 @@ from homeassistant.const import (
 from .api import TrueNASAPI
 from .apiparser import parse_api, utc_from_timestamp
 from .const import DOMAIN
+from .helper import is_read_only
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[None]):
 
         self.name = config_entry.data[CONF_NAME]
         self.host = config_entry.data[CONF_HOST]
+        self.read_only = is_read_only(config_entry.data)
 
         self.ds = {
             "interface": {},

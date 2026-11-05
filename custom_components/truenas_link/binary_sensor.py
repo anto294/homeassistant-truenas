@@ -18,6 +18,11 @@ from .entity import (
     invalid_state_error,
 )
 
+# One action at a time per platform. Data comes from the coordinator, but these
+# platforms also send actions, which first check the state on TrueNAS and then act:
+# this keeps a second action from passing the same check halfway through.
+PARALLEL_UPDATES = 1
+
 # Seconds a virt instance gets to shut down cleanly (TrueNAS 25.04)
 VIRT_STOP_TIMEOUT = 60
 

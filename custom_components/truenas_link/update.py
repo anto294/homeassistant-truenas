@@ -17,6 +17,11 @@ from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
 from .entity import TrueNASEntity, async_add_entities, invalid_state_error
 from .update_types import SENSOR_SERVICES, SENSOR_TYPES
 
+# One action at a time per platform. Data comes from the coordinator, but these
+# platforms also send actions, which first check the state on TrueNAS and then act:
+# this keeps a second action from passing the same check halfway through.
+PARALLEL_UPDATES = 1
+
 DEVICE_UPDATE = "device_update"
 
 

@@ -13,6 +13,11 @@ from .coordinator import TrueNASConfigEntry
 from .entity import TrueNASEntity, async_add_entities
 from .switch_types import SENSOR_SERVICES, SENSOR_TYPES
 
+# One action at a time per platform. Data comes from the coordinator, but these
+# platforms also send actions, which first check the state on TrueNAS and then act:
+# this keeps a second action from passing the same check halfway through.
+PARALLEL_UPDATES = 1
+
 
 # ---------------------------
 #   async_remove_switches

@@ -24,6 +24,11 @@ from .sensor_types import (
     SENSOR_TYPES,
 )
 
+# One action at a time per platform. Data comes from the coordinator, but these
+# platforms also send actions, which first check the state on TrueNAS and then act:
+# this keeps a second action from passing the same check halfway through.
+PARALLEL_UPDATES = 1
+
 # Job states in which a task is already running
 JOB_ACTIVE_STATES = ("WAITING", "RUNNING")
 

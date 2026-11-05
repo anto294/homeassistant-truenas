@@ -7,6 +7,74 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-05
+
+The first stable release since 2.0.1. It collects 2.1.0b1, 2.1.0b2 and 2.1.0b3, and
+their sections below have every detail.
+
+### Before you upgrade
+
+- **TrueNAS Link now requires Home Assistant 2026.11 or later.** On an older version,
+  stay on 2.0.1 until you can update Home Assistant. 2.0.1's Reconfigure stops working
+  on Home Assistant 2026.12, so update to this release before or together with that.
+- **There is nothing to set up again.** Existing entries are migrated at startup, and
+  keep their name, access level and entity IDs. **Back up Home Assistant first:** after
+  the migration, an older version refuses to load the entry, so going back needs that
+  backup or adding the entry again.
+- **Check your automations for these changes:**
+  - A failed action is now an error, so an automation can stop where it used to carry
+    on. Add `continue_on_error: true` to a step that may fail.
+  - An action now runs only on entities it is meant for, and gives an error on others.
+  - Sensors without a value are now unknown instead of 0, and automations that compare
+    them with a number do not trigger on unknown.
+  - The entities of items deleted from TrueNAS are removed after about an hour, which
+    loses their customizations.
+  - The `icon` attribute is gone from these entities' state.
+
+### Added
+
+- An access level for each entry, Administrator or Read-only, in the **Configure**
+  menu. New entries start as Read-only, and existing ones stay on Administrator.
+- Reauthentication when TrueNAS rejects the API key.
+- Alerts, reboot required, and pool scan, last scrub and errors sensors.
+- `pool_scrub_start`, `pool_scrub_pause`, `pool_scrub_stop` and `replication_run`
+  actions, and a switch per cron job, disabled by default.
+- New items on TrueNAS get their entities without a reload.
+- Translated entity names in five languages, plus complete forms and errors. Entity IDs
+  do not change.
+
+### Changed
+
+- The setup form no longer asks for a name, and the same TrueNAS system can no longer
+  be added twice.
+- Verify SSL is on by default for new entries. Existing entries keep their setting.
+- A lost connection now logs one message, and one when it is back.
+- The connection to TrueNAS is now asynchronous, and `websockets` is pinned to 17.4.
+- The README now covers installing, updating, testing pre-releases and removing through
+  the Marketplace, which replaced HACS in Home Assistant 2026.11. It also warns that
+  installing a TrueNAS update reboots the NAS.
+
+### Security
+
+- Credentials of cloud sync and replication tasks no longer reach Home Assistant.
+- The debug log and diagnostics hide more: secrets, and free-text fields that can hold
+  them. The API key forms mask the key, and Reconfigure no longer sends it to the browser.
+- Actions no longer run on the wrong entity. `pool_scrub_stop` on the uptime sensor,
+  for one, used to shut TrueNAS down.
+
+### Fixed
+
+- A TrueNAS that stopped answering blocked the integration: requests now give up after
+  150 seconds, and entities become unavailable instead of showing old data.
+- Reconfigure no longer breaks on Home Assistant 2026.12, keeps what was entered after
+  an error, and no longer reloads the entry twice.
+- The forms give the right error for a refused connection, an unreachable host, an
+  unknown name and a server that is not a websocket.
+- Connections are no longer left open after a failed login, setup or reload.
+- The uptime sensor no longer changes state on every update.
+- An empty **System** device left by renaming TrueNAS can now be deleted.
+- On TrueNAS 25.04, stopping a VM no longer cuts its power immediately.
+
 ## [2.1.0b3] - 2026-11-05
 
 ### Changed
@@ -515,7 +583,8 @@ only as 1.4 betas or not released yet:
   and attaches `truenas.zip`, which HACS installs from. Release notes come
   from this changelog.
 
-[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0b3...HEAD
+[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/anto294/homeassistant-truenas/compare/v2.0.1...v2.1.0
 [2.1.0b3]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0b2...v2.1.0b3
 [2.1.0b2]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0b1...v2.1.0b2
 [2.1.0b1]: https://github.com/anto294/homeassistant-truenas/compare/v2.0.1...v2.1.0b1

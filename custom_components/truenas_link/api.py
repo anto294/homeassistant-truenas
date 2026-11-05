@@ -1,12 +1,14 @@
 """TrueNAS API."""
 
-from logging import getLogger
+from logging import DEBUG, getLogger
 from threading import Lock
 from typing import Any
 
 import json
 from homeassistant.util.ssl import client_context, get_default_no_verify_context
 from websockets.sync.client import connect, ClientConnection
+
+from .helper import redact_secrets
 
 _LOGGER = getLogger(__name__)
 
@@ -256,7 +258,12 @@ class TrueNASAPI(object):
     # ---------------------------
     def _exchange(self, service: str, params: Any) -> Any:
         """Send a request and return the result, raising a TrueNASError if it fails."""
-        _LOGGER.debug("TrueNAS %s query: %s, %s", self._host, service, params)
+        debug = _LOGGER.isEnabledFor(DEBUG)
+        if debug:
+            _LOGGER.debug(
+                "TrueNAS %s query: %s, %s", self._host, service, redact_secrets(params)
+            )
+
         payload = {
             "method": service,
             "jsonrpc": "2.0",
@@ -293,7 +300,15 @@ class TrueNASAPI(object):
         else:
             data = response["result"]
 
-        _LOGGER.debug("TrueNAS %s query (%s) response: %s", self._host, service, data)
+        if debug:
+            # Text that is not JSON cannot be redacted key by key
+            logged = (
+                redact_secrets(data) if is_object else f"<{len(message)} characters>"
+            )
+            _LOGGER.debug(
+                "TrueNAS %s query (%s) response: %s", self._host, service, logged
+            )
+
         return data
 
     # ---------------------------
@@ -311,7 +326,7 @@ class TrueNASAPI(object):
             if not reason:
                 reason = error.get("message")
 
-        return str(reason or error)
+        return str(reason or redact_secrets(error))
 
     @property
     def error(self):

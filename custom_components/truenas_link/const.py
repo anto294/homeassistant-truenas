@@ -44,6 +44,16 @@ TO_REDACT = {
     "account",
     "key",
     "alert_messages",
+    "hostname",
+    "link_address",
+    "access_key_id",
+    "secret_access_key",
+    "client_secret",
+    "token",
+    "pass",
+    "private_key",
+    "encryption_key",
+    "service_account_credentials",
 }
 
 SCAN_IDLE = "idle"

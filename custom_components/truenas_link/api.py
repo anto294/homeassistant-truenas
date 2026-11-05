@@ -209,9 +209,13 @@ class TrueNASAPI(object):
 
         A successful call can also return None, so code that needs to know
         whether a call worked uses call() instead.
+
+        It never reconnects: a poll connects once, at its start. A query that
+        reconnected after the connection was lost would end the poll connected,
+        and hide that it failed. The poll has to fail so entities show it.
         """
         if not self.connected():
-            self.connect()
+            return None
 
         with self.lock:
             self._error = ""

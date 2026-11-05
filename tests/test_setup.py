@@ -252,3 +252,38 @@ def test_setup_form_keeps_false_after_an_error(run_in_hass):
         assert data["verify_ssl"] is False
 
     run_in_hass(scenario)
+
+
+def test_connection_lost_during_a_poll_fails_the_poll(run_in_hass):
+    """Entities go unavailable, even if a later query of the poll could reconnect.
+
+    get_pool makes a second query after pool.query, so a query that reconnects
+    would end the poll connected, and hide that its data is old.
+    """
+
+    async def scenario(hass, server):
+        entry = await async_add_entry(hass)
+        coordinator = hass.data[DOMAIN][entry.entry_id]
+        states = [state.entity_id for state in hass.states.async_all()]
+        assert states
+        connections = len(server.sockets)
+
+        server.unanswered = {"pool.query"}
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+        assert not coordinator.last_update_success
+        assert not coordinator.connected()
+        assert len(server.sockets) == connections
+        assert server.open_sockets == 0
+        assert all(hass.states.get(state).state == "unavailable" for state in states)
+
+        server.unanswered = set()
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+        assert coordinator.last_update_success
+        assert coordinator.connected()
+        assert all(hass.states.get(state).state != "unavailable" for state in states)
+
+    run_in_hass(scenario)

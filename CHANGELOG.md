@@ -11,8 +11,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - **Access level** option on the setup and Reconfigure forms: Administrator
   or Read-only. With Read-only, all entities keep working, update entities
-  have no install button, and actions are no longer offered. Existing
-  entries stay on Administrator.
+  have no install button, and actions are no longer offered. New entries
+  start as Read-only; existing entries stay on Administrator.
 
 ### Changed
 

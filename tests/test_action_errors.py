@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 import re
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 import pytest

@@ -17,14 +17,10 @@ def _sensor(task):
     sensor = TrueNASReplicationSensor.__new__(TrueNASReplicationSensor)
     sensor._data = {"id": 7, "name": "offsite"}
     sensor.coordinator = SimpleNamespace(
-        api=SimpleNamespace(call=MagicMock(return_value=task)),
+        api=SimpleNamespace(call=AsyncMock(return_value=task)),
         async_refresh=AsyncMock(),
     )
 
-    async def run_job(func, *args):
-        return func(*args)
-
-    sensor.hass = SimpleNamespace(async_add_executor_job=run_job)
     return sensor
 
 

@@ -146,10 +146,8 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
         self, host: str, api_key: str, verify_ssl: bool
     ) -> str | None:
         """Return the error code of a connection test, None if it worked."""
-        api = await self.hass.async_add_executor_job(
-            TrueNASAPI, host, api_key, verify_ssl
-        )
-        conn, errorcode = await self.hass.async_add_executor_job(api.connection_test)
+        api = TrueNASAPI(host, api_key, verify_ssl)
+        conn, errorcode = await api.connection_test()
         if conn:
             self._system_id = api.system_id
             return None

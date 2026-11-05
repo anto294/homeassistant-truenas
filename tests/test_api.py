@@ -8,7 +8,7 @@ import ssl
 import json
 from pathlib import Path
 import socket
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from homeassistant.util.ssl import client_context, get_default_no_verify_context
 import pytest
@@ -20,7 +20,7 @@ from custom_components.truenas_link.api import (
     TrueNASRequestError,
 )
 
-from .conftest import FakeWebSocket
+from .conftest import FakeWebSocket, SyncAPI
 
 # update.status on TrueNAS 25.10 for a system that is up to date. The
 # "error": null key is part of the method's own result, not a JSON-RPC error.
@@ -139,8 +139,9 @@ def _login(result=True):
 def _api_with(*sockets):
     """Return an API and the patch that makes connect() hand out `sockets`."""
     api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=False)
-    return api, patch(
-        "custom_components.truenas_link.api.connect", side_effect=list(sockets)
+    return SyncAPI(api), patch(
+        "custom_components.truenas_link.api.connect",
+        new=AsyncMock(side_effect=list(sockets)),
     )
 
 
@@ -276,7 +277,7 @@ def test_call_tells_if_the_connection_broke_before_sending(connected_api):
 def test_call_tells_if_the_connection_broke_after_sending(connected_api):
     """A failed recv means TrueNAS may have acted on the request."""
     api, ws = connected_api(_reply(result=None))
-    ws.recv = lambda timeout=None: (_ for _ in ()).throw(EOFError("closed"))
+    ws.recv = lambda: (_ for _ in ()).throw(EOFError("closed"))
 
     with pytest.raises(TrueNASConnectionError) as err:
         api.call("system.reboot", ["reason"])
@@ -289,7 +290,7 @@ def test_call_tells_if_the_connection_broke_after_sending(connected_api):
 def test_query_still_returns_none_on_every_failure(connected_api):
     """Polling keeps its behavior: query() never raises."""
     api, ws = connected_api(_reply(result=None))
-    ws.recv = lambda timeout=None: (_ for _ in ()).throw(EOFError("closed"))
+    ws.recv = lambda: (_ for _ in ()).throw(EOFError("closed"))
 
     assert api.query("system.info") is None
     assert not api.connected()
@@ -343,9 +344,11 @@ ERROR_CODES = json.loads(
 )
 def test_connection_failure_gives_a_known_code(error, code):
     """Each connection error maps to a code the forms have a message for."""
-    api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=False)
+    api = SyncAPI(TrueNASAPI("truenas.lan", "api-key", verify_ssl=False))
 
-    with patch("custom_components.truenas_link.api.connect", side_effect=error):
+    with patch(
+        "custom_components.truenas_link.api.connect", new=AsyncMock(side_effect=error)
+    ):
         assert api.connection_test() == (False, code)
 
     assert code in ERROR_CODES
@@ -365,11 +368,11 @@ def test_query_failure_during_the_test_gives_a_known_code():
     original = ws.recv
     replies = iter([original, None])
 
-    def recv(timeout=None):
+    def recv():
         reply = next(replies)
         if reply is None:
             raise OSError("connection reset by peer")
-        return reply(timeout)
+        return reply()
 
     ws.recv = recv
     api, connect = _api_with(ws)

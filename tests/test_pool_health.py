@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from datetime import datetime, timezone
 
 import pytest
@@ -100,7 +102,7 @@ def _coordinator(connected_api, pool):
     api, _ = connected_api(responder)
     coordinator = TrueNASCoordinator.__new__(TrueNASCoordinator)
     coordinator.host = "truenas.lan"
-    coordinator.api = api
+    coordinator.api = api.real
     coordinator.present = {}
     coordinator.answered = set()
     coordinator.pool_names = set()
@@ -123,7 +125,7 @@ def test_scan_status(connected_api, scan, expected):
     """The scan object maps to one of the sensor's states."""
     coordinator = _coordinator(connected_api, _pool(scan))
 
-    coordinator.get_pool()
+    asyncio.run(coordinator.get_pool())
 
     assert coordinator.ds["pool"]["123"]["scan_status"] == expected
 
@@ -133,18 +135,18 @@ def test_last_scrub_only_follows_finished_scrubs(connected_api):
     pool = _pool(_scan())
     coordinator = _coordinator(connected_api, pool)
 
-    coordinator.get_pool()
+    asyncio.run(coordinator.get_pool())
     last_scrub = coordinator.ds["pool"]["123"]["last_scrub"]
     assert isinstance(last_scrub, datetime)
     assert last_scrub.tzinfo is not None
     assert last_scrub.timestamp() == END_MS / 1000
 
     pool["scan"] = _scan("RESILVER", "FINISHED", end=END_MS + 5000)
-    coordinator.get_pool()
+    asyncio.run(coordinator.get_pool())
     assert coordinator.ds["pool"]["123"]["last_scrub"] == last_scrub
 
     pool["scan"] = _scan("SCRUB", "CANCELED", end=END_MS + 5000)
-    coordinator.get_pool()
+    asyncio.run(coordinator.get_pool())
     assert coordinator.ds["pool"]["123"]["last_scrub"] == last_scrub
 
 
@@ -152,7 +154,7 @@ def test_last_scrub_is_unknown_without_a_finished_scrub(connected_api):
     """No finished scrub means an unknown timestamp, not 1970."""
     coordinator = _coordinator(connected_api, _pool(None))
 
-    coordinator.get_pool()
+    asyncio.run(coordinator.get_pool())
 
     assert coordinator.ds["pool"]["123"]["last_scrub"] is None
 
@@ -161,7 +163,7 @@ def test_errors_add_up_the_disks_of_every_vdev(connected_api):
     """Counters come from the disks, with the type of error as attributes."""
     coordinator = _coordinator(connected_api, _pool(_scan()))
 
-    coordinator.get_pool()
+    asyncio.run(coordinator.get_pool())
 
     pool = coordinator.ds["pool"]["123"]
     assert pool["pool_errors"] == 6
@@ -175,7 +177,7 @@ def test_boot_pool_gets_the_same_values(connected_api):
     """boot.get_state has no guid, so the boot pool is keyed by name."""
     coordinator = _coordinator(connected_api, _pool(_scan()))
 
-    coordinator.get_pool()
+    asyncio.run(coordinator.get_pool())
 
     boot = coordinator.ds["pool"]["boot-pool"]
     assert boot["pool_errors"] == 5
@@ -241,12 +243,14 @@ def test_last_scrub_entity_on_truenas_27(run_in_hass, scan, state):
 def test_boot_pool_query_failing_after_a_good_one_fails_nothing(connected_api):
     """root_dataset is only there after an answer, so removing it may find nothing."""
     coordinator = _coordinator(connected_api, _pool(_scan()))
-    coordinator.get_pool()
+    asyncio.run(coordinator.get_pool())
     query = coordinator.api.query
-    coordinator.api.query = lambda method: (
-        None if method == "boot.get_state" else query(method)
-    )
 
-    coordinator.get_pool()
+    async def boot_query_fails(method):
+        return None if method == "boot.get_state" else await query(method)
+
+    coordinator.api.query = boot_query_fails
+
+    asyncio.run(coordinator.get_pool())
 
     assert coordinator.ds["pool"]["boot-pool"]["name"] == "boot-pool"

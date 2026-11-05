@@ -69,20 +69,20 @@ def test_reconfigure_form_starts_from_the_stored_level(stored, shown):
     assert schema(form)[CONF_ACCESS_LEVEL] == shown
 
 
-def _flow():
+def _flow(monkeypatch):
     """Return a config flow whose connection test succeeds."""
     flow = config_flow.TrueNASConfigFlow()
     flow.hass = MagicMock()
     flow.hass.config_entries.async_entries.return_value = []
-    flow.hass.async_add_executor_job = AsyncMock(
-        side_effect=[MagicMock(system_id=None), (True, "")],
-    )
+    api = MagicMock(system_id=None)
+    api.connection_test = AsyncMock(return_value=(True, ""))
+    monkeypatch.setattr(config_flow, "TrueNASAPI", lambda *_: api)
     return flow
 
 
-def test_setup_stores_the_chosen_level():
+def test_setup_stores_the_chosen_level(monkeypatch):
     """The level picked in the setup form ends up in the entry data."""
-    flow = _flow()
+    flow = _flow(monkeypatch)
     flow.async_create_entry = MagicMock()
     user_input = {**FORM, CONF_ACCESS_LEVEL: ACCESS_LEVEL_READ_ONLY}
 
@@ -91,9 +91,9 @@ def test_setup_stores_the_chosen_level():
     flow.async_create_entry.assert_called_once_with(title="TrueNAS", data=user_input)
 
 
-def test_reconfigure_stores_the_chosen_level():
+def test_reconfigure_stores_the_chosen_level(monkeypatch):
     """The level picked in Reconfigure replaces the stored one."""
-    flow = _flow()
+    flow = _flow(monkeypatch)
     entry = SimpleNamespace(
         data={**FORM, CONF_ACCESS_LEVEL: ACCESS_LEVEL_ADMIN}, unique_id=None
     )

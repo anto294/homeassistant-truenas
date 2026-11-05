@@ -205,9 +205,7 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
         out, that counts as success.
         """
         try:
-            result = await self.hass.async_add_executor_job(
-                self.coordinator.api.call, method, params
-            )
+            result = await self.coordinator.api.call(method, params)
         except TrueNASConnectionError as err:
             if may_disconnect and err.request_sent:
                 _LOGGER.debug("Connection closed while running %s (%s)", method, err)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock
 
 from custom_components.truenas_link.binary_sensor import TrueNASVMBinarySensor
 
@@ -14,15 +14,10 @@ def test_virt_instance_stop_is_a_clean_shutdown():
     sensor = TrueNASVMBinarySensor.__new__(TrueNASVMBinarySensor)
     sensor._data = {"id": "win11", "name": "win11"}
 
-    call = MagicMock(return_value={"status": "RUNNING"})
+    call = AsyncMock(return_value={"status": "RUNNING"})
     sensor.coordinator = SimpleNamespace(
         api=SimpleNamespace(call=call), version_at_least=lambda *_: False
     )
-
-    async def run_job(func, *args):
-        return func(*args)
-
-    sensor.hass = SimpleNamespace(async_add_executor_job=run_job)
 
     async def running():
         return "RUNNING"

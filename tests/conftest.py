@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import tempfile
 from collections.abc import Awaitable, Callable
@@ -40,7 +41,7 @@ class FakeWebSocket:
 
     `responder` gets each decoded request and returns the JSON-RPC response
     object to send back, so tests can answer per method. With NO_ANSWER, recv()
-    raises the TimeoutError of a real connection right away.
+    raises the TimeoutError of the response timeout right away.
     """
 
     def __init__(self, responder: Callable[[dict[str, Any]], dict[str, Any]]):
@@ -48,10 +49,9 @@ class FakeWebSocket:
         self._responder = responder
         self._pending: list[str] = []
         self.requests: list[dict[str, Any]] = []
-        self.recv_timeouts: list[float | None] = []
         self.closed = False
 
-    def send(self, message: str) -> None:
+    async def send(self, message: str) -> None:
         """Record a request and queue the response for recv()."""
         if self.closed:
             raise ConnectionError("send on a closed connection")
@@ -64,17 +64,35 @@ class FakeWebSocket:
                 response if isinstance(response, str) else json.dumps(response)
             )
 
-    def recv(self, timeout: float | None = None) -> str:
+    async def recv(self) -> str:
         """Return the response queued by the last send()."""
-        self.recv_timeouts.append(timeout)
         if not self._pending:
-            raise TimeoutError(f"timed out in {timeout}s")
+            raise TimeoutError
 
         return self._pending.pop(0)
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """Mark the connection as closed."""
         self.closed = True
+
+
+class SyncAPI:
+    """Run the methods of a TrueNASAPI to the end, for tests of a single call.
+
+    `real` is the API itself, for code that awaits it.
+    """
+
+    def __init__(self, api: TrueNASAPI) -> None:
+        """Wrap an API."""
+        self.real = api
+
+    def __getattr__(self, name: str) -> Any:
+        """Return an attribute, or a method that runs to the end."""
+        attribute = getattr(self.real, name)
+        if not inspect.iscoroutinefunction(attribute):
+            return attribute
+
+        return lambda *args, **kwargs: asyncio.run(attribute(*args, **kwargs))
 
 
 # ---------------------------
@@ -89,7 +107,7 @@ def connected_api() -> Callable[..., tuple[TrueNASAPI, FakeWebSocket]]:
         ws = FakeWebSocket(responder)
         api._ws = ws
         api._connected = True
-        return api, ws
+        return SyncAPI(api), ws
 
     return _factory
 
@@ -152,7 +170,7 @@ class FakeTrueNAS:
 
         return {"jsonrpc": "2.0", "id": request["id"], "result": result}
 
-    def connect(self, *_args: Any, **_kwargs: Any) -> FakeWebSocket:
+    async def connect(self, *_args: Any, **_kwargs: Any) -> FakeWebSocket:
         """Stand in for websockets' connect()."""
         self.sockets.append(FakeWebSocket(self._respond))
         return self.sockets[-1]

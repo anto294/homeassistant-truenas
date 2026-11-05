@@ -46,21 +46,6 @@ Or, in Home Assistant, open **HACS**, search for **TrueNAS Link**, download it a
 
 Download `truenas_link.zip` from the [latest release](https://github.com/anto294/homeassistant-truenas/releases/latest), extract it into `config/custom_components/truenas_link/` and restart Home Assistant.
 
-### Migrating from version 1.x or from the upstream integration
-
-Version 2.0 renamed the domain from `truenas` to `truenas_link`. Home Assistant cannot move config entries between domains, so each TrueNAS system has to be added again. If you remove the old entry first and give the new one the **same name**, the entities get the same entity IDs as before, so their history, statistics, dashboards and automation triggers keep working.
-
-1. Note the name of each TrueNAS entry in **Settings → Devices & services → TrueNAS**. It is the entry's title, `TrueNAS` unless you changed it.
-2. Delete those entries (three-dot menu → **Delete**).
-3. Install the new version:
-   - **From 1.x of this integration:** in HACS, open **TrueNAS Link** → three-dot menu → **Remove** (this also deletes `config/custom_components/truenas/`), then download it again from HACS. Do not use **Update**: HACS keeps the old domain, and the download (and the repository refresh) fails with "No manifest.json file found custom_components/truenas/manifest.json".
-   - **From the upstream integration:** download TrueNAS Link as described above, then remove the upstream **TrueNAS** integration in HACS. If the `config/custom_components/truenas/` folder still exists and no other integration uses it, delete it.
-4. Restart Home Assistant.
-5. Add **TrueNAS Link** with the same name, host and API key as before (see [Configuration](#configuration)).
-6. In automations and scripts, replace `truenas.` actions with `truenas_link.` (for example `truenas.vm_start` becomes `truenas_link.vm_start`).
-
-If you prefer, you can instead keep the upstream integration and run both side by side. Then give the TrueNAS Link entry a different name, so the entity IDs do not collide (otherwise Home Assistant adds a `_2` suffix to the new ones).
-
 ## Configuration
 
 1. In the TrueNAS web UI, create an API key for Home Assistant (user menu → **API Keys** → **Add**).
@@ -174,6 +159,21 @@ You can also download diagnostics from the integration's page (sensitive data is
 Available in English, Italian, Portuguese (Brazil), Russian, Slovak and Spanish.
 
 English strings live in `custom_components/truenas_link/strings.json` and `custom_components/truenas_link/translations/en.json`. To add or improve a language, open a pull request that adds or updates the matching file in [`custom_components/truenas_link/translations/`](custom_components/truenas_link/translations/).
+
+## Migrating from version 1.x or from the upstream integration
+
+Version 2.0 renamed the domain from `truenas` to `truenas_link`. Home Assistant cannot move config entries between domains, so each TrueNAS system has to be added again. If you remove the old entry first and give the new one the **same name**, the entities get the same entity IDs as before, so their history, statistics, dashboards and automation triggers keep working.
+
+1. Note the name of each TrueNAS entry in **Settings → Devices & services → TrueNAS**. It is the entry's title, `TrueNAS` unless you changed it.
+2. Delete those entries (three-dot menu → **Delete**).
+3. Install the new version:
+   - **From 1.x of this integration:** in HACS, open **TrueNAS Link** → three-dot menu → **Remove** (this also deletes `config/custom_components/truenas/`), then download it again from HACS. Do not use **Update**: HACS keeps the old domain, and the download (and the repository refresh) fails with "No manifest.json file found custom_components/truenas/manifest.json".
+   - **From the upstream integration:** download TrueNAS Link as described above, then remove the upstream **TrueNAS** integration in HACS. If the `config/custom_components/truenas/` folder still exists and no other integration uses it, delete it.
+4. Restart Home Assistant.
+5. Add **TrueNAS Link** with the same name, host and API key as before (see [Configuration](#configuration)).
+6. In automations and scripts, replace `truenas.` actions with `truenas_link.` (for example `truenas.vm_start` becomes `truenas_link.vm_start`).
+
+If you prefer, you can instead keep the upstream integration and run both side by side. Then give the TrueNAS Link entry a different name, so the entity IDs do not collide (otherwise Home Assistant adds a `_2` suffix to the new ones).
 
 ## Differences from upstream
 

@@ -276,7 +276,7 @@ def test_call_tells_if_the_connection_broke_before_sending(connected_api):
 def test_call_tells_if_the_connection_broke_after_sending(connected_api):
     """A failed recv means TrueNAS may have acted on the request."""
     api, ws = connected_api(_reply(result=None))
-    ws.recv = lambda: (_ for _ in ()).throw(EOFError("connection closed"))
+    ws.recv = lambda timeout=None: (_ for _ in ()).throw(EOFError("closed"))
 
     with pytest.raises(TrueNASConnectionError) as err:
         api.call("system.reboot", ["reason"])
@@ -289,9 +289,22 @@ def test_call_tells_if_the_connection_broke_after_sending(connected_api):
 def test_query_still_returns_none_on_every_failure(connected_api):
     """Polling keeps its behavior: query() never raises."""
     api, ws = connected_api(_reply(result=None))
-    ws.recv = lambda: (_ for _ in ()).throw(EOFError("connection closed"))
+    ws.recv = lambda timeout=None: (_ for _ in ()).throw(EOFError("closed"))
 
     assert api.query("system.info") is None
+    assert not api.connected()
+
+
+def test_query_does_not_reconnect(connected_api):
+    """Only the start of a poll connects: see the test on a lost connection."""
+    api, ws = connected_api(_reply(result=[]))
+    api.disconnect()
+
+    with patch("custom_components.truenas_link.api.connect") as connect:
+        assert api.query("pool.query") is None
+
+    connect.assert_not_called()
+    assert len(ws.requests) == 0
     assert not api.connected()
 
 
@@ -352,11 +365,11 @@ def test_query_failure_during_the_test_gives_a_known_code():
     original = ws.recv
     replies = iter([original, None])
 
-    def recv():
+    def recv(timeout=None):
         reply = next(replies)
         if reply is None:
             raise OSError("connection reset by peer")
-        return reply()
+        return reply(timeout)
 
     ws.recv = recv
     api, connect = _api_with(ws)

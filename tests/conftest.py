@@ -28,6 +28,9 @@ import custom_components
 from custom_components.truenas_link.api import TrueNASAPI
 from custom_components.truenas_link.const import DOMAIN
 
+# A responder returns this for a request that TrueNAS never answers
+NO_ANSWER = object()
+
 
 # ---------------------------
 #   FakeWebSocket
@@ -36,7 +39,8 @@ class FakeWebSocket:
     """Stand-in for websockets' ClientConnection that replays canned replies.
 
     `responder` gets each decoded request and returns the JSON-RPC response
-    object to send back, so tests can answer per method.
+    object to send back, so tests can answer per method. With NO_ANSWER, recv()
+    raises the TimeoutError of a real connection right away.
     """
 
     def __init__(self, responder: Callable[[dict[str, Any]], dict[str, Any]]):
@@ -54,12 +58,16 @@ class FakeWebSocket:
         request = json.loads(message)
         self.requests.append(request)
         response = self._responder(request)
-        self._pending.append(
-            response if isinstance(response, str) else json.dumps(response)
-        )
+        if response is not NO_ANSWER:
+            self._pending.append(
+                response if isinstance(response, str) else json.dumps(response)
+            )
 
-    def recv(self) -> str:
+    def recv(self, timeout: float | None = None) -> str:
         """Return the response queued by the last send()."""
+        if not self._pending:
+            raise TimeoutError(f"timed out in {timeout}s")
+
         return self._pending.pop(0)
 
     def close(self) -> None:
@@ -90,8 +98,9 @@ def connected_api() -> Callable[..., tuple[TrueNASAPI, FakeWebSocket]]:
 class FakeTrueNAS:
     """A TrueNAS that hands out a FakeWebSocket per connection.
 
-    Tests change `valid_keys` to revoke a key, and `results` to answer a method
-    with something else than an empty list.
+    Tests change `valid_keys` to revoke a key, `results` to answer a method
+    with something else than an empty list, and `unanswered` to leave a method
+    without an answer.
     """
 
     def __init__(self) -> None:
@@ -108,10 +117,14 @@ class FakeTrueNAS:
                 "physmem": 1,
             }
         }
+        self.unanswered: set[str] = set()
         self.sockets: list[FakeWebSocket] = []
 
-    def _respond(self, request: dict[str, Any]) -> dict[str, Any]:
+    def _respond(self, request: dict[str, Any]) -> Any:
         """Answer one JSON-RPC request."""
+        if request["method"] in self.unanswered:
+            return NO_ANSWER
+
         if request["method"] == "auth.login_with_api_key":
             result = request["params"][0] in self.valid_keys
         else:

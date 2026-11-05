@@ -10,6 +10,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ### Changed
 
 - `websockets` is now pinned to 17.4, instead of any version from 15.0.1 on.
+- The README now explains installing, testing pre-releases and removing through the
+  Marketplace, which replaced HACS in Home Assistant 2026.11, and warns that installing a
+  TrueNAS update reboots the NAS.
 
 ## [2.1.0b2] - 2026-11-05
 

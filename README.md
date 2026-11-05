@@ -7,8 +7,10 @@
 
 Monitor and control a TrueNAS SCALE system from Home Assistant: pools, datasets, disks, services, apps, virtual machines, containers, cloud sync, replication and snapshot tasks, and system updates.
 
+Targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.10 and 27.0. It keeps working after an in-place TrueNAS upgrade without reconfiguration.
+
 > [!NOTE]
-> **TrueNAS Link started as a fork** of [tomaae/homeassistant-truenas](https://github.com/tomaae/homeassistant-truenas) by Tomaae. It uses its own `truenas_link` domain, so it can be installed next to the upstream integration, and targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.10 and 27.0. Please report problems with this fork [here](https://github.com/anto294/homeassistant-truenas/issues), not upstream.
+> TrueNAS Link started as a fork of [tomaae/homeassistant-truenas](https://github.com/tomaae/homeassistant-truenas). It is a separate integration with its own `truenas_link` domain, so please report problems [here](https://github.com/anto294/homeassistant-truenas/issues), not upstream. See [Differences from upstream](#differences-from-upstream).
 
 ## Contents
 

@@ -21,6 +21,7 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.util import slugify
 from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
@@ -64,9 +65,6 @@ def _api_key_selector() -> TextSelector:
 def _base_schema(truenas_config: Mapping[str, Any]) -> vol.Schema:
     """Generate base schema."""
     base_schema = {
-        vol.Required(
-            CONF_NAME, default=truenas_config.get(CONF_NAME) or DEFAULT_DEVICE_NAME
-        ): str,
         vol.Required(
             CONF_HOST, default=truenas_config.get(CONF_HOST) or DEFAULT_HOST
         ): str,
@@ -114,14 +112,33 @@ def _reconfigure_schema(
 
 
 # ---------------------------
-#   configured_instances
+#   new_entry_name
 # ---------------------------
 @callback
-def configured_instances(hass: HomeAssistant) -> set[str]:
-    """Return a set of configured instances."""
-    return {
-        entry.options[CONF_NAME] for entry in hass.config_entries.async_entries(DOMAIN)
+def new_entry_name(hass: HomeAssistant, hostname: str | None) -> str:
+    """Return the name of a new entry, which its entity ids are built from.
+
+    The first entry gets the default name, so someone who adds an entry with that
+    name again gets the same entity ids. Later ones get the name of their system. The
+    comparison uses slugs, as entity ids do, so two names cannot give the same ids.
+    """
+    taken = {
+        slugify(str(entry.options[CONF_NAME]))
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if CONF_NAME in entry.options
     }
+    short_hostname = hostname.split(".")[0] if hostname else ""
+    if slugify(DEFAULT_DEVICE_NAME) not in taken:
+        return DEFAULT_DEVICE_NAME
+
+    base = short_hostname if slugify(short_hostname) else DEFAULT_DEVICE_NAME
+    name = base
+    number = 1
+    while slugify(name) in taken:
+        number += 1
+        name = f"{base} {number}"
+
+    return name
 
 
 # ---------------------------
@@ -142,8 +159,9 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Initialize the config flow."""
         self.truenas_config: dict[str, Any] = {}
-        # From the last connection test, None if TrueNAS did not give it
+        # From the last connection test, None if TrueNAS did not give them
         self._system_id: str | None = None
+        self._hostname: str | None = None
 
     async def _async_connection_error(
         self, host: str, api_key: str, verify_ssl: bool
@@ -153,6 +171,7 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
         conn, errorcode = await api.connection_test()
         if conn:
             self._system_id = api.system_id
+            self._hostname = api.hostname
             return None
 
         _LOGGER.error("TrueNAS connection error (%s)", errorcode)
@@ -180,10 +199,6 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             truenas_config.update(user_input)
 
-            # Check if instance with this name already exists
-            if truenas_config[CONF_NAME] in configured_instances(self.hass):
-                errors["base"] = "name_exists"
-
             # Test connection
             errorcode = await self._async_connection_error(
                 truenas_config[CONF_HOST],
@@ -198,18 +213,18 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
 
             # Save instance
             if not errors:
-                options = {
-                    CONF_NAME: truenas_config[CONF_NAME],
-                    CONF_ACCESS_LEVEL: truenas_config[CONF_ACCESS_LEVEL],
-                }
+                name = new_entry_name(self.hass, self._hostname)
                 return self.async_create_entry(
-                    title=truenas_config[CONF_NAME],
+                    title=name,
                     data={
                         key: value
                         for key, value in truenas_config.items()
-                        if key not in options
+                        if key != CONF_ACCESS_LEVEL
                     },
-                    options=options,
+                    options={
+                        CONF_NAME: name,
+                        CONF_ACCESS_LEVEL: truenas_config[CONF_ACCESS_LEVEL],
+                    },
                 )
 
         return self.async_show_form(
@@ -249,7 +264,6 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
             if not errors:
                 return self.async_update_reload_and_abort(
                     self._get_reconfigure_entry(),
-                    title=reconfigure_entry.options[CONF_NAME],
                     data_updates=truenas_config,
                 )
 

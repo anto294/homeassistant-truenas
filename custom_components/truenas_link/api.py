@@ -96,6 +96,7 @@ class TrueNASAPI(object):
         self._failed_methods: dict[str, str] = {}
         # Set by connection_test
         self.system_id: str | None = None
+        self.hostname: str | None = None
 
     # ---------------------------
     #   connect
@@ -228,7 +229,9 @@ class TrueNASAPI(object):
             if self.connected():
                 self.system_id = await self.read_system_id()
                 # Last, because each query replaces the error code
-                await self.query("system.info")
+                info = await self.query("system.info")
+                hostname = info.get("hostname") if isinstance(info, dict) else None
+                self.hostname = hostname if isinstance(hostname, str) else None
 
             return self._connected, self._error
         finally:

@@ -65,6 +65,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   **After this, going back to an older version needs the entry to be added again:**
   an older version refuses to load the migrated entry, so a read-only entry can never
   turn into an Administrator one by accident.
+- **The setup form no longer asks for a name.** The first entry is named `TrueNAS`,
+  later ones take the hostname of their system. Existing entries keep their name and
+  entity IDs. This changes what happens if you remove an entry with a name of your
+  own and add it again: its entities get new IDs, so update what uses them. Renaming
+  an entry in Home Assistant now survives Reconfigure, and never changes entity IDs.
 - **The same TrueNAS system can no longer be added twice**, whatever its name or
   address. Reconfigure and reauthentication refuse an address or key that leads
   to another system, and still accept a new address for the same one. Existing

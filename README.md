@@ -56,13 +56,14 @@ Download `truenas_link.zip` from the [latest release](https://github.com/anto294
 
    | Field | Description |
    |---|---|
-   | Name | Friendly name for this TrueNAS system |
    | Host | Hostname or IP address |
    | API key | The key created in step 1 |
    | Access level | **Read-only** (default) or **Administrator** (see [Access level](#access-level)) |
    | Verify SSL | On by default. Turn off if TrueNAS uses a self-signed certificate |
 
-You can add the integration once per TrueNAS system. To change the host or API key later, use **Reconfigure** from the integration's menu. It does not show the stored API key: leave the field empty to keep it. To change the access level, use **Configure**. The name cannot be changed, because entity IDs are built from it.
+You can add the integration once per TrueNAS system. To change the host or API key later, use **Reconfigure** from the integration's menu. It does not show the stored API key: leave the field empty to keep it. To change the access level, use **Configure**.
+
+Entity IDs are built from the entry's name, which is set once. The first entry is named `TrueNAS`, so its entities look like `sensor.truenas_system_uptime`. Later entries take the hostname of their TrueNAS system. Renaming an entry in Home Assistant only changes the title shown, not its entity IDs.
 
 If TrueNAS Link does not appear in the list, clear your browser cache.
 
@@ -219,7 +220,7 @@ English strings live in `custom_components/truenas_link/strings.json` and `custo
 
 ## Migrating from version 1.x or from the upstream integration
 
-Version 2.0 renamed the domain from `truenas` to `truenas_link`. Home Assistant cannot move config entries between domains, so each TrueNAS system has to be added again. If you remove the old entry first and give the new one the **same name**, the entities get the same entity IDs as before, so their history, statistics, dashboards and automation triggers keep working.
+Version 2.0 renamed the domain from `truenas` to `truenas_link`. Home Assistant cannot move config entries between domains, so each TrueNAS system has to be added again. If you remove the old entry first and it was named `TrueNAS`, the default, the new one gets the same entity IDs as before, so their history, statistics, dashboards and automation triggers keep working. **Since 2.1 a new entry can no longer be given a name, so an old entry with another name gets new entity IDs:** update what uses them, or rename the entities in Home Assistant.
 
 1. Note the name of each TrueNAS entry in **Settings → Devices & services → TrueNAS**. It is the entry's title, `TrueNAS` unless you changed it.
 2. Delete those entries (three-dot menu → **Delete**).
@@ -227,10 +228,10 @@ Version 2.0 renamed the domain from `truenas` to `truenas_link`. Home Assistant 
    - **From 1.x of this integration:** in HACS, open **TrueNAS Link** → three-dot menu → **Remove** (this also deletes `config/custom_components/truenas/`), then download it again from HACS. Do not use **Update**: HACS keeps the old domain, and the download (and the repository refresh) fails with "No manifest.json file found custom_components/truenas/manifest.json".
    - **From the upstream integration:** download TrueNAS Link as described above, then remove the upstream **TrueNAS** integration in HACS. If the `config/custom_components/truenas/` folder still exists and no other integration uses it, delete it.
 4. Restart Home Assistant.
-5. Add **TrueNAS Link** with the same name, host and API key as before (see [Configuration](#configuration)).
+5. Add **TrueNAS Link** with the same host and API key as before (see [Configuration](#configuration)).
 6. In automations and scripts, replace `truenas.` actions with `truenas_link.` (for example `truenas.vm_start` becomes `truenas_link.vm_start`).
 
-If you prefer, you can instead keep the upstream integration and run both side by side. Then give the TrueNAS Link entry a different name, so the entity IDs do not collide (otherwise Home Assistant adds a `_2` suffix to the new ones).
+If you prefer, you can instead keep the upstream integration and run both side by side. The entity IDs of the first TrueNAS Link entry then collide with the upstream ones, so Home Assistant adds a `_2` suffix to the new ones.
 
 ## Differences from upstream
 

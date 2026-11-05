@@ -355,7 +355,7 @@ class TrueNASEntity(CoordinatorEntity[TrueNASCoordinator], Entity):
         )
         # Registered in async_setup_entry before any platform is set up
         if self.coordinator.system_device_id:
-            info["via_device_id"] = self.coordinator.system_device_id
+            info.via_device_id = self.coordinator.system_device_id
 
         return info
 

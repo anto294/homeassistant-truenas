@@ -45,6 +45,12 @@ TO_REDACT = {
     "alert_messages",
 }
 
+SCAN_IDLE = "idle"
+SCAN_SCRUBBING = "scrubbing"
+SCAN_PAUSED = "paused"
+SCAN_RESILVERING = "resilvering"
+BOOT_POOL_NAMES = ("boot-pool", "freenas-boot")
+
 SERVICE_CLOUDSYNC_RUN = "cloudsync_run"
 SCHEMA_SERVICE_CLOUDSYNC_RUN = {}
 

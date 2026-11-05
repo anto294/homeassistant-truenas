@@ -5,6 +5,8 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
+from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.truenas_link.const import DOMAIN
 
@@ -132,5 +134,51 @@ def test_reauthentication_with_a_wrong_key(run_in_hass):
         assert result["errors"] == {"base": "invalid_key"}
         assert entry.data["api_key"] == "good"
         assert server.open_sockets == 0
+
+    run_in_hass(scenario)
+
+
+def test_rejected_key_raises_a_translated_error_and_starts_reauthentication(
+    run_in_hass,
+):
+    """On a poll, not only at setup, and without fixed text in the code."""
+
+    async def scenario(hass, server):
+        entry = await async_add_entry(hass)
+        coordinator = entry.runtime_data
+        await coordinator.api.disconnect()
+        server.valid_keys = set()
+
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+        error = coordinator.last_exception
+        assert isinstance(error, ConfigEntryAuthFailed)
+        assert error.translation_domain == DOMAIN
+        assert error.translation_key == "api_key_rejected"
+        assert error.translation_placeholders == {"host": "nas"}
+        flows = entry.async_get_active_flows(hass, {SOURCE_REAUTH})
+        assert [flow["step_id"] for flow in flows] == ["reauth_confirm"]
+
+    run_in_hass(scenario)
+
+
+def test_failed_update_raises_a_translated_error(run_in_hass):
+    """So the log and the setup retry show it in the language of Home Assistant."""
+
+    async def scenario(hass, server):
+        entry = await async_add_entry(hass)
+        coordinator = entry.runtime_data
+        server.unanswered = {"pool.query"}
+
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+        error = coordinator.last_exception
+        assert isinstance(error, UpdateFailed)
+        assert error.translation_domain == DOMAIN
+        assert error.translation_key == "update_failed"
+        assert error.translation_placeholders == {"host": "nas"}
+        assert "TrueNas" not in str(error)
 
     run_in_hass(scenario)

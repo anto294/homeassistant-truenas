@@ -186,7 +186,11 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             await self.api.connect()
             # Check it here: the next query() clears the error code
             if self.api.error == "invalid_key":
-                raise ConfigEntryAuthFailed(f"TrueNAS {self.host} rejected the API key")
+                raise ConfigEntryAuthFailed(
+                    translation_domain=DOMAIN,
+                    translation_key="api_key_rejected",
+                    translation_placeholders={"host": self.host},
+                )
 
         jobs = [
             self.get_systeminfo,
@@ -216,7 +220,11 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.last_updatecheck_update = datetime.now().replace(microsecond=0)
 
         if not self.api.connected():
-            raise UpdateFailed("TrueNas Disconnected")
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="update_failed",
+                translation_placeholders={"host": self.host},
+            )
 
         self._forget_stale_items()
         return self.ds

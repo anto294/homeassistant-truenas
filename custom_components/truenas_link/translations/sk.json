@@ -105,6 +105,12 @@
         },
         "scrub_boot_pool": {
             "message": "Akcie scrub nie sú dostupné pre zavádzací pool {name}."
+        },
+        "api_key_rejected": {
+            "message": "TrueNAS {host} odmietol kľúč API."
+        },
+        "update_failed": {
+            "message": "Nepodarilo sa získať údaje z TrueNAS {host}: pripojenie zlyhalo."
         }
     },
     "entity": {

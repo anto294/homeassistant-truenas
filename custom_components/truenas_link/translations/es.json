@@ -105,6 +105,12 @@
         },
         "scrub_boot_pool": {
             "message": "Las acciones de scrub no están disponibles para el pool de arranque {name}."
+        },
+        "api_key_rejected": {
+            "message": "TrueNAS {host} rechazó la clave API."
+        },
+        "update_failed": {
+            "message": "No se pudieron obtener datos de TrueNAS {host}: la conexión falló."
         }
     },
     "entity": {

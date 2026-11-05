@@ -33,7 +33,8 @@ async def _polls(hass, coordinator, count):
 
 COORDINATOR_DOWN = (
     logging.ERROR,
-    "Error fetching TrueNAS data: TrueNas Disconnected",
+    "Error fetching TrueNAS data: "
+    "Could not get data from TrueNAS nas: the connection failed",
 )
 COORDINATOR_BACK = (logging.INFO, "Fetching TrueNAS data recovered")
 

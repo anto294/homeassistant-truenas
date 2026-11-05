@@ -46,7 +46,8 @@
             "http_used": "È stata inviata una richiesta HTTP semplice alla porta HTTPS. Reverse proxy?",
             "tlsv1_not_supported": "TLSv1 non supportato. Reverse proxy?",
             "websocket_not_supported": "WebSocket non supportato. Reverse proxy?",
-            "unknown_hostname": "Nome host sconosciuto, controlla il DNS."
+            "unknown_hostname": "Nome host sconosciuto, controlla il DNS.",
+            "cannot_connect": "Impossibile connettersi a TrueNAS. Controlla l'host e che TrueNAS sia in funzione."
         },
         "abort": {
             "reconfigure_successful": "Riconfigurazione completata.",

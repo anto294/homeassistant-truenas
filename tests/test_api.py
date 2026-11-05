@@ -5,6 +5,9 @@ from __future__ import annotations
 import logging
 import ssl
 
+import json
+from pathlib import Path
+import socket
 from unittest.mock import patch
 
 from homeassistant.util.ssl import client_context, get_default_no_verify_context
@@ -290,3 +293,73 @@ def test_query_still_returns_none_on_every_failure(connected_api):
 
     assert api.query("system.info") is None
     assert not api.connected()
+
+
+ERROR_CODES = json.loads(
+    (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "truenas_link"
+        / "strings.json"
+    ).read_text()
+)["config"]["error"]
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        (TimeoutError("timed out during opening handshake"), "handshake_timeout"),
+        (TimeoutError(), "handshake_timeout"),
+        (socket.timeout("_ssl.c:989: The handshake timed out"), "handshake_timeout"),
+        (ConnectionRefusedError(111, "Connection refused"), "connection_refused"),
+        (socket.gaierror(-2, "Name or service not known"), "invalid_hostname"),
+        (OSError(113, "No route to host"), "invalid_hostname"),
+        (
+            socket.gaierror(-5, "No address associated with hostname"),
+            "unknown_hostname",
+        ),
+        (
+            ssl.SSLCertVerificationError("[SSL: CERTIFICATE_VERIFY_FAILED] failed"),
+            "certificate_verify_failed",
+        ),
+        (Exception("server rejected WebSocket connection: HTTP 404"), "api_not_found"),
+        # Not recognized: the fallback, and never the exception's own text
+        (OSError("something else entirely"), "cannot_connect"),
+        (Exception(""), "cannot_connect"),
+    ],
+)
+def test_connection_failure_gives_a_known_code(error, code):
+    """Each connection error maps to a code the forms have a message for."""
+    api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=False)
+
+    with patch("custom_components.truenas_link.api.connect", side_effect=error):
+        assert api.connection_test() == (False, code)
+
+    assert code in ERROR_CODES
+
+
+def test_login_exception_gives_a_known_code():
+    """A login that raises has a code too, instead of an empty one."""
+    api, connect = _api_with(FakeWebSocket(lambda request: {"id": request["id"]}))
+
+    with connect:
+        assert api.connection_test() == (False, "cannot_connect")
+
+
+def test_query_failure_during_the_test_gives_a_known_code():
+    """A broken connection never puts the exception's text in the error code."""
+    ws = FakeWebSocket(_login())
+    original = ws.recv
+    replies = iter([original, None])
+
+    def recv():
+        reply = next(replies)
+        if reply is None:
+            raise OSError("connection reset by peer")
+        return reply()
+
+    ws.recv = recv
+    api, connect = _api_with(ws)
+
+    with connect:
+        assert api.connection_test() == (False, "cannot_connect")

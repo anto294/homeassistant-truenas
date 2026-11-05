@@ -46,7 +46,8 @@
             "connection_refused": "Connection failed, connection refused.",
             "handshake_timeout": "Connection failed, timed out while waiting for handshake response.",
             "api_not_found": "Connection failed, API not found.",
-            "malformed_result": "API response is malformed."
+            "malformed_result": "API response is malformed.",
+            "cannot_connect": "Could not connect to TrueNAS. Check the host and that TrueNAS is running."
         },
         "abort": {
             "reconfigure_successful": "Reconfigure successful.",

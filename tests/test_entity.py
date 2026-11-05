@@ -155,7 +155,7 @@ def test_system_device_info_is_unchanged():
     assert info["connections"] == {("truenas_link", "TrueNAS_nas")}
     assert info["name"] == "System"
     assert info["sw_version"] == "25.10.1"
-    assert info["configuration_url"] == "http://truenas.lan"
+    assert info["configuration_url"] == "https://truenas.lan"
     assert "via_device" not in info and "via_device_id" not in info
 
 

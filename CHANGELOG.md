@@ -21,6 +21,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   Reconfigure no longer sends the stored key to the browser: leave the field
   empty to keep it.
 
+### Fixed
+
+- The link to TrueNAS on the System device now uses HTTPS, the only protocol the
+  integration uses to reach it.
+
 ## [2.1.0b1] - 2026-11-05
 
 Pre-release for testing ahead of 2.1.0. It has not been tested on a real TrueNAS

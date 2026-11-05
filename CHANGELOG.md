@@ -25,6 +25,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- The uptime sensor no longer changes state on every update. Its time went back and
+  forth by a second, without any reboot, which also filled the history. A real reboot
+  still updates it.
 - An empty **System** device that stays behind after renaming TrueNAS can now be deleted.
 - The setup and Reconfigure forms now give the right error. A refused connection gave a
   generic message, and with a port such as 8404 even "API not found", because the

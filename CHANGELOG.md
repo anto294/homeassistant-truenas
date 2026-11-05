@@ -41,6 +41,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   found custom_components/truenas/manifest.json". The steps now say to
   remove TrueNAS Link in HACS (three-dot menu → **Remove**, which also
   deletes `config/custom_components/truenas/`) and download it again.
+- Reconfigure and every later reload would have failed from Home Assistant
+  2026.12, which no longer accepts an update listener together with a config
+  flow that reloads. The integration has no options flow, so the listener is
+  gone, and an entry can no longer reload twice after Reconfigure.
 
 ### Development
 

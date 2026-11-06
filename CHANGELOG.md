@@ -7,6 +7,57 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-11-06
+
+The first stable release since 2.1.0. It collects 2.1.1b1, 2.2.0b1, 2.2.0b2 and 2.2.0b3,
+and their sections below have every detail.
+
+### Before you upgrade
+
+- **There is nothing to set up again.** Entries keep their name, access level and
+  entity IDs.
+- **This version has been tried on a real system only with TrueNAS 27.0,** currently
+  27.0.0-RC.1. 25.04 and 25.10 stay supported through the automated tests, but the
+  current connection client has not been tried on real systems with those versions.
+
+### Added
+
+- TrueNAS systems with a name starting with `truenas` are now discovered on the local
+  network. Home Assistant offers them with the address filled in, and you still enter
+  an API key and confirm. An announcement never changes the address of an entry.
+
+### Changed
+
+- The connection to TrueNAS now goes through the web session of Home Assistant, so the
+  integration no longer installs a Python package of its own.
+- Two entries on the same TrueNAS system now raise a repair issue in **Settings →
+  System → Repairs**, instead of a warning in the log.
+- VMs, containers, services and apps now show **Running** or **Not running**, and Reboot
+  required shows **Problem** or **OK**. Their on and off states are the same, so
+  automations keep working.
+- Reboot required, pool scan, last scrub and errors, and network RX and TX are now
+  diagnostic entities, so new dashboards made by Home Assistant leave them out.
+- On new installations, load (5 and 15 min) and ARC size start disabled. Existing
+  entities stay as they are.
+- The access level options are now just **Administrator** and **Read-only**, with a
+  shorter description below them. What each level does is unchanged.
+
+### Fixed
+
+- A revoked API key is now noticed within about 15 minutes. It used to go unnoticed for
+  as long as the connection stayed open.
+- The reauthentication dialog now names the entry in its title.
+- A disk without a serial, such as a virtual one, no longer gets a second entity when
+  TrueNAS partitions it. The entity follows the disk and keeps its ID, name and history.
+- **Uptime** no longer moves by an hour when clocks change, if TrueNAS booted before the
+  change.
+
+### Documentation
+
+- The README now covers what you can do with the integration, how data is updated,
+  automation examples, known limitations, troubleshooting, and where it stands on the
+  Integration Quality Scale.
+
 ## [2.2.0b3] - 2026-11-06
 
 ### Fixed
@@ -668,7 +719,8 @@ only as 1.4 betas or not released yet:
   and attaches `truenas.zip`, which HACS installs from. Release notes come
   from this changelog.
 
-[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.2.0b3...HEAD
+[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0...v2.2.0
 [2.2.0b3]: https://github.com/anto294/homeassistant-truenas/compare/v2.2.0b2...v2.2.0b3
 [2.2.0b2]: https://github.com/anto294/homeassistant-truenas/compare/v2.2.0b1...v2.2.0b2
 [2.2.0b1]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0...v2.2.0b1

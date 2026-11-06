@@ -188,7 +188,11 @@ async def async_add_entities(
     @callback
     def async_add_new_entities() -> None:
         """Add what appeared on TrueNAS since the last update."""
-        if coordinator.last_update_success and (new := async_new_entities()):
+        if (
+            coordinator.last_update_success
+            and not coordinator.reload_scheduled
+            and (new := async_new_entities())
+        ):
             add_entities(new)
 
     add_entities(async_new_entities())

@@ -286,6 +286,7 @@ TrueNAS nightly and development builds can change the API at any time; some feat
 ## Known limitations
 
 - **Discovery** only finds a system whose hostname starts with `truenas`, on the same network, and it never updates the address of an entry. See [Discovery](#discovery).
+- **A discovered system can stay on offer** if you added it by hand under a name, such as `truenas.lan`, because that cannot be matched with the address it announces. Choose **Ignore**.
 - **The entry's name cannot change**, because entity IDs are built from it.
 - **Last scrub** only knows a pool's latest scan, because that is all TrueNAS reports. After a resilver, and a restart of Home Assistant, it stays unknown until the next scrub finishes.
 - **Temperatures** are unknown where TrueNAS has none, such as virtual disks and virtual CPUs.

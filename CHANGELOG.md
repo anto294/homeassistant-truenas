@@ -16,6 +16,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   made with 2.1.1b1 is repaired when it next loads.
 - **Uptime** no longer moves by an hour when clocks change, if TrueNAS booted before the
   change.
+- A discovered system no longer stays on offer after you add its address by hand. If you
+  add it under a name, choose **Ignore**: a name cannot be matched with an address.
 
 ## [2.1.1b1] - 2026-11-06
 

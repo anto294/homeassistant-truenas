@@ -14,6 +14,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util, slugify
 
@@ -146,9 +147,9 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         }
 
         self.api = TrueNASAPI(
+            async_get_clientsession(hass, config_entry.data[CONF_VERIFY_SSL]),
             config_entry.data[CONF_HOST],
             config_entry.data[CONF_API_KEY],
-            config_entry.data[CONF_VERIFY_SSL],
         )
 
         # Per section: the uids in TrueNAS' last answer, which may be empty.

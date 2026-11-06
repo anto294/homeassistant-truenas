@@ -11,7 +11,7 @@ pytest = ">=8.3"
 wheel = ">=0.45"
 pygithub = ">=2.6"
 homeassistant = ">=2026.11.0"
-websockets = "==17.4"
+websockets = ">=15"
 
 
 [packages]

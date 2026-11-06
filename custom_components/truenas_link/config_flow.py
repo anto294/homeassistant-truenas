@@ -22,6 +22,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.util import slugify
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from homeassistant.helpers.selector import (
     SelectSelector,
@@ -175,7 +176,7 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
         self, host: str, api_key: str, verify_ssl: bool
     ) -> str | None:
         """Return the error code of a connection test, None if it worked."""
-        api = TrueNASAPI(host, api_key, verify_ssl)
+        api = TrueNASAPI(async_get_clientsession(self.hass, verify_ssl), host, api_key)
         conn, errorcode = await api.connection_test()
         if conn:
             self._system_id = api.system_id

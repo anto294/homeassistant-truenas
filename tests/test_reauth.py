@@ -78,7 +78,7 @@ def test_other_failures_do_not_start_reauthentication(run_in_hass):
         def refuse(*_args, **_kwargs):
             raise ConnectionRefusedError(111, "Connection refused")
 
-        with patch("custom_components.truenas_link.api.connect", refuse):
+        with patch("aiohttp.ClientSession.ws_connect", refuse):
             await coordinator.async_refresh()
         await hass.async_block_till_done()
 

@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from types import MappingProxyType
+from types import MappingProxyType, SimpleNamespace
 
 import asyncio
 import inspect
 import json
 import tempfile
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
+from aiohttp import ThreadedResolver, WSMsgType
 from homeassistant import config_entries, loader
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import (
@@ -25,6 +26,7 @@ from homeassistant.helpers import (
     label_registry,
     translation,
 )
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import pytest
 
 import custom_components
@@ -35,11 +37,21 @@ from custom_components.truenas_link.const import DOMAIN
 NO_ANSWER = object()
 
 
+@pytest.fixture(autouse=True)
+def _resolver_without_zeroconf() -> Iterator[None]:
+    """Resolve names without Home Assistant's resolver, which starts mDNS sockets."""
+    with patch(
+        "homeassistant.helpers.aiohttp_client._async_make_resolver",
+        lambda _hass: ThreadedResolver(),
+    ):
+        yield
+
+
 # ---------------------------
 #   FakeWebSocket
 # ---------------------------
 class FakeWebSocket:
-    """Stand-in for websockets' ClientConnection that replays canned replies.
+    """Stand-in for aiohttp's ClientWebSocketResponse that replays canned replies.
 
     `responder` gets each decoded request and returns the JSON-RPC response
     object to send back, so tests can answer per method. With NO_ANSWER, recv()
@@ -53,7 +65,7 @@ class FakeWebSocket:
         self.requests: list[dict[str, Any]] = []
         self.closed = False
 
-    async def send(self, message: str) -> None:
+    async def send_str(self, message: str) -> None:
         """Record a request and queue the response for recv()."""
         if self.closed:
             raise ConnectionError("send on a closed connection")
@@ -72,6 +84,12 @@ class FakeWebSocket:
             raise TimeoutError
 
         return self._pending.pop(0)
+
+    async def receive(self) -> SimpleNamespace:
+        """Return the next response the way aiohttp gives it."""
+        data = await self.recv()
+        kind = WSMsgType.TEXT if isinstance(data, str) else WSMsgType.BINARY
+        return SimpleNamespace(type=kind, data=data)
 
     async def close(self) -> None:
         """Mark the connection as closed."""
@@ -105,7 +123,7 @@ def connected_api() -> Callable[..., tuple[TrueNASAPI, FakeWebSocket]]:
     """Return a factory for a logged-in TrueNASAPI backed by a FakeWebSocket."""
 
     def _factory(responder):
-        api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=False)
+        api = TrueNASAPI(MagicMock(), "truenas.lan", "api-key")
         ws = FakeWebSocket(responder)
         api._ws = ws
         api._connected = True
@@ -173,7 +191,7 @@ class FakeTrueNAS:
         return {"jsonrpc": "2.0", "id": request["id"], "result": result}
 
     async def connect(self, *_args: Any, **_kwargs: Any) -> FakeWebSocket:
-        """Stand in for websockets' connect()."""
+        """Stand in for aiohttp's ClientSession.ws_connect()."""
         self.sockets.append(FakeWebSocket(self._respond))
         return self.sockets[-1]
 
@@ -211,6 +229,23 @@ async def _async_start_hass() -> HomeAssistant:
 
 
 # ---------------------------
+#   real_connection_test
+# ---------------------------
+def real_connection_test(host: str, verify_ssl: bool = False) -> tuple[bool, str]:
+    """Return a connection test over the real session of Home Assistant."""
+
+    async def main() -> tuple[bool, str]:
+        hass = await _async_start_hass()
+        try:
+            session = async_get_clientsession(hass, verify_ssl)
+            return await TrueNASAPI(session, host, "api-key").connection_test()
+        finally:
+            await hass.async_stop(force=True)
+
+    return asyncio.run(main())
+
+
+# ---------------------------
 #   run_in_hass
 # ---------------------------
 @pytest.fixture
@@ -222,9 +257,7 @@ def run_in_hass() -> Callable[[Callable[..., Awaitable[None]]], None]:
             hass = await _async_start_hass()
             server = FakeTrueNAS()
             try:
-                with patch(
-                    "custom_components.truenas_link.api.connect", server.connect
-                ):
+                with patch("aiohttp.ClientSession.ws_connect", server.connect):
                     await scenario(hass, server)
             finally:
                 await hass.async_stop(force=True)

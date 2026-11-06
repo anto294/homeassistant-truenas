@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 from homeassistant import config_entries
 
-from custom_components.truenas_link import api as api_module
 from custom_components.truenas_link.const import DOMAIN, LOGIN_INTERVAL
 
 from .conftest import async_add_entry
@@ -52,7 +51,7 @@ def test_unreachable_truenas_is_logged_once_and_when_it_is_back(run_in_hass, cap
         with caplog.at_level(logging.INFO, logger=LOGGERS):
             caplog.clear()
             await coordinator.api.disconnect()
-            with patch.object(api_module, "connect", refused):
+            with patch("aiohttp.ClientSession.ws_connect", refused):
                 await _polls(hass, coordinator, 4)
 
             assert _messages(caplog) == [COORDINATOR_DOWN]
@@ -126,7 +125,7 @@ def test_the_cause_stays_in_the_debug_log(run_in_hass, caplog):
         with caplog.at_level(logging.DEBUG, logger=LOGGERS):
             caplog.clear()
             await coordinator.api.disconnect()
-            with patch.object(api_module, "connect", refused):
+            with patch("aiohttp.ClientSession.ws_connect", refused):
                 await _polls(hass, coordinator, 1)
 
             assert "failed to connect (the refused cause)" in caplog.text

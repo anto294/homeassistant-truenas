@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- A revoked API key is now always noticed within 15 minutes, as the README says. Waiting
+  for the next poll could make it 16.
+
 ## [2.2.0b1] - 2026-11-06
 
 This beta also contains everything in 2.1.1b1, and replaces that pre-release.

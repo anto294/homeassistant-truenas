@@ -6,8 +6,14 @@ import logging
 from unittest.mock import patch
 
 from homeassistant import config_entries
+import pytest
 
-from custom_components.truenas_link.const import DOMAIN, LOGIN_INTERVAL
+from custom_components.truenas_link import coordinator as coordinator_module
+from custom_components.truenas_link.const import (
+    DOMAIN,
+    LOGIN_INTERVAL,
+    UPDATE_INTERVAL,
+)
 
 from .conftest import async_add_entry
 
@@ -225,5 +231,28 @@ def test_new_login_leaves_a_single_connection(run_in_hass):
         assert coordinator.last_update_success
         assert len(server.sockets) == sockets + 1
         assert server.open_sockets == 1
+
+    run_in_hass(scenario)
+
+
+@pytest.mark.parametrize("late", [-0.5, 0, 0.5], ids=["early", "on time", "late"])
+def test_new_login_never_waits_past_the_interval(run_in_hass, late):
+    """Polls rarely land exactly on the interval, so waiting for it could add a minute."""
+
+    async def scenario(hass, server):
+        entry = await async_add_entry(hass)
+        coordinator = entry.runtime_data
+        coordinator.last_login = 1000.0
+        sockets = len(server.sockets)
+        elapsed = 0.0
+
+        while len(server.sockets) == sockets:
+            elapsed += UPDATE_INTERVAL
+            with patch.object(
+                coordinator_module, "monotonic", return_value=1000.0 + elapsed + late
+            ):
+                await coordinator.async_refresh()
+
+        assert LOGIN_INTERVAL - 2 * UPDATE_INTERVAL < elapsed + late <= LOGIN_INTERVAL
 
     run_in_hass(scenario)

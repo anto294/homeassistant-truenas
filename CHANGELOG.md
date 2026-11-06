@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Documentation
+
+- The README now says that this version has been tried on a real system only with
+  TrueNAS 27.0. 25.04 and 25.10 stay supported through the automated tests.
+
 ### Fixed
 
 - A revoked API key is now always noticed within 15 minutes, as the README says. Waiting

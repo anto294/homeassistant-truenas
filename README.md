@@ -282,6 +282,8 @@ The API methods used depend on the running release:
 
 API references: [all versions](https://api.truenas.com/), [25.10](https://api.truenas.com/v25.10/), [27.0](https://api.truenas.com/v27.0/).
 
+This version has been tried on a real system only with TrueNAS 27.0, currently 27.0.0-RC.1. 25.04 and 25.10 stay supported through the automated tests, but the current connection client has not been tried on real systems with those versions.
+
 TrueNAS nightly and development builds can change the API at any time; some features may stop working on them.
 
 ## Known limitations

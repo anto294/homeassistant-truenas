@@ -14,19 +14,31 @@ Targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.
 
 ## Contents
 
+- [What you can do with it](#what-you-can-do-with-it)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Entities](#entities)
+- [How data is updated](#how-data-is-updated)
 - [Actions](#actions)
+- [Automation examples](#automation-examples)
 - [Security](#security)
 - [Supported TrueNAS versions](#supported-truenas-versions)
+- [Known limitations](#known-limitations)
 - [Troubleshooting](#troubleshooting)
 - [Removal](#removal)
 - [Translations](#translations)
 - [Migrating from version 1.x or from the upstream integration](#migrating-from-version-1x-or-from-the-upstream-integration)
 - [Differences from upstream](#differences-from-upstream)
 - [Credits and license](#credits-and-license)
+
+## What you can do with it
+
+- **Hear about problems early:** get a notification when a pool is no longer healthy, a disk runs hot, or TrueNAS raises a critical alert.
+- **See your storage in one place:** put free space, dataset size and scrub state on a dashboard, and keep their history.
+- **Tie TrueNAS into your home:** shut it down cleanly when the UPS runs low, or stop a VM at night.
+- **Protect data around changes:** take a dataset snapshot from an automation before a risky job, or run a replication when you want.
+- **Stay up to date:** see when TrueNAS or an app has an update, and install it from Home Assistant if you allow that.
 
 ## Requirements
 
@@ -35,7 +47,7 @@ Targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.
 | TrueNAS SCALE | 25.04 |
 | Home Assistant | 2026.11.0 |
 
-TrueNAS CORE and SCALE releases before 25.04 are not supported, because they do not provide the versioned websocket API this integration uses.
+TrueNAS CORE and SCALE releases before 25.04 are not supported, because they do not provide the versioned websocket API this integration uses. Any hardware or virtual machine running a supported release works. What a system does not report, such as the temperature of a virtual disk, shows as unknown.
 
 ## Installation
 
@@ -112,7 +124,7 @@ See [Security](#security) for what the level does and does not protect against.
 
 ## Entities
 
-Data is polled every 60 seconds; available updates are checked every 12 hours. If TrueNAS reports no value for a sensor, its state is unknown, not 0. A value of 0 that TrueNAS does report stays 0. On a virtual TrueNAS, which has no such reading, CPU temperature stays unknown.
+If TrueNAS reports no value for a sensor, its state is unknown, not 0. A value of 0 that TrueNAS does report stays 0. On a virtual TrueNAS, which has no such reading, CPU temperature stays unknown.
 
 | Device | Entity | Type | Notes |
 |---|---|---|---|
@@ -145,6 +157,15 @@ Data is polled every 60 seconds; available updates are checked every 12 hours. I
 
 Most entities expose extra details as attributes (for example pool scrub state, disk model and serial, dataset compression and quota, VM memory and vCPUs).
 
+## How data is updated
+
+- Home Assistant asks TrueNAS for all data every 60 seconds, over one connection that stays open. TrueNAS does not push changes, so a change can take up to a minute to show.
+- Available updates are checked every 12 hours.
+- The connection logs in again every 15 minutes, so a revoked API key is noticed.
+- New items, such as a new dataset or VM, get their entities on the next poll, without a reload.
+- An item that is gone becomes unavailable at once, and its entity is removed after about an hour of successful polls without it. A failed query or an empty list never counts, because a pool that is still importing or Docker restarting looks the same.
+- If TrueNAS cannot be reached, entities become unavailable, the log says so once, and they recover on their own.
+
 ## Actions
 
 All actions target an entity of this integration, given as `target`, and need the Administrator access level. On a read-only entity, or on an entity the action is not meant for, they give an error and send nothing to TrueNAS. If the entity's entry is not loaded, for example because TrueNAS is unreachable at startup, the action does nothing and Home Assistant logs that the entity is not available.
@@ -171,7 +192,52 @@ Example:
 ```yaml
 action: truenas_link.dataset_snapshot
 target:
-  entity_id: sensor.truenas_tank_media
+  entity_id: sensor.truenas_datasets_tank_media
+```
+
+## Automation examples
+
+Entity IDs below are for an entry named `TrueNAS` with a pool named `tank`. Find yours in **Settings → Devices & services → TrueNAS Link**.
+
+Get a notification when a pool is no longer healthy:
+
+```yaml
+alias: TrueNAS pool problem
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.truenas_system_tank_healthy
+    to: "off"
+actions:
+  - action: notify.notify
+    data:
+      message: The TrueNAS pool tank is no longer healthy
+```
+
+Take a snapshot every night (needs the Administrator access level):
+
+```yaml
+alias: Nightly TrueNAS snapshot
+triggers:
+  - trigger: time
+    at: "02:00:00"
+actions:
+  - action: truenas_link.dataset_snapshot
+    target:
+      entity_id: sensor.truenas_datasets_tank_media
+```
+
+Shut down TrueNAS when the UPS battery runs low (needs the Administrator access level, and your own UPS sensor):
+
+```yaml
+alias: Shut down TrueNAS on low battery
+triggers:
+  - trigger: numeric_state
+    entity_id: sensor.ups_battery
+    below: 20
+actions:
+  - action: truenas_link.system_shutdown
+    target:
+      entity_id: sensor.truenas_system_uptime
 ```
 
 ## Security
@@ -217,7 +283,31 @@ API references: [all versions](https://api.truenas.com/), [25.10](https://api.tr
 
 TrueNAS nightly and development builds can change the API at any time; some features may stop working on them.
 
+## Known limitations
+
+- **Discovery** only finds a system whose hostname starts with `truenas`, on the same network, and it never updates the address of an entry. See [Discovery](#discovery).
+- **The entry's name cannot change**, because entity IDs are built from it.
+- **Last scrub** only knows a pool's latest scan, because that is all TrueNAS reports. After a resilver, and a restart of Home Assistant, it stays unknown until the next scrub finishes.
+- **Temperatures** are unknown where TrueNAS has none, such as virtual disks and virtual CPUs.
+- **Renaming TrueNAS** leaves an empty **System** device. See [Troubleshooting](#troubleshooting).
+- **Deleting the last item of a section**, such as the only VM, does not remove its entity automatically, because an empty list can also be Docker restarting. Delete its device by hand.
+- **Cloud sync and replication** show the state of their last job, and TrueNAS may forget it after a reboot, so they can be unknown until the next run.
+
 ## Troubleshooting
+
+**Certificate verification failed:** TrueNAS uses a self-signed certificate. Install a trusted one, or turn off **Verify SSL** with **Reconfigure**.
+
+**API key rejected:** the key was revoked, expired or typed wrong. Home Assistant shows **Reconfigure** on the entry: create a new key in TrueNAS and paste it there.
+
+**Connection refused, no route or unknown hostname:** check the host, and add the port if it is not 443, such as `192.168.1.10:8443`. TrueNAS must serve its API over HTTPS.
+
+**Entities are unavailable:** TrueNAS cannot be reached, or that one item is gone from TrueNAS. A single one coming back on its own means it was temporary.
+
+**An action gives an error:** Read-only entries refuse actions, and each action only works on its own type of entity. See [Actions](#actions).
+
+**Sensors stay unknown:** TrueNAS reports no value for them. See [Known limitations](#known-limitations).
+
+**Two entries on one system:** Home Assistant raises a repair issue. Remove the entry you do not need.
 
 Enable debug logging to see every API query and response:
 

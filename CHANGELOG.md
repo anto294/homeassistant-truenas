@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Documentation
+
+- The README now covers what you can do with the integration, how data is updated,
+  automation examples, known limitations and more troubleshooting.
+
 ### Added
 
 - TrueNAS systems with a name starting with `truenas` are now discovered on the local

@@ -40,9 +40,11 @@ from .const import (
     DEFAULT_DEVICE_NAME,
     DEFAULT_HOST,
     DEFAULT_SSL_VERIFY,
+    DISCOVERED_ID_PREFIX,
     DOMAIN,
 )
 from .api import TrueNASAPI
+from .helper import is_system_id
 
 _LOGGER = getLogger(__name__)
 
@@ -182,10 +184,10 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _async_abort_if_other_system(self, entry: ConfigEntry) -> None:
         """Stop a form from pointing an entry to another TrueNAS system.
 
-        A new address for the same system is fine. An entry without a unique id
-        has nothing to compare with, and neither has a system that gives no id.
+        A new address for the same system is fine. An entry without the id of its
+        system has nothing to compare with, and neither has a system that gives no id.
         """
-        if entry.unique_id is None or self._system_id is None:
+        if not is_system_id(entry.unique_id) or self._system_id is None:
             return
 
         await self.async_set_unique_id(self._system_id, raise_on_progress=False)
@@ -213,7 +215,7 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
             if configured in (host, hostname):
                 return self.async_abort(reason="already_configured")
 
-        await self.async_set_unique_id(f"discovered-{host}")
+        await self.async_set_unique_id(f"{DISCOVERED_ID_PREFIX}{host}")
         self._abort_if_unique_id_configured()
 
         self.truenas_config[CONF_HOST] = host
@@ -245,6 +247,9 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
             elif self._system_id is not None:
                 await self.async_set_unique_id(self._system_id, raise_on_progress=False)
                 self._abort_if_unique_id_configured()
+            else:
+                # The id of a discovery flow must not stay on the entry
+                await self.async_set_unique_id(None)
 
             # Save instance
             if not errors:

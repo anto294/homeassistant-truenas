@@ -57,6 +57,8 @@ def _flow(monkeypatch):
     flow = config_flow.TrueNASConfigFlow()
     flow.hass = MagicMock()
     flow.hass.config_entries.async_entries.return_value = []
+    # What the flow manager gives every flow
+    flow.context = {}
     api = MagicMock(system_id=None)
     api.connection_test = AsyncMock(return_value=(True, ""))
     monkeypatch.setattr(config_flow, "TrueNASAPI", lambda *_: api)

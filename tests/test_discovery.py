@@ -201,3 +201,22 @@ def test_ipv6_address_is_not_offered(run_in_hass):
         assert result["reason"] == "not_ipv4_address"
 
     run_in_hass(scenario)
+
+
+@pytest.mark.parametrize("answer", [None, ""])
+def test_entry_keeps_no_id_of_the_flow_if_the_system_gives_none(run_in_hass, answer):
+    """The id of the flow says nothing about the system, so it must not stay."""
+
+    async def scenario(hass, server):
+        server.results["system.global.id"] = answer
+        result = await _discover(hass)
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], _fields()
+        )
+        await hass.async_block_till_done()
+
+        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["result"].unique_id is None
+
+    run_in_hass(scenario)

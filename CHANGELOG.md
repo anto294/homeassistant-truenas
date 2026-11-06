@@ -11,6 +11,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - The title of the reauthentication flow no longer shows a translation error, and no
   longer writes an error to the Home Assistant log.
+- An entry added from a discovered system while TrueNAS did not give its id no longer
+  fails **Reconfigure** and reauthentication with "unique ID mismatch". Such an entry
+  made with 2.1.1b1 is repaired when it next loads.
 
 ## [2.1.1b1] - 2026-11-06
 

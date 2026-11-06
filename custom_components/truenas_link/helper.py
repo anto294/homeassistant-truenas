@@ -9,6 +9,7 @@ from .const import (
     ACCESS_LEVEL_READ_ONLY,
     CONF_ACCESS_LEVEL,
     DEFAULT_ACCESS_LEVEL,
+    DISCOVERED_ID_PREFIX,
     TO_REDACT,
 )
 
@@ -42,6 +43,14 @@ def is_read_only(entry_options: Mapping[str, Any]) -> bool:
     """
     level = entry_options.get(CONF_ACCESS_LEVEL, DEFAULT_ACCESS_LEVEL)
     return bool(level == ACCESS_LEVEL_READ_ONLY)
+
+
+# ---------------------------
+#   is_system_id
+# ---------------------------
+def is_system_id(unique_id: str | None) -> bool:
+    """Return whether the unique id of a set up entry is the id of its system."""
+    return unique_id is not None and not unique_id.startswith(DISCOVERED_ID_PREFIX)
 
 
 # ---------------------------

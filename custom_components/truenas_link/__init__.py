@@ -17,6 +17,7 @@ from . import binary_sensor_types, sensor_types
 from .const import CONF_ACCESS_LEVEL, DOMAIN, LEGACY_ACCESS_LEVEL, PLATFORMS
 from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
 from .entity import entity_service_handler, system_device_info
+from .helper import is_system_id
 from .stale import async_can_remove_device, async_remove_stale_entities
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -94,14 +95,18 @@ async def _async_set_missing_unique_id(
     config_entry: TrueNASConfigEntry,
     coordinator: TrueNASCoordinator,
 ) -> None:
-    """Give an entry made before entries had a unique id its system's id.
+    """Give an entry its system's id, if it does not have it.
 
-    Without the id, or with another entry already holding it, the entry keeps
-    working as before. The latter is a repair issue, because only the user can tell
-    which entry to keep. It goes away with the entry, or when the id is free.
+    That is an entry made before entries had a unique id, or by a discovery flow of
+    2.1.1b1 that could not read the id. Ignored entries are never set up, so they keep
+    the id that stops their address from being offered again.
+
+    Without the id, or with another entry already holding it, the entry keeps working
+    as before. The latter is a repair issue, because only the user can tell which
+    entry to keep. It goes away with the entry, or when the id is free.
     """
     issue_id = _duplicate_issue_id(config_entry.entry_id)
-    if config_entry.unique_id is not None:
+    if is_system_id(config_entry.unique_id):
         ir.async_delete_issue(hass, DOMAIN, issue_id)
         return
 

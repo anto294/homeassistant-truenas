@@ -220,6 +220,8 @@ logger:
     custom_components.truenas_link: debug
 ```
 
+After you revoke an API key, TrueNAS keeps an open connection going, so Home Assistant notices at its next login, within 15 minutes, and then asks for a new key.
+
 When TrueNAS cannot be reached, the log says so once, and once more when it is back. The cause is only in the debug log.
 
 After you rename TrueNAS, an empty **System** device stays next to the new one, because a device's identifier holds the hostname. To remove it, open it in **Settings → Devices & services**, then three-dot menu → **Delete**.

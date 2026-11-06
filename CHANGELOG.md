@@ -14,6 +14,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   identifier, and its first entity stayed unavailable. The entity now follows the
   disk and keeps its ID, name and history. A disk with another serial or size is
   still a new disk.
+- Revoking an API key went unnoticed for as long as the connection stayed open, because
+  TrueNAS keeps it going. The integration now logs in again every 15 minutes, so the
+  revoked key is noticed by then and Home Assistant asks for a new one.
 
 ## [2.1.0] - 2026-11-05
 

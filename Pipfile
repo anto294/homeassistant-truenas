@@ -4,10 +4,14 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+black = ">=25.1"
+flake8 = ">=7.2"
 mypy = ">=1.15"
+pytest = ">=8.3"
 wheel = ">=0.45"
 pygithub = ">=2.6"
 homeassistant = ">=2026.11.0"
+websockets = "==17.4"
 
 
 [packages]

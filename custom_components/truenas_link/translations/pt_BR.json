@@ -30,7 +30,7 @@
                 }
             },
             "reauth_confirm": {
-                "title": "Reautenticar",
+                "title": "Reautenticar {name}",
                 "description": "O TrueNAS recusou a chave de API de {name}. Informe uma nova.",
                 "data": {
                     "api_key": "Chave de API"

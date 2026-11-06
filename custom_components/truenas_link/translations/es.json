@@ -30,7 +30,7 @@
                 }
             },
             "reauth_confirm": {
-                "title": "Volver a autenticar",
+                "title": "Volver a autenticar {name}",
                 "description": "TrueNAS rechazó la clave API de {name}. Introduzca una nueva.",
                 "data": {
                     "api_key": "Clave API"

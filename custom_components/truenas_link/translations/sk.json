@@ -30,7 +30,7 @@
                 }
             },
             "reauth_confirm": {
-                "title": "Opätovné overenie",
+                "title": "Opätovné overenie: {name}",
                 "description": "TrueNAS odmietol kľúč API pre {name}. Zadajte nový.",
                 "data": {
                     "api_key": "Kľúč API"

@@ -99,6 +99,9 @@ def test_reauthentication_with_a_working_key(run_in_hass):
         await hass.async_block_till_done()
 
         flow = _reauth_flows(hass)[0]
+        form = await hass.config_entries.flow.async_configure(flow["flow_id"])
+        assert form["description_placeholders"] == {"name": entry.title}
+
         result = await hass.config_entries.flow.async_configure(
             flow["flow_id"], {"api_key": "new"}
         )

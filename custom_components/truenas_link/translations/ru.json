@@ -30,7 +30,7 @@
                 }
             },
             "reauth_confirm": {
-                "title": "Повторная аутентификация",
+                "title": "Повторная аутентификация: {name}",
                 "description": "TrueNAS отклонил ключ API для {name}. Введите новый.",
                 "data": {
                     "api_key": "Ключ API"

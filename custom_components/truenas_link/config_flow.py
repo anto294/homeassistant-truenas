@@ -60,6 +60,11 @@ def _access_level_selector() -> SelectSelector:
     )
 
 
+def _host_without_port(host: str) -> str:
+    """Return a host as a system announces it, which is without its port."""
+    return host.rsplit(":", 1)[0]
+
+
 def _api_key_selector() -> TextSelector:
     """Return the field for an API key, which masks what it shows."""
     return TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
@@ -193,6 +198,19 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(self._system_id, raise_on_progress=False)
         self._abort_if_unique_id_mismatch()
 
+    @callback
+    def _async_close_offers(self, host: str) -> None:
+        """Close the discovery flows of a host that now has an entry.
+
+        Their unique id is not the system's, so Home Assistant does not close them.
+        A host entered as a name cannot be matched with an announced address.
+        """
+        unique_id = f"{DISCOVERED_ID_PREFIX}{_host_without_port(host)}"
+        for flow in self._async_in_progress(
+            include_uninitialized=True, match_context={"unique_id": unique_id}
+        ):
+            self.hass.config_entries.flow.async_abort(flow["flow_id"])
+
     async def async_step_zeroconf(
         self, discovery_info: ZeroconfServiceInfo
     ) -> ConfigFlowResult:
@@ -211,7 +229,7 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
 
         hostname = discovery_info.hostname.rstrip(".")
         for entry in self.hass.config_entries.async_entries(DOMAIN):
-            configured = str(entry.data.get(CONF_HOST, "")).rsplit(":", 1)[0]
+            configured = _host_without_port(str(entry.data.get(CONF_HOST, "")))
             if configured in (host, hostname):
                 return self.async_abort(reason="already_configured")
 
@@ -253,6 +271,7 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
 
             # Save instance
             if not errors:
+                self._async_close_offers(truenas_config[CONF_HOST])
                 name = new_entry_name(self.hass, self._hostname)
                 return self.async_create_entry(
                     title=name,

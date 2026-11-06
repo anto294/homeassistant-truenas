@@ -220,3 +220,44 @@ def test_entry_keeps_no_id_of_the_flow_if_the_system_gives_none(run_in_hass, ans
         assert result["result"].unique_id is None
 
     run_in_hass(scenario)
+
+
+async def _add_by_hand(hass, host):
+    """Add an entry with the form the user opens, for this host."""
+    flow = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        flow["flow_id"], _fields(host=host)
+    )
+    await hass.async_block_till_done()
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+
+
+@pytest.mark.parametrize("host", [HOST, f"{HOST}:8443"], ids=["address", "with port"])
+def test_entry_added_by_hand_closes_the_offer_of_its_host(run_in_hass, host):
+    """Otherwise it stays among the discovered devices, already added."""
+
+    async def scenario(hass, server):
+        offer = await _discover(hass)
+
+        await _add_by_hand(hass, host)
+
+        progress = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+        assert offer["flow_id"] not in [flow["flow_id"] for flow in progress]
+
+    run_in_hass(scenario)
+
+
+def test_entry_added_by_hand_keeps_the_offer_of_another_host(run_in_hass):
+    """That is another system, or at least nothing shows that it is the same."""
+
+    async def scenario(hass, server):
+        offer = await _discover(hass)
+
+        await _add_by_hand(hass, "192.168.1.7")
+
+        progress = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+        assert [flow["flow_id"] for flow in progress] == [offer["flow_id"]]
+
+    run_in_hass(scenario)

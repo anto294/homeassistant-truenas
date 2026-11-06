@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+import time
+from zoneinfo import ZoneInfo
+
+from homeassistant.util import dt as dt_util
 import pytest
+
+from custom_components.truenas_link import coordinator
 
 from .conftest import async_add_entry
 from .sample_data import answers
@@ -83,3 +90,41 @@ def test_first_reading_sets_the_state(run_in_hass):
         assert hass.states.get(UPTIME).state != "unknown"
 
     run_in_hass(scenario)
+
+
+def test_change_of_the_clock_does_not_change_the_state(run_in_hass, monkeypatch):
+    """Going off summer time leaves the moment TrueNAS booted where it was."""
+    # The hour before and the hour after clocks go back in Rome, on 25 October 2026.
+    # The system's clock is what datetime.now() and timestamp() use.
+    monkeypatch.setenv("TZ", "Europe/Rome")
+    time.tzset()
+    rome = ZoneInfo("Europe/Rome")
+    moment = [datetime(2026, 10, 25, 0, 30, tzinfo=UTC)]
+
+    class LocalClock(datetime):
+        """The local clock at the moment of the test."""
+
+        @classmethod
+        def now(cls, tz=None):
+            return moment[0].astimezone(tz or rome).replace(tzinfo=tz)
+
+    monkeypatch.setattr(coordinator, "datetime", LocalClock)
+    monkeypatch.setattr(dt_util, "utcnow", lambda: moment[0])
+
+    async def scenario(hass, server):
+        server.results = answers("25.10")
+        # Booted before the change, so the local time then had another offset
+        server.results["system.info"]["uptime_seconds"] = 100000
+        entry = await async_add_entry(hass)
+        before = hass.states.get(UPTIME).state
+
+        moment[0] += timedelta(hours=2)
+        after = await _state_with_uptime(hass, server, entry, 100000 + 7200)
+
+        assert after == before
+
+    try:
+        run_in_hass(scenario)
+    finally:
+        monkeypatch.undo()
+        time.tzset()

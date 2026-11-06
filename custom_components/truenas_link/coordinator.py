@@ -15,7 +15,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import slugify
+from homeassistant.util import dt as dt_util, slugify
 
 from homeassistant.const import (
     CONF_API_KEY,
@@ -25,7 +25,7 @@ from homeassistant.const import (
 )
 
 from .api import TrueNASAPI
-from .apiparser import parse_api, utc_from_timestamp
+from .apiparser import parse_api
 from .const import (
     BOOT_POOL_NAMES,
     DOMAIN,
@@ -379,11 +379,9 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         ]
 
         if self.ds["system_info"]["uptime_seconds"] > 0:
-            now = datetime.now().replace(microsecond=0)
-            uptime_tm = datetime.timestamp(
-                now - timedelta(seconds=int(self.ds["system_info"]["uptime_seconds"]))
+            boot_time = dt_util.utcnow().replace(microsecond=0) - timedelta(
+                seconds=int(self.ds["system_info"]["uptime_seconds"])
             )
-            boot_time = utc_from_timestamp(uptime_tm)
             last_boot_time = self.ds["system_info"]["uptimeEpoch"]
             if (
                 last_boot_time is None

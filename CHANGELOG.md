@@ -18,6 +18,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   change.
 - A discovered system no longer stays on offer after you add its address by hand. If you
   add it under a name, choose **Ignore**: a name cannot be matched with an address.
+- Removing one of several duplicate entries of a TrueNAS system no longer clears the
+  repair issue of another duplicate. It goes away when the entry holding the id does.
 
 ## [2.1.1b1] - 2026-11-06
 

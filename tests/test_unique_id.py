@@ -553,3 +553,58 @@ def test_ignored_entry_keeps_its_id(run_in_hass):
         assert entry.unique_id == unique_id
 
     run_in_hass(scenario)
+
+
+def test_issue_stays_while_its_holder_is_there(run_in_hass):
+    """Removing another duplicate solves nothing for this one."""
+
+    async def scenario(hass, server):
+        server.results["system.global.id"] = SYSTEM_A
+        holder = await async_add_entry(hass)
+        second = await async_add_entry(hass, name="Second")
+        third = await async_add_entry(hass, name="Third")
+        await _make_legacy(hass, holder, second, third)
+        registry = ir.async_get(hass)
+        second_issue = f"duplicate_system_{second.entry_id}"
+        third_issue = f"duplicate_system_{third.entry_id}"
+        assert registry.async_get_issue(DOMAIN, second_issue) is not None
+        assert registry.async_get_issue(DOMAIN, third_issue) is not None
+
+        await hass.config_entries.async_remove(third.entry_id)
+        await hass.async_block_till_done()
+
+        assert registry.async_get_issue(DOMAIN, third_issue) is None
+        assert registry.async_get_issue(DOMAIN, second_issue) is not None
+
+        await hass.config_entries.async_remove(holder.entry_id)
+        await hass.async_block_till_done()
+
+        assert registry.async_get_issue(DOMAIN, second_issue) is None
+
+    run_in_hass(scenario)
+
+
+def test_removal_leaves_an_issue_about_another_holder(run_in_hass):
+    """Two systems, each with a duplicate: removing one holder touches only its own."""
+
+    async def scenario(hass, server):
+        server.results["system.global.id"] = SYSTEM_A
+        holder_a = await async_add_entry(hass)
+        duplicate_a = await async_add_entry(hass, name="Duplicate A")
+        await _make_legacy(hass, holder_a, duplicate_a)
+        server.results["system.global.id"] = SYSTEM_B
+        holder_b = await async_add_entry(hass, name="Holder B")
+        duplicate_b = await async_add_entry(hass, name="Duplicate B")
+        registry = ir.async_get(hass)
+        assert holder_b.unique_id == SYSTEM_B
+        issue_a = f"duplicate_system_{duplicate_a.entry_id}"
+        issue_b = f"duplicate_system_{duplicate_b.entry_id}"
+        assert registry.async_get_issue(DOMAIN, issue_b) is not None
+
+        await hass.config_entries.async_remove(holder_b.entry_id)
+        await hass.async_block_till_done()
+
+        assert registry.async_get_issue(DOMAIN, issue_b) is None
+        assert registry.async_get_issue(DOMAIN, issue_a) is not None
+
+    run_in_hass(scenario)

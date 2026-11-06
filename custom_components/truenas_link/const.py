@@ -41,7 +41,7 @@ STALE_AFTER_POLLS = 60
 
 # Seconds between polls
 UPDATE_INTERVAL = 60
-# Most seconds between logins. TrueNAS keeps an open connection going after its API key is
+# About the most seconds between logins. TrueNAS keeps an open connection going after its API key is
 # revoked, so only a new login tells. It adds to TrueNAS' audit log, which is why this
 # is not every poll.
 LOGIN_INTERVAL = 900

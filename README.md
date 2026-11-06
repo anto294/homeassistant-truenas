@@ -162,7 +162,7 @@ Most entities expose extra details as attributes (for example pool scrub state, 
 
 - Home Assistant asks TrueNAS for all data every 60 seconds, over one connection that stays open. TrueNAS does not push changes, so a change can take up to a minute to show.
 - Available updates are checked every 12 hours.
-- The connection logs in again every 15 minutes, so a revoked API key is noticed.
+- The connection logs in again about every 15 minutes, so a revoked API key is noticed.
 - New items, such as a new dataset or VM, get their entities on the next poll, without a reload.
 - An item that is gone becomes unavailable at once, and its entity is removed after about an hour of successful polls without it. A failed query or an empty list never counts, because a pool that is still importing or Docker restarting looks the same.
 - If TrueNAS cannot be reached, entities become unavailable, the log says so once, and they recover on their own.
@@ -322,7 +322,7 @@ logger:
     custom_components.truenas_link: debug
 ```
 
-After you revoke an API key, TrueNAS keeps an open connection going, so Home Assistant notices at its next login, within 15 minutes, and then asks for a new key.
+After you revoke an API key, TrueNAS keeps an open connection going, so Home Assistant notices at its next login, within about 15 minutes, and then asks for a new key.
 
 When TrueNAS cannot be reached, the log says so once, and once more when it is back. The cause is only in the debug log.
 

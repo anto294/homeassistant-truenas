@@ -7,6 +7,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [2.2.0b1] - 2026-11-06
+
+This beta also contains everything in 2.1.1b1, and replaces that pre-release.
+
 ### Documentation
 
 - The README now shows where the integration stands on the Integration Quality Scale,

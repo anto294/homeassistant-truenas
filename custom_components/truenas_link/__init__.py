@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 
-from logging import getLogger
-
 from homeassistant.const import CONF_NAME, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import (
@@ -20,8 +18,6 @@ from .const import CONF_ACCESS_LEVEL, DOMAIN, LEGACY_ACCESS_LEVEL, PLATFORMS
 from .coordinator import TrueNASConfigEntry, TrueNASCoordinator
 from .entity import entity_service_handler, system_device_info
 from .stale import async_can_remove_device, async_remove_stale_entities
-
-_LOGGER = getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 

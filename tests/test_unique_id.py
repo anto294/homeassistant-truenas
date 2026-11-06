@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import logging
-
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.helpers import entity_registry as er, issue_registry as ir
@@ -295,7 +293,7 @@ def test_existing_entry_gets_the_id_at_setup(run_in_hass):
     run_in_hass(scenario)
 
 
-def test_two_old_entries_on_one_system_keep_working(run_in_hass, caplog):
+def test_two_old_entries_on_one_system_keep_working(run_in_hass):
     """The second stays without an id, with a warning, and loses nothing."""
 
     async def scenario(hass, server):

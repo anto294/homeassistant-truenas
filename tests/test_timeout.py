@@ -95,6 +95,32 @@ def test_call_without_answer_may_have_reached_truenas(connected_api):
     assert not api.real.lock.locked()
 
 
+def test_binary_answer_may_have_reached_truenas(connected_api):
+    """call() raises, and says that the request went out."""
+    api, ws = connected_api(lambda _request: NO_ANSWER)
+    ws._pending.append(b"binary")
+
+    with pytest.raises(TrueNASConnectionError) as err:
+        api.call("system.info")
+
+    assert err.value.request_sent
+    assert ws.closed
+    assert not api.connected()
+    assert not api.real.lock.locked()
+
+
+def test_binary_answer_to_a_query_disconnects(connected_api):
+    """query() returns None and leaves nothing open."""
+    api, ws = connected_api(lambda _request: NO_ANSWER)
+    ws._pending.append(b"binary")
+
+    assert api.query("system.info") is None
+
+    assert ws.closed
+    assert not api.connected()
+    assert api.error == "cannot_connect"
+
+
 def test_login_without_answer_closes_the_connection():
     """A login that gets no answer is not a wrong key, so no reauthentication."""
     ws = FakeWebSocket(lambda _request: NO_ANSWER)
@@ -359,6 +385,48 @@ def test_cancelled_login_closes_the_connection():
         await asyncio.sleep(0)
         assert socket.closed
         assert not api._closing
+
+    asyncio.run(scenario())
+
+
+def test_cancelled_send_drops_the_connection():
+    """The lock is free, and the next request does not use the abandoned connection."""
+
+    class HangingSend(FakeWebSocket):
+        """A connection that takes the login, and then cannot send."""
+
+        async def send_str(self, message):
+            """Record the request, and wait until cancelled unless it is the login."""
+            if "auth.login_with_api_key" in message:
+                await super().send_str(message)
+                return
+
+            self.requests.append(json.loads(message))
+            await asyncio.Event().wait()
+
+    async def scenario():
+        hanging = HangingSend(_answers)
+        fresh = FakeWebSocket(_answers)
+        session = MagicMock(ws_connect=AsyncMock(side_effect=[hanging, fresh]))
+        api = TrueNASAPI(session, "truenas.lan", "api-key")
+        assert await api.connect()
+        task = asyncio.create_task(api.call("system.info"))
+        while len(hanging.requests) < 2:
+            await asyncio.sleep(0)
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+        assert not api.connected()
+        assert not api.lock.locked()
+        await asyncio.gather(*api._closing)
+        assert hanging.closed
+
+        assert await api.call("system.info") == "system.info"
+        assert not fresh.closed
+        assert fresh.requests[-1]["method"] == "system.info"
+        assert session.ws_connect.await_count == 2
 
     asyncio.run(scenario())
 

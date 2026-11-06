@@ -10,9 +10,11 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import slugify
 
 from homeassistant.const import (
     CONF_API_KEY,
@@ -162,6 +164,8 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._systemstats_errored: list[tuple[str, str | None]] = []
         # Device registry id of the "System" device, set by async_setup_entry
         self.system_device_id: str | None = None
+        # The entry is about to reload, so nothing new should be added to it
+        self.reload_scheduled = False
         self.datasets_hass_device_id = None
         self.last_updatecheck_update = datetime(1970, 1, 1)
 
@@ -1103,9 +1107,11 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # ---------------------------
     async def get_disk(self) -> None:
         """Get disks from TrueNAS."""
+        disks = await self.api.query("disk.query")
+        self._async_follow_new_identifiers(disks)
         self.ds["disk"] = parse_api(
             data=self.ds["disk"],
-            source=self._seen("disk", "identifier", await self.api.query("disk.query")),
+            source=self._seen("disk", "identifier", disks),
             key="identifier",
             vals=[
                 {"name": "name", "default": "unknown"},
@@ -1141,6 +1147,55 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self.ds["disk"][uid]["temperature"] = temps.get(vals["name"])
                 # looks for devname here, and returns devname temp to uid disk
                 # I feel like this will break in the future when TrueNAS updates to a more sensible system. Currently their own long term stats are broken by the changing devnames.
+
+    # ---------------------------
+    #   _async_follow_new_identifiers
+    # ---------------------------
+    @callback
+    def _async_follow_new_identifiers(self, disks: Any) -> None:
+        """Keep the entity of a disk whose identifier changed, then reload.
+
+        Without a serial, a disk's identifier holds its name until TrueNAS partitions
+        it, and then a partition's uuid. Its entity's unique id holds the identifier,
+        so the disk would get a second entity with another entity id. A disk with a
+        new serial or size is another disk, whatever its name.
+        """
+        if not isinstance(disks, list):
+            return
+
+        listed = {disk.get("identifier") for disk in disks}
+        registry = er.async_get(self.hass)
+        fields = ("name", "serial", "size")
+        for disk in disks:
+            new = disk.get("identifier")
+            if new in self.ds["disk"]:
+                continue
+
+            for old, known in self.ds["disk"].items():
+                if old in listed or any(known.get(f) != disk.get(f) for f in fields):
+                    continue
+
+                entity_id = registry.async_get_entity_id(
+                    "sensor", DOMAIN, self._disk_unique_id(old)
+                )
+                new_unique_id = self._disk_unique_id(new)
+                if (
+                    entity_id is None
+                    or registry.async_get_entity_id("sensor", DOMAIN, new_unique_id)
+                    is not None
+                ):
+                    continue
+
+                registry.async_update_entity(entity_id, new_unique_id=new_unique_id)
+                self.reload_scheduled = True
+
+        if self.reload_scheduled:
+            # Entities hold their item's identifier, so they have to be made again
+            self.hass.config_entries.async_schedule_reload(self.config_entry.entry_id)
+
+    def _disk_unique_id(self, identifier: Any) -> str:
+        """Return the unique id of a disk's entity, as TrueNASEntity builds it."""
+        return f"{self.instance.lower()}-disk-{slugify(str(identifier).lower())}"
 
     # ---------------------------
     #   get_vm

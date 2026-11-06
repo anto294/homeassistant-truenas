@@ -52,6 +52,82 @@ def test_wait_before_a_removal_is_about_an_hour():
     assert STALE_AFTER_POLLS == 60
 
 
+def test_disk_with_a_new_identifier_keeps_its_entity(run_in_hass):
+    """TrueNAS changes it when it partitions a disk without a serial."""
+
+    async def scenario(hass, server):
+        entry, coordinator = await _setup(hass, server)
+        server.results["disk.query"][0]["identifier"] = "{uuid}new"
+        await _poll(hass, coordinator)
+
+        registered = _registered(hass, "sensor.truenas_disks_sda")
+        assert registered.unique_id == "truenas-disk-uuid_new"
+        assert _registered(hass, "sensor.truenas_disks_sda_2") is None
+        assert entry.runtime_data is not coordinator
+        assert hass.states.get("sensor.truenas_disks_sda").state == "33"
+
+    run_in_hass(scenario)
+
+
+def test_replaced_disk_with_the_same_name_is_another_disk(run_in_hass):
+    """Its entity is its own, and the old one goes away as for any other item."""
+
+    async def scenario(hass, server):
+        entry, coordinator = await _setup(hass, server)
+        server.results["disk.query"][0].update(
+            identifier="{serial_lunid}DISK9", serial="DISK9"
+        )
+        await _poll(hass, coordinator)
+
+        assert entry.runtime_data is coordinator
+        assert (
+            _registered(hass, "sensor.truenas_disks_sda").unique_id
+            == "truenas-disk-serial_lunid_disk1"
+        )
+        assert hass.states.get("sensor.truenas_disks_sda").state == "unavailable"
+        assert hass.states.get("sensor.truenas_disks_sda_2").state == "33"
+
+    run_in_hass(scenario)
+
+
+def test_disk_that_already_has_a_second_entity_is_left_alone(run_in_hass):
+    """Moving the unique id over one in use would raise, and helps nobody."""
+
+    async def scenario(hass, server):
+        entry, coordinator = await _setup(hass, server)
+        er.async_get(hass).async_get_or_create(
+            "sensor",
+            DOMAIN,
+            "truenas-disk-uuid_new",
+            config_entry=entry,
+            suggested_object_id="truenas_disks_sda_2",
+        )
+        server.results["disk.query"][0]["identifier"] = "{uuid}new"
+        await _poll(hass, coordinator)
+
+        assert entry.runtime_data is coordinator
+        assert (
+            _registered(hass, "sensor.truenas_disks_sda").unique_id
+            == "truenas-disk-serial_lunid_disk1"
+        )
+
+    run_in_hass(scenario)
+
+
+def test_failed_disk_query_follows_nothing(run_in_hass):
+    """No answer says nothing about the identifiers."""
+
+    async def scenario(hass, server):
+        entry, coordinator = await _setup(hass, server)
+        server.errors["disk.query"] = "[EBUSY] busy"
+        await _poll(hass, coordinator)
+
+        assert entry.runtime_data is coordinator
+        assert not coordinator.reload_scheduled
+
+    run_in_hass(scenario)
+
+
 def test_new_items_appear_without_a_reload(run_in_hass):
     """A new dataset and a new VM get their entities on the next poll."""
 

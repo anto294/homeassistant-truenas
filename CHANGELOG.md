@@ -7,6 +7,14 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- A disk without a serial, such as a virtual one, got a second entity
+  (`sensor.truenas_disks_vdb_2`) when TrueNAS partitioned it and changed its
+  identifier, and its first entity stayed unavailable. The entity now follows the
+  disk and keeps its ID, name and history. A disk with another serial or size is
+  still a new disk.
+
 ## [2.1.0] - 2026-11-05
 
 The first stable release since 2.0.1. It collects 2.1.0b1, 2.1.0b2 and 2.1.0b3, and

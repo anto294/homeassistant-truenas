@@ -14,6 +14,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - An entry added from a discovered system while TrueNAS did not give its id no longer
   fails **Reconfigure** and reauthentication with "unique ID mismatch". Such an entry
   made with 2.1.1b1 is repaired when it next loads.
+- **Uptime** no longer moves by an hour when clocks change, if TrueNAS booted before the
+  change.
 
 ## [2.1.1b1] - 2026-11-06
 

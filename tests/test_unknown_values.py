@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from homeassistant.const import STATE_UNKNOWN
 
+from homeassistant.helpers import entity_registry as er
+
 from .conftest import async_add_entry
 from .sample_data import answers
 
@@ -53,6 +55,15 @@ async def _refresh(hass, entry):
     await hass.async_block_till_done()
 
 
+async def _add_entry(hass, **overrides):
+    """Add an entry, with ARC size enabled as these tests look at it."""
+    entry = await async_add_entry(hass, **overrides)
+    er.async_get(hass).async_update_entity(ARC, disabled_by=None)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    return entry
+
+
 def test_graphs_without_samples_at_first_still_create_the_sensors(run_in_hass):
     """The sensors exist from the start, with the same ids, and are unknown."""
 
@@ -60,7 +71,7 @@ def test_graphs_without_samples_at_first_still_create_the_sensors(run_in_hass):
         server.results = answers("25.10")
         _without_samples(server)
 
-        await async_add_entry(hass)
+        await _add_entry(hass)
 
         for entity_id in FROM_GRAPHS:
             assert _state(hass, entity_id) == STATE_UNKNOWN, entity_id
@@ -73,7 +84,7 @@ def test_graphs_that_lose_their_samples_become_unknown(run_in_hass):
 
     async def scenario(hass, server):
         server.results = answers("25.10")
-        entry = await async_add_entry(hass)
+        entry = await _add_entry(hass)
         assert _state(hass, CPU_USAGE) == "2.5"
         memory = _state(hass, MEMORY)
 
@@ -92,7 +103,7 @@ def test_a_mean_of_null_is_unknown_and_a_real_zero_stays_zero(run_in_hass):
 
     async def scenario(hass, server):
         server.results = answers("25.10")
-        entry = await async_add_entry(hass)
+        entry = await _add_entry(hass)
 
         _with_mean(server, None)
         await _refresh(hass, entry)
@@ -114,7 +125,7 @@ def test_failed_graphs_keep_the_last_values(run_in_hass):
 
     async def scenario(hass, server):
         server.results = answers("25.10")
-        entry = await async_add_entry(hass)
+        entry = await _add_entry(hass)
 
         server.errors[GRAPHS] = "[EBUSY] busy"
         await _refresh(hass, entry)
@@ -135,7 +146,7 @@ def test_virtual_truenas_keeps_its_cpu_temperature_sensor_unknown(run_in_hass):
         server.results[GRAPHS] = [
             graph for graph in server.results[GRAPHS] if graph["name"] != "cputemp"
         ]
-        entry = await async_add_entry(hass)
+        entry = await _add_entry(hass)
         await _refresh(hass, entry)
 
         assert _state(hass, CPU_TEMPERATURE) == STATE_UNKNOWN
@@ -150,7 +161,7 @@ def test_entity_of_a_value_never_read_is_still_not_created(run_in_hass):
         server.results = answers("25.10")
         server.errors["alert.list"] = "[EPERM] not allowed"
 
-        await async_add_entry(hass)
+        await _add_entry(hass)
 
         assert hass.states.get("sensor.truenas_system_alerts") is None
 
@@ -162,7 +173,7 @@ def test_disk_temperatures(run_in_hass):
 
     async def scenario(hass, server):
         server.results = answers("25.10")
-        entry = await async_add_entry(hass)
+        entry = await _add_entry(hass)
         assert _state(hass, DISK) == "33"
 
         server.results["disk.temperatures"] = {"sda": 0, "nvme0n1": None}
@@ -189,7 +200,7 @@ def test_disk_without_temperature_from_the_start_is_unknown(run_in_hass):
         server.results = answers("25.10")
         server.results["disk.temperatures"] = {}
 
-        await async_add_entry(hass)
+        await _add_entry(hass)
 
         assert _state(hass, DISK) == STATE_UNKNOWN
 
@@ -207,7 +218,7 @@ def test_uptime_without_a_reading_is_unknown(run_in_hass):
             if key != "uptime_seconds"
         }
 
-        await async_add_entry(hass)
+        await _add_entry(hass)
 
         assert _state(hass, UPTIME) == STATE_UNKNOWN
 

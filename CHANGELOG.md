@@ -11,6 +11,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - Two entries on the same TrueNAS system now raise a repair issue in **Settings →
   System → Repairs**, instead of a warning in the log. It goes away when you remove one.
+- VMs, containers, services and apps now show **Running** or **Not running**, and Reboot
+  required shows **Problem** or **OK**. Their on and off states are the same, so
+  automations keep working.
+- Reboot required, pool scan, last scrub and errors, and network RX and TX are now
+  diagnostic entities, so new dashboards made by Home Assistant leave them out.
+- On new installations, load (5 and 15 min) and ARC size start disabled, because they
+  change often and few people use them. Existing entities stay as they are.
 
 ### Fixed
 

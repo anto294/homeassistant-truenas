@@ -30,6 +30,7 @@ Targets the versioned JSON-RPC API of **TrueNAS 25.04 and later**, including 25.
 - [Translations](#translations)
 - [Migrating from version 1.x or from the upstream integration](#migrating-from-version-1x-or-from-the-upstream-integration)
 - [Differences from upstream](#differences-from-upstream)
+- [Quality scale](#quality-scale)
 - [Credits and license](#credits-and-license)
 
 ## What you can do with it
@@ -370,6 +371,27 @@ If you prefer, you can instead keep the upstream integration and run both side b
 - Keeps the last known VM, container and memory values when a single query fails or returns no samples, instead of making entities unavailable.
 - Adds entities for new datasets, VMs, apps and other items without a reload. An item that TrueNAS stops listing becomes unavailable, and its entities are removed after about an hour (60 successful updates). A failed query or an empty list never counts: Docker restarting or a pool that is not imported yet removes nothing. To remove what an empty list leaves behind, delete the device from its page in Home Assistant.
 - Handles `null` values that newer TrueNAS releases return for reporting data and app versions.
+
+## Quality scale
+
+Home Assistant grades the integrations in its core with the [Integration Quality Scale](https://contributors.home-assistant.io/core/quality-scale/). It does not review custom integrations, so TrueNAS Link has no official tier. This project follows those rules as a goal, and this is its own assessment. [`quality_scale.yaml`](custom_components/truenas_link/quality_scale.yaml) holds the state of each rule.
+
+| Tier | Rules | Met | Not applicable | Not met |
+|---|---:|---:|---:|---:|
+| Bronze | 20 | 16 | 4 | 0 |
+| Silver | 10 | 10 | 0 | 0 |
+| Gold | 21 | 20 | 0 | 1 |
+| Platinum | 3 | 2 | 1 | 0 |
+
+A tier needs every rule of that tier and the ones below it, so this project does not claim Gold or Platinum, because of one choice:
+
+- **Discovery never changes the address of an entry (`discovery-update-info`, Gold), on purpose.** The rule asks to update the address from an announcement when a stable ID in it shows that the device is the same. TrueNAS announcements have no such ID, and the API gives one only after login. Anything on your network can announce a name, so following an announcement could send your API key to it. Security comes first: if the address changes, use **Reconfigure**.
+
+Other choices behind the table:
+
+- **No dependencies of its own.** The connection uses the web session of Home Assistant (`inject-websession`), so the rules on dependencies (`dependency-transparency`, `async-dependency`) do not apply.
+- **Strict typing (`strict-typing`)** is checked with mypy in CI, because the file the rule names only exists in core.
+- **No conditions, triggers or event subscriptions**, so `docs-conditions`, `docs-triggers` and `entity-event-setup` do not apply.
 
 ## Credits and license
 

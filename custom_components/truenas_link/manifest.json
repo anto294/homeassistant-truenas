@@ -18,5 +18,11 @@
     "requirements": [
         "websockets==17.4"
     ],
-    "version": "0.0.0"
+    "version": "0.0.0",
+    "zeroconf": [
+        {
+            "type": "_http._tcp.local.",
+            "name": "truenas*"
+        }
+    ]
 }

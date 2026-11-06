@@ -1,5 +1,6 @@
 {
     "config": {
+        "flow_title": "{name} ({host})",
         "step": {
             "user": {
                 "description": "Nastavte integráciu TrueNAS.",
@@ -57,7 +58,8 @@
             "reconfigure_successful": "Opätovné nastavenie bolo úspešné.",
             "reauth_successful": "Opätovné overenie bolo úspešné.",
             "already_configured": "Tento systém TrueNAS je už nastavený.",
-            "unique_id_mismatch": "Toto je iný systém TrueNAS. Ak ho chcete pridať, použite Pridať položku."
+            "unique_id_mismatch": "Toto je iný systém TrueNAS. Ak ho chcete pridať, použite Pridať položku.",
+            "not_ipv4_address": "Zistiť možno iba adresy IPv4. Ak chcete použiť inú adresu, pridajte TrueNAS ručne."
         }
     },
     "options": {

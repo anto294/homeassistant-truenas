@@ -22,6 +22,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.util import slugify
+from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
@@ -189,6 +190,38 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
 
         await self.async_set_unique_id(self._system_id, raise_on_progress=False)
         self._abort_if_unique_id_mismatch()
+
+    async def async_step_zeroconf(
+        self, discovery_info: ZeroconfServiceInfo
+    ) -> ConfigFlowResult:
+        """Offer a TrueNAS system that announces itself, with its address filled in.
+
+        Nothing is sent to it until the user has entered a key and confirmed. An
+        announcement proves nothing, so it never changes the address of an entry: that
+        would send the entry's key to whoever announces that name. An announcement has
+        no id of the system either, so this flow's unique id only stops the same
+        address from being offered twice, or again after the user ignored it. The form
+        replaces it with the system's id.
+        """
+        host = discovery_info.host
+        if discovery_info.ip_address.version != 4:
+            return self.async_abort(reason="not_ipv4_address")
+
+        hostname = discovery_info.hostname.rstrip(".")
+        for entry in self.hass.config_entries.async_entries(DOMAIN):
+            configured = str(entry.data.get(CONF_HOST, "")).rsplit(":", 1)[0]
+            if configured in (host, hostname):
+                return self.async_abort(reason="already_configured")
+
+        await self.async_set_unique_id(f"discovered-{host}")
+        self._abort_if_unique_id_configured()
+
+        self.truenas_config[CONF_HOST] = host
+        self.context["title_placeholders"] = {
+            "name": hostname.split(".")[0],
+            "host": host,
+        }
+        return await self.async_step_user()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None

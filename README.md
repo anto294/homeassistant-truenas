@@ -85,6 +85,12 @@ Entity IDs are built from the entry's name, which is set once. The first entry i
 
 If TrueNAS Link does not appear in the list, clear your browser cache.
 
+### Discovery
+
+Home Assistant discovers a TrueNAS system on your network if its hostname starts with `truenas`, and offers it in **Settings → Devices & services** with the address filled in. You still enter an API key and confirm, and nothing is sent to the system before that. To stop being offered one, choose **Ignore**.
+
+A system with another hostname, on another network, or with mDNS turned off is not discovered: add it by hand. A discovered address never replaces the address of an existing entry, because an announcement on the network proves nothing and the entry's key would be sent there. If the address changes, use **Reconfigure**.
+
 ### Access level
 
 | Level | Sensors | Actions | Installing updates | Cron job switches | API key |

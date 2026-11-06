@@ -649,7 +649,8 @@ only as 1.4 betas or not released yet:
   and attaches `truenas.zip`, which HACS installs from. Release notes come
   from this changelog.
 
-[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.1b1...HEAD
+[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.2.0b1...HEAD
+[2.2.0b1]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0...v2.2.0b1
 [2.1.1b1]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0...v2.1.1b1
 [2.1.0]: https://github.com/anto294/homeassistant-truenas/compare/v2.0.1...v2.1.0
 [2.1.0b3]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0b2...v2.1.0b3

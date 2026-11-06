@@ -380,9 +380,16 @@ def test_device_with_an_entity_that_is_not_an_item_is_kept(run_in_hass):
     """An entity from before, of unknown form, is not ours to remove."""
 
     async def scenario(hass, server):
-        entry, _ = await _setup(hass, server)
+        entry, coordinator = await _setup(hass, server)
         registry = er.async_get(hass)
         vm = registry.async_get("binary_sensor.truenas_vms_win11")
+        device = dr.async_get(hass).async_get(vm.device_id)
+        # With the VM there, that alone would keep the device
+        server.results["vm.query"] = []
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+        assert await async_remove_config_entry_device(hass, entry, device)
+
         registry.async_get_or_create(
             "sensor",
             DOMAIN,
@@ -390,7 +397,6 @@ def test_device_with_an_entity_that_is_not_an_item_is_kept(run_in_hass):
             config_entry=entry,
             device_id=vm.device_id,
         )
-        device = dr.async_get(hass).async_get(vm.device_id)
 
         assert not await async_remove_config_entry_device(hass, entry, device)
 

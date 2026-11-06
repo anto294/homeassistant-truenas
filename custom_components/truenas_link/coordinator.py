@@ -7,6 +7,7 @@ import logging
 import re
 
 from datetime import datetime, timedelta
+from time import monotonic
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -28,6 +29,7 @@ from .apiparser import parse_api, utc_from_timestamp
 from .const import (
     BOOT_POOL_NAMES,
     DOMAIN,
+    LOGIN_INTERVAL,
     STALE_AFTER_POLLS,
     SCAN_IDLE,
     SCAN_PAUSED,
@@ -164,6 +166,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._systemstats_errored: list[tuple[str, str | None]] = []
         # Device registry id of the "System" device, set by async_setup_entry
         self.system_device_id: str | None = None
+        self.last_login = 0.0
         # The entry is about to reload, so nothing new should be added to it
         self.reload_scheduled = False
         self.datasets_hass_device_id = None
@@ -186,8 +189,9 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Update TrueNAS data."""
         self.answered = set()
-        if not self.api.connected():
+        if not self.api.connected() or monotonic() - self.last_login >= LOGIN_INTERVAL:
             await self.api.connect()
+            self.last_login = monotonic()
             # Check it here: the next query() clears the error code
             if self.api.error == "invalid_key":
                 raise ConfigEntryAuthFailed(

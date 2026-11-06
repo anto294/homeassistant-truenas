@@ -8,7 +8,7 @@ from unittest.mock import patch
 from homeassistant import config_entries
 
 from custom_components.truenas_link import api as api_module
-from custom_components.truenas_link.const import DOMAIN
+from custom_components.truenas_link.const import DOMAIN, LOGIN_INTERVAL
 
 from .conftest import async_add_entry
 
@@ -181,5 +181,50 @@ def test_method_that_truenas_refuses_is_still_logged_once(run_in_hass, caplog):
         assert [
             level for level, message in _messages(caplog) if "alert.list" in message
         ] == [logging.ERROR]
+
+    run_in_hass(scenario)
+
+
+def test_revoked_key_is_noticed_at_the_next_login(run_in_hass):
+    """TrueNAS keeps an open connection going, so polls alone do not tell."""
+
+    async def scenario(hass, server):
+        entry = await async_add_entry(hass)
+        coordinator = entry.runtime_data
+        server.valid_keys = set()
+
+        await coordinator.async_refresh()
+        assert coordinator.last_update_success
+
+        coordinator.last_login -= LOGIN_INTERVAL
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+        assert not coordinator.last_update_success
+        flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+        assert [flow["context"]["source"] for flow in flows] == ["reauth"]
+        assert server.open_sockets == 0
+
+    run_in_hass(scenario)
+
+
+def test_new_login_leaves_a_single_connection(run_in_hass):
+    """A login replaces the connection, and only once per interval."""
+
+    async def scenario(hass, server):
+        entry = await async_add_entry(hass)
+        coordinator = entry.runtime_data
+        sockets = len(server.sockets)
+
+        await coordinator.async_refresh()
+        assert len(server.sockets) == sockets
+
+        coordinator.last_login -= LOGIN_INTERVAL
+        await coordinator.async_refresh()
+        await coordinator.async_refresh()
+
+        assert coordinator.last_update_success
+        assert len(server.sockets) == sockets + 1
+        assert server.open_sockets == 1
 
     run_in_hass(scenario)

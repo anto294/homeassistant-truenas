@@ -31,6 +31,7 @@ from .const import (
     BOOT_POOL_NAMES,
     DOMAIN,
     LOGIN_INTERVAL,
+    UPDATE_INTERVAL,
     STALE_AFTER_POLLS,
     SCAN_IDLE,
     SCAN_PAUSED,
@@ -122,7 +123,7 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
-            update_interval=timedelta(seconds=60),
+            update_interval=timedelta(seconds=UPDATE_INTERVAL),
         )
 
         self.name = config_entry.options[CONF_NAME]
@@ -189,7 +190,9 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Update TrueNAS data."""
         self.answered = set()
-        if not self.api.connected() or monotonic() - self.last_login >= LOGIN_INTERVAL:
+        # Not waiting for the interval to pass: the next poll may be a minute after it
+        next_poll_at = monotonic() - self.last_login + UPDATE_INTERVAL
+        if not self.api.connected() or next_poll_at > LOGIN_INTERVAL:
             await self.api.connect()
             self.last_login = monotonic()
             # Check it here: the next query() clears the error code

@@ -39,7 +39,9 @@ LEGACY_ACCESS_LEVEL = ACCESS_LEVEL_ADMIN
 # disk that is being replaced or a pool that is still importing after a reboot.
 STALE_AFTER_POLLS = 60
 
-# Seconds between logins. TrueNAS keeps an open connection going after its API key is
+# Seconds between polls
+UPDATE_INTERVAL = 60
+# Most seconds between logins. TrueNAS keeps an open connection going after its API key is
 # revoked, so only a new login tells. It adds to TrueNAS' audit log, which is why this
 # is not every poll.
 LOGIN_INTERVAL = 900

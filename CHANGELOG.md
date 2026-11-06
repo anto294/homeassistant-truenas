@@ -21,7 +21,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
-- A revoked API key is now noticed within 15 minutes, as the README says. Waiting
+- A revoked API key is now noticed within about 15 minutes, as the README says. Waiting
   for the next poll could make it 16.
 
 ## [2.2.0b1] - 2026-11-06

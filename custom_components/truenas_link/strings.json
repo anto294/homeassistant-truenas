@@ -178,5 +178,11 @@
                 "name": "{name} healthy"
             }
         }
+    },
+    "issues": {
+        "duplicate_system": {
+            "title": "Two TrueNAS entries connect to the same system",
+            "description": "\"{entry}\" and \"{other}\" connect to the same TrueNAS system. Both keep working, but they poll it twice. Remove the one you do not need in Settings → Devices & services → TrueNAS Link. This goes away with it."
+        }
     }
 }

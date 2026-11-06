@@ -178,5 +178,11 @@
                 "name": "{name} v poriadku"
             }
         }
+    },
+    "issues": {
+        "duplicate_system": {
+            "title": "Dva záznamy TrueNAS sa pripájajú k rovnakému systému",
+            "description": "„{entry}“ a „{other}“ sa pripájajú k rovnakému systému TrueNAS. Oba fungujú ďalej, ale dotazujú sa ho dvakrát. Odstráňte ten, ktorý nepotrebujete, v časti Nastavenia → Zariadenia a služby → TrueNAS Link. Toto upozornenie zmizne spolu s ním."
+        }
     }
 }

@@ -178,5 +178,11 @@
                 "name": "{name} integro"
             }
         }
+    },
+    "issues": {
+        "duplicate_system": {
+            "title": "Due voci TrueNAS si collegano allo stesso sistema",
+            "description": "\"{entry}\" e \"{other}\" si collegano allo stesso sistema TrueNAS. Entrambe continuano a funzionare, ma lo interrogano due volte. Rimuovi quella che non ti serve in Impostazioni → Dispositivi e servizi → TrueNAS Link. Questo avviso sparirà con essa."
+        }
     }
 }

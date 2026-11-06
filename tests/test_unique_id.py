@@ -6,7 +6,7 @@ import logging
 
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import entity_registry as er, issue_registry as ir
 import pytest
 
 from custom_components.truenas_link.const import DOMAIN
@@ -308,14 +308,21 @@ def test_two_old_entries_on_one_system_keep_working(run_in_hass, caplog):
         assert entities
         server.results["system.global.id"] = SYSTEM_A
 
-        with caplog.at_level(logging.WARNING):
-            await _make_legacy(hass, first, second)
+        await _make_legacy(hass, first, second)
 
         assert first.unique_id == SYSTEM_A
         assert second.unique_id is None
         assert first.state is ConfigEntryState.LOADED
         assert second.state is ConfigEntryState.LOADED
-        assert "connect to the same system" in caplog.text
+        issue = ir.async_get(hass).async_get_issue(
+            DOMAIN, f"duplicate_system_{second.entry_id}"
+        )
+        assert issue.translation_key == "duplicate_system"
+        assert issue.config_entry_id == second.entry_id
+        assert issue.translation_placeholders == {
+            "entry": second.title,
+            "other": first.title,
+        }
         assert (
             len(er.async_entries_for_config_entry(registry, second.entry_id))
             == entities
@@ -423,5 +430,29 @@ def test_reauth_recovers_from_an_error(run_in_hass):
         assert result["reason"] == "reauth_successful"
         assert entry.data["api_key"] == "new"
         assert entry.unique_id == SYSTEM_A
+
+    run_in_hass(scenario)
+
+
+def test_issue_of_two_entries_on_a_system_goes_away_with_one(run_in_hass):
+    """Removing either one solves it, and the other then takes the id."""
+
+    async def scenario(hass, server):
+        server.results["system.global.id"] = SYSTEM_A
+        first = await async_add_entry(hass)
+        second = await async_add_entry(hass, name="Second")
+        await _make_legacy(hass, first, second)
+        registry = ir.async_get(hass)
+        issue_id = f"duplicate_system_{second.entry_id}"
+        assert registry.async_get_issue(DOMAIN, issue_id) is not None
+
+        await hass.config_entries.async_remove(first.entry_id)
+        await hass.async_block_till_done()
+        assert registry.async_get_issue(DOMAIN, issue_id) is None
+
+        await hass.config_entries.async_reload(second.entry_id)
+        await hass.async_block_till_done()
+        assert second.unique_id == SYSTEM_A
+        assert registry.async_get_issue(DOMAIN, issue_id) is None
 
     run_in_hass(scenario)

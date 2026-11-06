@@ -7,7 +7,11 @@ from logging import getLogger
 
 from homeassistant.const import CONF_NAME, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers import (
+    config_validation as cv,
+    device_registry as dr,
+    issue_registry as ir,
+)
 from homeassistant.helpers.service import async_register_platform_entity_service
 from homeassistant.helpers.typing import ConfigType
 
@@ -79,6 +83,14 @@ async def async_migrate_entry(
 
 
 # ---------------------------
+#   _duplicate_issue_id
+# ---------------------------
+def _duplicate_issue_id(entry_id: str) -> str:
+    """Return the id of the repair issue of an entry on a system that has one."""
+    return f"duplicate_system_{entry_id}"
+
+
+# ---------------------------
 #   _async_set_missing_unique_id
 # ---------------------------
 async def _async_set_missing_unique_id(
@@ -89,9 +101,12 @@ async def _async_set_missing_unique_id(
     """Give an entry made before entries had a unique id its system's id.
 
     Without the id, or with another entry already holding it, the entry keeps
-    working as before.
+    working as before. The latter is a repair issue, because only the user can tell
+    which entry to keep. It goes away with the entry, or when the id is free.
     """
+    issue_id = _duplicate_issue_id(config_entry.entry_id)
     if config_entry.unique_id is not None:
+        ir.async_delete_issue(hass, DOMAIN, issue_id)
         return
 
     system_id = await coordinator.api.read_system_id()
@@ -100,15 +115,22 @@ async def _async_set_missing_unique_id(
 
     for other in hass.config_entries.async_entries(DOMAIN):
         if other.unique_id == system_id:
-            _LOGGER.warning(
-                'The TrueNAS entries "%s" and "%s" connect to the same system. '
-                "Both keep working, but they poll it twice: remove one if you do "
-                "not need it",
-                config_entry.title,
-                other.title,
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                issue_id,
+                config_entry_id=config_entry.entry_id,
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="duplicate_system",
+                translation_placeholders={
+                    "entry": config_entry.title,
+                    "other": other.title,
+                },
             )
             return
 
+    ir.async_delete_issue(hass, DOMAIN, issue_id)
     hass.config_entries.async_update_entry(config_entry, unique_id=system_id)
 
 
@@ -184,3 +206,19 @@ async def async_unload_entry(
         await config_entry.runtime_data.api.disconnect()
 
     return unload_ok
+
+
+# ---------------------------
+#   async_remove_entry
+# ---------------------------
+async def async_remove_entry(
+    hass: HomeAssistant, config_entry: TrueNASConfigEntry
+) -> None:
+    """Remove the repair issues the removal may have solved.
+
+    That includes those of other entries, which may have been waiting for this one's
+    system id. Their next setup raises the issue again if there is still a duplicate.
+    """
+    entries = [config_entry, *hass.config_entries.async_entries(DOMAIN)]
+    for entry in entries:
+        ir.async_delete_issue(hass, DOMAIN, _duplicate_issue_id(entry.entry_id))

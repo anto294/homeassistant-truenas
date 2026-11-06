@@ -276,4 +276,5 @@ def test_every_exception_key_is_translated(path):
         used |= set(re.findall(r'translation_key="(\w+)"', source.read_text()))
 
     assert used
-    assert used <= set(json.loads((COMPONENT / path).read_text())["exceptions"])
+    translations = json.loads((COMPONENT / path).read_text())
+    assert used <= {*translations["exceptions"], *translations["issues"]}

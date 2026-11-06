@@ -169,7 +169,6 @@ class TrueNASCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.last_login = 0.0
         # The entry is about to reload, so nothing new should be added to it
         self.reload_scheduled = False
-        self.datasets_hass_device_id = None
         self.last_updatecheck_update = datetime(1970, 1, 1)
 
         self._is_virtual = False

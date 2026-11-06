@@ -11,7 +11,7 @@ import ssl
 import threading
 import time
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -321,6 +321,40 @@ def test_cancelled_call_closes_the_connection():
 
     with _real_server() as (api, handlers):
         asyncio.run(scenario(api, handlers))
+
+
+def test_cancelled_login_drops_the_connection():
+    """A cancelled task cannot wait for a clean close, so the socket is aborted."""
+
+    class HangingSocket(FakeWebSocket):
+        """A connection that takes the login but never answers it."""
+
+        transport = MagicMock()
+
+        async def recv(self):
+            """Wait until cancelled."""
+            await asyncio.Event().wait()
+
+    async def scenario():
+        api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=False)
+        socket = HangingSocket(lambda _request: NO_ANSWER)
+        with patch(
+            "custom_components.truenas_link.api.connect",
+            AsyncMock(return_value=socket),
+        ):
+            task = asyncio.create_task(api.connect())
+            while not socket.requests:
+                await asyncio.sleep(0)
+
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+        socket.transport.abort.assert_called_once()
+        assert not api.connected()
+        assert not api.lock.locked()
+
+    asyncio.run(scenario())
 
 
 def _extra_tasks(before):

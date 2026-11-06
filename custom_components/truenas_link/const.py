@@ -15,11 +15,9 @@ PLATFORMS = [
 ]
 
 DOMAIN = "truenas_link"
-DEFAULT_NAME = "root"
 ATTRIBUTION = "Data provided by TrueNAS integration"
 
 DEFAULT_HOST = "10.0.0.1"
-DEFAULT_USERNAME = "admin"
 
 DEFAULT_DEVICE_NAME = "TrueNAS"
 # Starts the unique id of a flow from an announcement, and of an ignored one. It is no

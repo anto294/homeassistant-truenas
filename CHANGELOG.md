@@ -11,6 +11,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - The connection to TrueNAS now goes through the web session of Home Assistant, so the
   integration no longer installs a Python package of its own.
+- The access level options are now just **Administrator** and **Read-only**, with a
+  shorter description below them. What each level does is unchanged.
 
 ### Fixed
 

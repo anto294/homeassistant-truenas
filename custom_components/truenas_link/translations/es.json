@@ -13,7 +13,7 @@
                     "host": "Dirección de TrueNAS, con el puerto si no es el 443. La integración se conecta por HTTPS.",
                     "api_key": "Créela en la interfaz web de TrueNAS: menú de usuario → API Keys → Add.",
                     "verify_ssl": "Comprueba el certificado de TrueNAS. Desactívelo para un certificado autofirmado: entonces alguien en su red podría interceptar la clave.",
-                    "access_level": "Solo lectura rechaza las acciones, quita los botones de instalación y los interruptores de cron, y mantiene todos los sensores. Use una clave API con el rol READONLY_ADMIN para que TrueNAS también lo imponga."
+                    "access_level": "Administrador también permite acciones y actualizaciones; Solo lectura solo muestra los sensores."
                 }
             },
             "reconfigure": {
@@ -69,7 +69,7 @@
                     "access_level": "Nivel de acceso"
                 },
                 "data_description": {
-                    "access_level": "Solo lectura rechaza las acciones, quita los botones de instalación y los interruptores de cron, y mantiene todos los sensores. Use una clave API con el rol READONLY_ADMIN para que TrueNAS también lo imponga."
+                    "access_level": "Administrador también permite acciones y actualizaciones; Solo lectura solo muestra los sensores."
                 }
             }
         }
@@ -77,8 +77,8 @@
     "selector": {
         "access_level": {
             "options": {
-                "admin": "Administrador (sensores, acciones y actualizaciones)",
-                "read_only": "Solo lectura (solo sensores)"
+                "admin": "Administrador",
+                "read_only": "Solo lectura"
             }
         }
     },

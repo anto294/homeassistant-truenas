@@ -78,3 +78,18 @@ def test_flow_title_only_asks_for_the_name(path):
     title = _load(path).get("config.flow_title", "")
 
     assert set(re.findall(r"{(\w+)}", title)) <= {"name"}
+
+
+@pytest.mark.parametrize(
+    "path",
+    [COMPONENT / "strings.json", *sorted((COMPONENT / "translations").glob("*.json"))],
+    ids=lambda path: path.name,
+)
+def test_access_level_options_are_short_and_explained(path):
+    """The options only name the level, and each form says what the levels do."""
+    texts = _load(path)
+
+    assert "(" not in texts["selector.access_level.options.admin"]
+    assert "(" not in texts["selector.access_level.options.read_only"]
+    assert texts["config.step.user.data_description.access_level"]
+    assert texts["options.step.init.data_description.access_level"]

@@ -13,7 +13,7 @@
                     "host": "Adresa TrueNAS, s portom, ak to nie je 443. Integrácia sa pripája cez HTTPS.",
                     "api_key": "Vytvorte ho vo webovom rozhraní TrueNAS: menu používateľa → API Keys → Add.",
                     "verify_ssl": "Kontroluje certifikát TrueNAS. Pri certifikáte podpísanom sebou samým ho vypnite: niekto vo vašej sieti by potom mohol kľúč zachytiť.",
-                    "access_level": "Režim iba na čítanie odmieta akcie, odstraňuje tlačidlá inštalácie a prepínače úloh cron a ponecháva všetky senzory. Použite kľúč API s rolou READONLY_ADMIN, aby to vynucoval aj TrueNAS."
+                    "access_level": "Správca povoľuje aj akcie a aktualizácie; Iba na čítanie zobrazuje iba senzory."
                 }
             },
             "reconfigure": {
@@ -69,7 +69,7 @@
                     "access_level": "Úroveň prístupu"
                 },
                 "data_description": {
-                    "access_level": "Režim iba na čítanie odmieta akcie, odstraňuje tlačidlá inštalácie a prepínače úloh cron a ponecháva všetky senzory. Použite kľúč API s rolou READONLY_ADMIN, aby to vynucoval aj TrueNAS."
+                    "access_level": "Správca povoľuje aj akcie a aktualizácie; Iba na čítanie zobrazuje iba senzory."
                 }
             }
         }
@@ -77,8 +77,8 @@
     "selector": {
         "access_level": {
             "options": {
-                "admin": "Správca (senzory, akcie a aktualizácie)",
-                "read_only": "Iba na čítanie (iba senzory)"
+                "admin": "Správca",
+                "read_only": "Iba na čítanie"
             }
         }
     },

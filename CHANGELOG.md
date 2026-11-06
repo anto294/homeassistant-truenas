@@ -7,6 +7,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [2.2.0b2] - 2026-11-06
+
 ### Documentation
 
 - The README now says that this version has been tried on a real system only with
@@ -659,7 +661,8 @@ only as 1.4 betas or not released yet:
   and attaches `truenas.zip`, which HACS installs from. Release notes come
   from this changelog.
 
-[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.2.0b1...HEAD
+[Unreleased]: https://github.com/anto294/homeassistant-truenas/compare/v2.2.0b2...HEAD
+[2.2.0b2]: https://github.com/anto294/homeassistant-truenas/compare/v2.2.0b1...v2.2.0b2
 [2.2.0b1]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0...v2.2.0b1
 [2.1.1b1]: https://github.com/anto294/homeassistant-truenas/compare/v2.1.0...v2.1.1b1
 [2.1.0]: https://github.com/anto294/homeassistant-truenas/compare/v2.0.1...v2.1.0

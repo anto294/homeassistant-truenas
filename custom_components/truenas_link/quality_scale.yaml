@@ -8,7 +8,9 @@ rules:
   common-modules: done
   config-flow: done
   config-flow-test-coverage: done
-  dependency-transparency: done
+  dependency-transparency:
+    status: exempt
+    comment: The integration has no external dependencies.
   docs-actions: done
   docs-conditions:
     status: exempt
@@ -64,8 +66,10 @@ rules:
   repair-issues: done
   stale-devices: done
   # Platinum
-  async-dependency: done
-  inject-websession:
+  async-dependency:
     status: exempt
-    comment: The dependency is websockets, which takes no shared HTTP session.
-  strict-typing: done
+    comment: The integration has no external dependencies, and aiohttp is asyncio too.
+  inject-websession: done
+  strict-typing:
+    status: done
+    comment: CI runs mypy in strict mode. The .strict-typing file of the rule only exists in core.

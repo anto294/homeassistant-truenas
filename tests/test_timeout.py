@@ -377,7 +377,7 @@ def test_cancelled_login_closes_the_connection():
 
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
-            await task
+            await asyncio.gather(task)
 
         assert not api.connected()
         assert not api.lock.locked()
@@ -416,7 +416,7 @@ def test_cancelled_send_drops_the_connection():
 
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
-            await task
+            await asyncio.gather(task)
 
         assert not api.connected()
         assert not api.lock.locked()

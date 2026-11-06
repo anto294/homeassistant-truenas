@@ -14,6 +14,7 @@ from .conftest import async_add_entry
 FIELDS = {"verify_ssl": False}
 SYSTEM_A = "system-a"
 SYSTEM_B = "system-b"
+PROVISIONAL = "discovered-"
 
 
 async def _start_user_flow(hass, server, **overrides):
@@ -452,5 +453,103 @@ def test_issue_of_two_entries_on_a_system_goes_away_with_one(run_in_hass):
         await hass.async_block_till_done()
         assert second.unique_id == SYSTEM_A
         assert registry.async_get_issue(DOMAIN, issue_id) is None
+
+    run_in_hass(scenario)
+
+
+async def _make_provisional(hass, entry):
+    """Turn an entry into what 2.1.1b1 left: the id of the flow that discovered it."""
+    hass.config_entries.async_update_entry(
+        entry, unique_id=f"{PROVISIONAL}{entry.title}"
+    )
+    await hass.async_block_till_done()
+
+
+def test_provisional_id_is_replaced_at_setup(run_in_hass):
+    """An entry from 2.1.1b1 gets the id of its system once it can be read."""
+
+    async def scenario(hass, server):
+        server.results["system.global.id"] = SYSTEM_A
+        entry = await async_add_entry(hass)
+        await _make_provisional(hass, entry)
+
+        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done()
+
+        assert entry.unique_id == SYSTEM_A
+
+    run_in_hass(scenario)
+
+
+def test_provisional_id_on_a_system_with_an_entry_raises_the_issue(run_in_hass):
+    """It is an entry without a unique id, like any other."""
+
+    async def scenario(hass, server):
+        server.results["system.global.id"] = SYSTEM_A
+        await async_add_entry(hass)
+        second = await async_add_entry(hass, name="Second")
+        await _make_provisional(hass, second)
+
+        await hass.config_entries.async_reload(second.entry_id)
+        await hass.async_block_till_done()
+
+        issue_id = f"duplicate_system_{second.entry_id}"
+        assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is not None
+
+    run_in_hass(scenario)
+
+
+def test_reconfigure_of_an_entry_with_a_provisional_id(run_in_hass):
+    """The id of the flow says nothing about the system, so it is no mismatch."""
+
+    async def scenario(hass, server):
+        server.results["system.global.id"] = SYSTEM_A
+        entry = await async_add_entry(hass)
+        await _make_provisional(hass, entry)
+
+        result = await _reconfigure(hass, entry)
+
+        assert result["reason"] == "reconfigure_successful"
+        assert entry.data["host"] == "new-host"
+        assert entry.unique_id == SYSTEM_A
+
+    run_in_hass(scenario)
+
+
+def test_reauth_of_an_entry_with_a_provisional_id(run_in_hass):
+    """The id of the flow says nothing about the system, so it is no mismatch."""
+
+    async def scenario(hass, server):
+        server.results["system.global.id"] = SYSTEM_A
+        entry = await async_add_entry(hass)
+        await _make_provisional(hass, entry)
+
+        result = await _reauth(hass, entry)
+
+        assert result["reason"] == "reauth_successful"
+        assert entry.unique_id == SYSTEM_A
+
+    run_in_hass(scenario)
+
+
+def test_ignored_entry_keeps_its_id(run_in_hass):
+    """That id is what stops the address from being offered again."""
+
+    async def scenario(hass, server):
+        server.results["system.global.id"] = SYSTEM_A
+        unique_id = f"{PROVISIONAL}192.168.1.42"
+        await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_IGNORE},
+            data={"unique_id": unique_id, "title": "TrueNAS"},
+        )
+        await hass.async_block_till_done()
+        entry = hass.config_entries.async_entries(DOMAIN)[0]
+
+        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done()
+
+        assert entry.source == config_entries.SOURCE_IGNORE
+        assert entry.unique_id == unique_id
 
     run_in_hass(scenario)

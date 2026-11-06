@@ -159,7 +159,7 @@ def test_setup_registers_system_device_before_platforms(monkeypatch):
     hass = MagicMock()
     hass.data = {}
     hass.config_entries.async_forward_entry_setups = forward
-    config_entry = MagicMock(entry_id="entry")
+    config_entry = MagicMock(entry_id="entry", unique_id="system")
 
     monkeypatch.setattr(integration, "TrueNASCoordinator", lambda *_: coordinator)
     monkeypatch.setattr(integration.dr, "async_get", lambda _: registry)

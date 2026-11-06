@@ -22,6 +22,9 @@ DEFAULT_HOST = "10.0.0.1"
 DEFAULT_USERNAME = "admin"
 
 DEFAULT_DEVICE_NAME = "TrueNAS"
+# Starts the unique id of a flow from an announcement, and of an ignored one. It is no
+# id of a system. 2.1.1b1 could leave it on an entry too.
+DISCOVERED_ID_PREFIX = "discovered-"
 DEFAULT_SSL_VERIFY = True
 
 CONF_ACCESS_LEVEL = "access_level"

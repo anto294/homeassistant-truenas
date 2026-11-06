@@ -111,8 +111,10 @@ Data is polled every 60 seconds; available updates are checked every 12 hours. I
 | Device | Entity | Type | Notes |
 |---|---|---|---|
 | System | Uptime | sensor | Target for the reboot and shutdown actions |
-| System | CPU usage, CPU temperature, load (1/5/15 min) | sensor | |
-| System | Memory usage, ARC size | sensor | |
+| System | CPU usage, CPU temperature, load (1 min) | sensor | |
+| System | Load (5 and 15 min) | sensor | Disabled by default |
+| System | Memory usage | sensor | |
+| System | ARC size | sensor | Disabled by default |
 | System | Network RX / TX | sensor | One pair per interface |
 | System | TrueNAS update | update | Install system updates from Home Assistant. **Installing one reboots the NAS** |
 | System | Alerts | sensor | Active TrueNAS alerts; the messages are an attribute |

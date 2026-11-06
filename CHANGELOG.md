@@ -7,6 +7,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- TrueNAS systems with a name starting with `truenas` are now discovered on the local
+  network. Home Assistant offers them with the address filled in, and you still enter
+  an API key and confirm.
+
 ### Changed
 
 - Two entries on the same TrueNAS system now raise a repair issue in **Settings →

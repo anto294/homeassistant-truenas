@@ -1,5 +1,6 @@
 {
     "config": {
+        "flow_title": "{name} ({host})",
         "step": {
             "user": {
                 "description": "Настройка интеграции TrueNAS.",
@@ -57,7 +58,8 @@
             "reconfigure_successful": "Перенастройка выполнена.",
             "reauth_successful": "Повторная аутентификация выполнена.",
             "already_configured": "Эта система TrueNAS уже настроена.",
-            "unique_id_mismatch": "Это другая система TrueNAS. Чтобы добавить её, используйте «Добавить запись»."
+            "unique_id_mismatch": "Это другая система TrueNAS. Чтобы добавить её, используйте «Добавить запись».",
+            "not_ipv4_address": "Обнаруживать можно только адреса IPv4. Чтобы использовать другой адрес, добавьте TrueNAS вручную."
         }
     },
     "options": {

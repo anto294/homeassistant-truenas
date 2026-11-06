@@ -66,3 +66,15 @@ def test_placeholders_are_the_same_in_each_text(language):
 def test_english_file_is_the_same_as_strings_json():
     """They are two copies of one text."""
     assert _load(COMPONENT / "translations" / "en.json") == SOURCE
+
+
+@pytest.mark.parametrize(
+    "path",
+    [COMPONENT / "strings.json", *sorted((COMPONENT / "translations").glob("*.json"))],
+    ids=lambda path: path.name,
+)
+def test_flow_title_only_asks_for_the_name(path):
+    """A reauthentication flow only has the name, and a title can't go without one."""
+    title = _load(path).get("config.flow_title", "")
+
+    assert set(re.findall(r"{(\w+)}", title)) <= {"name"}

@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- The title of the reauthentication flow no longer shows a translation error, and no
+  longer writes an error to the Home Assistant log.
+
 ## [2.1.1b1] - 2026-11-06
 
 ### Documentation

@@ -217,9 +217,10 @@ class TrueNASConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
 
         self.truenas_config[CONF_HOST] = host
+        # Only the name: a reauthentication flow has no other placeholder, and the
+        # translations share one title
         self.context["title_placeholders"] = {
-            "name": hostname.split(".")[0],
-            "host": host,
+            "name": f"{hostname.split('.')[0]} ({host})",
         }
         return await self.async_step_user()
 

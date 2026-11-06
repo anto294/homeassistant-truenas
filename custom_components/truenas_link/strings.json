@@ -1,6 +1,5 @@
 {
     "config": {
-        "flow_title": "{name} ({host})",
         "step": {
             "user": {
                 "description": "Set up TrueNAS integration.",

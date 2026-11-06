@@ -75,8 +75,7 @@ def test_announcement_shows_the_form_with_the_address_and_contacts_nobody(run_in
         assert server.sockets == []
         flow = hass.config_entries.flow.async_get(result["flow_id"])
         assert flow["context"]["title_placeholders"] == {
-            "name": "truenas",
-            "host": HOST,
+            "name": f"truenas ({HOST})",
         }
 
     run_in_hass(scenario)

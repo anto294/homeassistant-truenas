@@ -17,12 +17,11 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
+from aiohttp import ClientSession, ClientTimeout
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util.ssl import client_context, get_default_no_verify_context
 import pytest
-from websockets.asyncio.client import connect as real_connect
 from websockets.sync.server import serve
 
 from custom_components.truenas_link.api import (
@@ -34,9 +33,17 @@ from custom_components.truenas_link.const import DOMAIN
 from custom_components.truenas_link.entity import TrueNASEntity
 
 from .sample_data import answers
-from .conftest import NO_ANSWER, FakeWebSocket, SyncAPI, async_add_entry
+from .conftest import (
+    NO_ANSWER,
+    FakeWebSocket,
+    SyncAPI,
+    async_add_entry,
+    real_connection_test,
+)
 
 SHORT_TIMEOUT = 0.3
+# run_in_hass replaces it
+REAL_WS_CONNECT = ClientSession.ws_connect
 
 
 def _answers(request):
@@ -50,10 +57,10 @@ def _answers(request):
 
 def _api_with(*sockets):
     """Return an API and the patch that makes connect() hand out `sockets`."""
-    api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=False)
-    return SyncAPI(api), patch(
-        "custom_components.truenas_link.api.connect",
-        new=AsyncMock(side_effect=list(sockets)),
+    session = MagicMock()
+    api = TrueNASAPI(session, "truenas.lan", "api-key")
+    return SyncAPI(api), patch.object(
+        session, "ws_connect", new=AsyncMock(side_effect=list(sockets))
     )
 
 
@@ -188,12 +195,12 @@ def test_login_without_answer_does_not_ask_for_a_new_key(run_in_hass):
 #   Real websocket server
 # ---------------------------
 @contextmanager
-def _real_server(
-    *hang: str, results: dict | None = None
-) -> Iterator[tuple[TrueNASAPI, list]]:
+def _real_server(*hang: str, results: dict | None = None) -> Iterator[tuple[int, list]]:
     """Run a server that answers pings, but not the requests for `hang` methods.
 
-    websockets answers pings by itself, whatever the handler is doing.
+    Clients of this block connect without TLS, and ping well within the timeout: a
+    server that did not answer would end in a closed connection, not in a timeout.
+    This server answers pings by itself, whatever the handler is doing.
     query.late gets its answer after the client has stopped waiting.
     """
     handlers = []
@@ -222,24 +229,29 @@ def _real_server(
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         port = server.socket.getsockname()[1]
-        api = TrueNASAPI(f"127.0.0.1:{port}", "api-key", verify_ssl=False)
-        api._url = f"ws://127.0.0.1:{port}/api/current"
-        api._ssl_context = None
-
-        def connect(url, **kwargs):
-            # Pings well within the timeout: a server that did not answer them
-            # would end in a closed connection, not in a timeout
-            kwargs.update(ping_interval=0.05, ping_timeout=SHORT_TIMEOUT / 2)
-            return real_connect(url, **kwargs)
 
         with (
             patch("custom_components.truenas_link.api.RESPONSE_TIMEOUT", SHORT_TIMEOUT),
-            patch("custom_components.truenas_link.api.connect", connect),
+            patch("custom_components.truenas_link.api.HEARTBEAT", SHORT_TIMEOUT / 2),
+            patch("custom_components.truenas_link.api.URL_FORMAT", "ws://{host}/api"),
         ):
-            yield api, handlers
+            yield port, handlers
 
         server.shutdown()
         thread.join(5)
+
+
+def _run_real(scenario, *hang, session_options=None, results=None):
+    """Run a scenario with an API that uses a real session and a real server."""
+
+    async def main(port, handlers):
+        async with ClientSession(**(session_options or {})) as session:
+            await scenario(
+                TrueNASAPI(session, f"127.0.0.1:{port}", "api-key"), handlers
+            )
+
+    with _real_server(*hang, results=results) as (port, handlers):
+        asyncio.run(main(port, handlers))
 
 
 def test_real_server_that_answers_pings_but_not_the_query():
@@ -255,7 +267,7 @@ def test_real_server_that_answers_pings_but_not_the_query():
 
         assert isinstance(err.value.__cause__, TimeoutError)
         assert err.value.request_sent
-        # Closing does not take websockets' close timeout of 10 seconds
+        # Closing does not take aiohttp's close timeout of 10 seconds
         assert SHORT_TIMEOUT <= time.monotonic() - start < 5
         assert not api.connected()
         assert not api.lock.locked()
@@ -266,22 +278,20 @@ def test_real_server_that_answers_pings_but_not_the_query():
         assert len(handlers) == 2
         await api.disconnect()
 
-    with _real_server("query.hang") as (api, handlers):
-        asyncio.run(scenario(api, handlers))
+    _run_real(scenario, "query.hang")
 
 
 def test_real_server_login_without_answer():
     """A login that gets no answer times out too."""
 
-    async def scenario(api):
+    async def scenario(api, _handlers):
         assert await api.connect() is False
 
         assert api.error == "cannot_connect"
         assert not api.connected()
         assert not api.lock.locked()
 
-    with _real_server("auth.login_with_api_key") as (api, _):
-        asyncio.run(scenario(api))
+    _run_real(scenario, "auth.login_with_api_key")
 
 
 def test_real_server_late_answer_is_not_read_by_the_next_query():
@@ -297,8 +307,7 @@ def test_real_server_late_answer_is_not_read_by_the_next_query():
         assert len(handlers) == 2
         await api.disconnect()
 
-    with _real_server() as (api, handlers):
-        asyncio.run(scenario(api, handlers))
+    _run_real(scenario)
 
 
 def test_cancelled_call_closes_the_connection():
@@ -319,42 +328,92 @@ def test_cancelled_call_closes_the_connection():
         assert len(handlers) == 2
         await api.disconnect()
 
-    with _real_server() as (api, handlers):
-        asyncio.run(scenario(api, handlers))
+    _run_real(scenario)
 
 
-def test_cancelled_login_drops_the_connection():
-    """A cancelled task cannot wait for a clean close, so the socket is aborted."""
+def test_cancelled_login_closes_the_connection():
+    """A cancelled task cannot wait for the close, so it happens in the background."""
 
     class HangingSocket(FakeWebSocket):
         """A connection that takes the login but never answers it."""
-
-        transport = MagicMock()
 
         async def recv(self):
             """Wait until cancelled."""
             await asyncio.Event().wait()
 
     async def scenario():
-        api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=False)
         socket = HangingSocket(lambda _request: NO_ANSWER)
-        with patch(
-            "custom_components.truenas_link.api.connect",
-            AsyncMock(return_value=socket),
-        ):
-            task = asyncio.create_task(api.connect())
-            while not socket.requests:
-                await asyncio.sleep(0)
+        session = MagicMock(ws_connect=AsyncMock(return_value=socket))
+        api = TrueNASAPI(session, "truenas.lan", "api-key")
+        task = asyncio.create_task(api.connect())
+        while not socket.requests:
+            await asyncio.sleep(0)
 
-            task.cancel()
-            with pytest.raises(asyncio.CancelledError):
-                await task
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
 
-        socket.transport.abort.assert_called_once()
         assert not api.connected()
         assert not api.lock.locked()
+        await asyncio.gather(*api._closing)
+        await asyncio.sleep(0)
+        assert socket.closed
+        assert not api._closing
 
     asyncio.run(scenario())
+
+
+def test_connection_outlives_the_timeout_of_the_session():
+    """Home Assistant's session gives a request 5 minutes, not a whole connection."""
+
+    async def scenario(api, handlers):
+        assert await api.connect()
+        await asyncio.sleep(SHORT_TIMEOUT * 2)
+
+        assert await api.call("system.info") == "system.info"
+        assert len(handlers) == 1
+        await api.disconnect()
+
+    _run_real(scenario, session_options={"timeout": ClientTimeout(total=SHORT_TIMEOUT)})
+
+
+def test_connection_timeout_is_reported():
+    """A server that accepts the connection and then says nothing."""
+
+    async def hang(*_args, **_kwargs):
+        await asyncio.Event().wait()
+
+    session = MagicMock(ws_connect=hang)
+    api = SyncAPI(TrueNASAPI(session, "truenas.lan", "api-key"))
+
+    with patch("custom_components.truenas_link.api.CONNECT_TIMEOUT", 0.01):
+        assert api.connection_test() == (False, "handshake_timeout")
+
+
+def test_closed_connection_ends_the_call():
+    """A connection that closes while waiting for the answer is reported as lost."""
+
+    async def scenario(api, handlers):
+        assert await api.connect()
+        handlers[0].close()
+
+        with pytest.raises(TrueNASConnectionError) as err:
+            await api.call("query.hang")
+
+        assert err.value.request_sent
+        assert not api.connected()
+
+    _run_real(scenario, "query.hang")
+
+
+def test_session_stays_open():
+    """It belongs to Home Assistant, and other integrations use it."""
+
+    async def scenario(api, _handlers):
+        await api.connection_test()
+        assert not api._session.closed
+
+    _run_real(scenario)
 
 
 def _extra_tasks(before):
@@ -380,23 +439,12 @@ def test_no_task_or_connection_is_left_behind(key):
         for websocket in handlers:
             assert websocket.protocol.state.name in ("CLOSING", "CLOSED")
 
-    with _real_server() as (api, handlers):
-        asyncio.run(scenario(api, handlers))
+    _run_real(scenario)
 
 
 def _open_connections(handlers):
     """Return how many connections the server still has open."""
     return sum(websocket.protocol.state.name == "OPEN" for websocket in handlers)
-
-
-def _connection_tasks():
-    """Return the tasks that real client connections keep running."""
-    return [
-        task
-        for task in asyncio.all_tasks()
-        if "Connection." in task.get_coro().__qualname__
-        and "ServerConnection" not in task.get_coro().__qualname__
-    ]
 
 
 async def _settled(hass):
@@ -408,20 +456,17 @@ async def _settled(hass):
 def test_setup_failure_unload_and_reload_leave_nothing_behind(run_in_hass):
     """On a real core, through a real connection: each path closes what it opened."""
 
-    with _real_server(results=answers("25.10")) as (api, handlers):
-
-        def connect(_url, **kwargs):
-            kwargs.pop("ssl", None)
-            return real_connect(api._url, **kwargs)
+    with _real_server(results=answers("25.10")) as (port, handlers):
 
         async def scenario(hass, server):
-            with patch("custom_components.truenas_link.api.connect", connect):
+            with patch("aiohttp.ClientSession.ws_connect", REAL_WS_CONNECT):
                 # The form's connection test, then the entry's own connection
-                entry = await async_add_entry(hass, api_key="api-key")
+                entry = await async_add_entry(
+                    hass, host=f"127.0.0.1:{port}", api_key="api-key"
+                )
                 await _settled(hass)
                 assert _open_connections(handlers) == 1
                 assert len(handlers) == 2
-                assert len(_connection_tasks()) > 0
 
                 # Reload: the old connection goes, and there is one again
                 await hass.config_entries.async_reload(entry.entry_id)
@@ -432,7 +477,6 @@ def test_setup_failure_unload_and_reload_leave_nothing_behind(run_in_hass):
                 await hass.config_entries.async_unload(entry.entry_id)
                 await _settled(hass)
                 assert _open_connections(handlers) == 0
-                assert not _connection_tasks()
 
                 # A setup that fails, because the key was revoked
                 hass.config_entries.async_update_entry(
@@ -442,7 +486,6 @@ def test_setup_failure_unload_and_reload_leave_nothing_behind(run_in_hass):
                 await _settled(hass)
                 assert entry.state is ConfigEntryState.SETUP_ERROR
                 assert _open_connections(handlers) == 0
-                assert not _connection_tasks()
 
         run_in_hass(scenario)
 
@@ -525,22 +568,8 @@ def test_real_tls_server_with_a_self_signed_certificate(tmp_path, verify_ssl, ex
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         port = server.socket.getsockname()[1]
-        api = TrueNASAPI(f"127.0.0.1:{port}", "api-key", verify_ssl=verify_ssl)
 
-        assert asyncio.run(api.connection_test()) == expected
-        assert not api.connected()
+        assert real_connection_test(f"127.0.0.1:{port}", verify_ssl) == expected
 
         server.shutdown()
         thread.join(5)
-
-
-def test_getting_the_ssl_context_does_not_touch_the_disk():
-    """Creating the client runs on the event loop, so it must not load certificates."""
-    with patch("ssl.SSLContext.load_verify_locations", side_effect=AssertionError):
-        assert (
-            TrueNASAPI("nas", "key", verify_ssl=True)._ssl_context is client_context()
-        )
-        assert (
-            TrueNASAPI("nas", "key", verify_ssl=False)._ssl_context
-            is get_default_no_verify_context()
-        )

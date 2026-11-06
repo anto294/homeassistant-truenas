@@ -114,9 +114,10 @@ jobs:
           # installs a custom integration's requirements.
           curl -sSfL -o "$RUNNER_TEMP/constraints.txt" \
             "https://raw.githubusercontent.com/home-assistant/core/$HA_VERSION/homeassistant/package_constraints.txt"
-          mapfile -t REQUIREMENTS < <(python -c 'import json; print("\n".join(json.load(open("custom_components/truenas_link/manifest.json"))["requirements"]))')
+          mapfile -t REQUIREMENTS < <(python -c 'import json; [print(r) for r in json.load(open("custom_components/truenas_link/manifest.json"))["requirements"]]')
           EXTRA="${{ matrix.extra }}"
-          pip install "homeassistant==$HA_VERSION" "${REQUIREMENTS[@]}" pytest ${EXTRA:+"$EXTRA"} -c "$RUNNER_TEMP/constraints.txt"
+          # websockets is only for the real server in the tests
+          pip install "homeassistant==$HA_VERSION" "${REQUIREMENTS[@]}" pytest websockets ${EXTRA:+"$EXTRA"} -c "$RUNNER_TEMP/constraints.txt"
 
       - name: Import all integration modules
         run: |

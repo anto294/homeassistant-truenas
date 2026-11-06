@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import pytest
 import probatio as vol
 
@@ -121,7 +122,7 @@ def test_form_shows_a_known_error_for_an_unknown_failure(run_in_hass):
         flow = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        with patch("custom_components.truenas_link.api.connect", fail):
+        with patch("aiohttp.ClientSession.ws_connect", fail):
             result = await hass.config_entries.flow.async_configure(
                 flow["flow_id"],
                 {
@@ -165,13 +166,36 @@ def test_new_entries_verify_ssl_by_default(run_in_hass):
     run_in_hass(scenario)
 
 
+@pytest.mark.parametrize("verify_ssl", [True, False])
+def test_form_tests_the_connection_with_the_session_it_asks_for(
+    run_in_hass, verify_ssl
+):
+    """Home Assistant has a session per choice: that is what checks the certificate."""
+
+    async def scenario(hass, _server):
+        with patch(
+            "custom_components.truenas_link.config_flow.async_get_clientsession",
+            wraps=async_get_clientsession,
+        ) as get_session:
+            await async_add_entry(hass, verify_ssl=verify_ssl)
+
+        get_session.assert_called_once_with(hass, verify_ssl)
+
+    run_in_hass(scenario)
+
+
 @pytest.mark.parametrize("stored", [True, False])
 def test_reconfigure_shows_the_stored_verify_ssl(run_in_hass, stored):
     """A stored value is shown as it is, and used, without a migration."""
 
     async def scenario(hass, _server):
-        entry = await async_add_entry(hass, verify_ssl=stored)
-        assert entry.runtime_data.api._ssl_verify is stored
+        with patch(
+            "custom_components.truenas_link.coordinator.async_get_clientsession",
+            wraps=async_get_clientsession,
+        ) as get_session:
+            entry = await async_add_entry(hass, verify_ssl=stored)
+
+        get_session.assert_called_once_with(hass, stored)
 
         flow = await _reconfigure_flow(hass, entry)
 

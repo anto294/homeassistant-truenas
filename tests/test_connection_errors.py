@@ -1,8 +1,7 @@
-"""Tests of the error codes, from real failures of real connections."""
+"""Tests of the error codes, from real failures through Home Assistant's session."""
 
 from __future__ import annotations
 
-import asyncio
 from contextlib import contextmanager
 from http import HTTPStatus
 import socket
@@ -11,14 +10,8 @@ import threading
 
 import pytest
 
-from custom_components.truenas_link.api import TrueNASAPI
-
+from .conftest import real_connection_test as _test
 from .test_timeout import _tls_server
-
-
-def _test(host, verify_ssl=False):
-    """Return the result of a connection test."""
-    return asyncio.run(TrueNASAPI(host, "api-key", verify_ssl).connection_test())
 
 
 def _closed_port():

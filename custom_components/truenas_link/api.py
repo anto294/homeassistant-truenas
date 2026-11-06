@@ -9,9 +9,14 @@ from logging import DEBUG, getLogger
 from typing import Any
 
 import json
-from homeassistant.util.ssl import client_context, get_default_no_verify_context
-from websockets.asyncio.client import ClientConnection, connect
-from websockets.exceptions import InvalidHandshake, InvalidStatus
+from aiohttp import (
+    ClientConnectorDNSError,
+    ClientConnectorError,
+    ClientSession,
+    ClientWebSocketResponse,
+    WSMsgType,
+    WSServerHandshakeError,
+)
 
 from .helper import redact_secrets
 
@@ -46,6 +51,13 @@ ERRNO_IN_TEXT = re.compile(r"\[Errno (\d+)\]")
 # After a timeout or a cancellation the connection must be closed: every request has
 # id 0, so a late answer would otherwise be read as the answer to the next request.
 RESPONSE_TIMEOUT = 150
+# Seconds to wait for a connection to open
+CONNECT_TIMEOUT = 10
+# Seconds between pings. A connection is lost when no pong comes in half of this.
+HEARTBEAT = 40
+# Bytes in one answer, which a system with many datasets can need
+MAX_MESSAGE_SIZE = 16777216
+URL_FORMAT = "wss://{host}/api/current"
 
 
 # ---------------------------
@@ -81,25 +93,21 @@ class TrueNASMalformedResponseError(TrueNASRequestError):
 class TrueNASAPI(object):
     """Handle all communication with TrueNAS."""
 
-    def __init__(
-        self,
-        host: str,
-        api_key: str,
-        verify_ssl: bool = True,
-    ) -> None:
-        """Initialize the TrueNAS API."""
+    def __init__(self, session: ClientSession, host: str, api_key: str) -> None:
+        """Initialize the TrueNAS API.
+
+        The session decides whether certificates are verified. It belongs to Home
+        Assistant, so this never closes it.
+        """
+        self._session = session
         self._host = host
         self._api_key = api_key
-        self._ssl_verify = verify_ssl
-        self._url = f"wss://{self._host}/api/current"
-        # Home Assistant's shared contexts, created when it starts, so getting one
-        # does not block. They are shared, so never modify them.
-        self._ssl_context = (
-            client_context() if verify_ssl else get_default_no_verify_context()
-        )
+        self._url = URL_FORMAT.format(host=host)
 
         self.lock = asyncio.Lock()
-        self._ws: ClientConnection | None = None
+        self._ws: ClientWebSocketResponse | None = None
+        # Connections being closed in the background, kept so they are not lost
+        self._closing: set[asyncio.Task[None]] = set()
         self._connected = False
         self._error = ""
         # What each method last failed with, to log a repeated failure once
@@ -119,12 +127,12 @@ class TrueNASAPI(object):
             await self.disconnect()
             self._error = ""
             try:
-                self._ws = await connect(
-                    self._url,
-                    ssl=self._ssl_context,
-                    max_size=16777216,
-                    ping_interval=20,
-                )
+                async with asyncio.timeout(CONNECT_TIMEOUT):
+                    self._ws = await self._session.ws_connect(
+                        self._url,
+                        heartbeat=HEARTBEAT,
+                        max_msg_size=MAX_MESSAGE_SIZE,
+                    )
             except Exception as e:
                 self._error = self._connect_error_code(e)
                 # The coordinator logs that TrueNAS went away, and that it is back,
@@ -139,7 +147,7 @@ class TrueNASAPI(object):
                     "id": 0,
                     "params": [self._api_key],
                 }
-                await self._ws.send(json.dumps(payload))
+                await self._ws.send_str(json.dumps(payload))
                 message = await self._receive()
                 data = json.loads(message)
                 self._connected = data["result"]
@@ -167,8 +175,12 @@ class TrueNASAPI(object):
         if isinstance(error, TimeoutError):
             return ERROR_TIMEOUT
 
-        if isinstance(error, socket.gaierror):
+        if isinstance(error, (ClientConnectorDNSError, socket.gaierror)):
             return "unknown_hostname"
+
+        if isinstance(error, ClientConnectorError):
+            # What failed, without the wrapping of aiohttp
+            error = error.os_error
 
         if isinstance(error, ssl.SSLCertVerificationError):
             return "certificate_verify_failed"
@@ -179,10 +191,10 @@ class TrueNASAPI(object):
 
             return ERROR_CANNOT_CONNECT
 
-        if isinstance(error, InvalidStatus) and error.response.status_code == 404:
-            return "api_not_found"
+        if isinstance(error, WSServerHandshakeError):
+            if error.status == 404:
+                return "api_not_found"
 
-        if isinstance(error, InvalidHandshake):
             # Something answers at this address, but not with a websocket
             return "websocket_not_supported"
 
@@ -211,23 +223,36 @@ class TrueNASAPI(object):
         ws, self._ws = self._ws, None
         self._connected = False
         if ws:
-            try:
-                await ws.close()
-            except Exception as e:
-                # The connection is gone either way
-                _LOGGER.debug("TrueNAS %s failed to disconnect (%s)", self._host, e)
+            await self._close(ws)
 
         return self._connected
+
+    # ---------------------------
+    #   _close
+    # ---------------------------
+    async def _close(self, ws: ClientWebSocketResponse) -> None:
+        """Close a connection."""
+        try:
+            await ws.close()
+        except Exception as e:
+            # The connection is gone either way
+            _LOGGER.debug("TrueNAS %s failed to disconnect (%s)", self._host, e)
 
     # ---------------------------
     #   _abort
     # ---------------------------
     def _abort(self) -> None:
-        """Drop the connection at once, for a cancelled task that cannot wait."""
+        """Drop the connection now and close it in the background.
+
+        A cancelled task cannot wait for the close. A late answer can't reach the next
+        request either, as that one gets a new connection.
+        """
         ws, self._ws = self._ws, None
         self._connected = False
         if ws:
-            ws.transport.abort()
+            task = asyncio.create_task(self._close(ws))
+            self._closing.add(task)
+            task.add_done_callback(self._closing.discard)
 
     # ---------------------------
     #   _receive
@@ -238,7 +263,13 @@ class TrueNASAPI(object):
             raise ConnectionError("not connected")
 
         async with asyncio.timeout(RESPONSE_TIMEOUT):
-            return await self._ws.recv()
+            message = await self._ws.receive()
+
+        if message.type in (WSMsgType.TEXT, WSMsgType.BINARY):
+            data: str | bytes = message.data
+            return data
+
+        raise ConnectionError(f"connection closed ({message.type.name})")
 
     # ---------------------------
     #   connected
@@ -387,7 +418,7 @@ class TrueNASAPI(object):
             if self._ws is None:
                 raise ConnectionError("not connected")
 
-            await self._ws.send(json.dumps(payload))
+            await self._ws.send_str(json.dumps(payload))
         except asyncio.CancelledError:
             self._abort()
             raise

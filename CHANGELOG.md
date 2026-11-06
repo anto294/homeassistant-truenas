@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- The connection to TrueNAS now goes through the web session of Home Assistant, so the
+  integration no longer installs a Python package of its own.
+
 ### Fixed
 
 - The title of the reauthentication flow no longer shows a translation error, and no

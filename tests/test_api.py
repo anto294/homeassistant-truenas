@@ -1,4 +1,4 @@
-"""Tests for TrueNASAPI: JSON-RPC handling of query() and the SSL context."""
+"""Tests for TrueNASAPI: JSON-RPC handling of query() and the connection errors."""
 
 from __future__ import annotations
 
@@ -8,9 +8,8 @@ import json
 from pathlib import Path
 import errno
 import ssl
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from homeassistant.util.ssl import client_context, get_default_no_verify_context
 import pytest
 
 from custom_components.truenas_link.api import (
@@ -106,25 +105,6 @@ def test_list_result_is_returned(connected_api):
     assert api.query("pool.query") == pools
 
 
-def test_ssl_context_verifies_with_ca_bundle():
-    """Verify SSL uses Home Assistant's context, which loads trusted CAs."""
-    api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=True)
-
-    assert api._ssl_context is client_context()
-    assert api._ssl_context.verify_mode == ssl.CERT_REQUIRED
-    assert api._ssl_context.check_hostname
-    assert api._ssl_context.cert_store_stats()["x509_ca"] > 0
-
-
-def test_ssl_context_without_verification():
-    """Without Verify SSL, use Home Assistant's no-verify context."""
-    api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=False)
-
-    assert api._ssl_context is get_default_no_verify_context()
-    assert api._ssl_context.verify_mode == ssl.CERT_NONE
-    assert not api._ssl_context.check_hostname
-
-
 def _login(result=True):
     """Build a responder that answers a login with `result`, and queries with []."""
 
@@ -138,10 +118,10 @@ def _login(result=True):
 
 def _api_with(*sockets):
     """Return an API and the patch that makes connect() hand out `sockets`."""
-    api = TrueNASAPI("truenas.lan", "api-key", verify_ssl=False)
-    return SyncAPI(api), patch(
-        "custom_components.truenas_link.api.connect",
-        new=AsyncMock(side_effect=list(sockets)),
+    session = MagicMock()
+    api = TrueNASAPI(session, "truenas.lan", "api-key")
+    return SyncAPI(api), patch.object(
+        session, "ws_connect", new=AsyncMock(side_effect=list(sockets))
     )
 
 
@@ -301,10 +281,9 @@ def test_query_does_not_reconnect(connected_api):
     api, ws = connected_api(_reply(result=[]))
     api.disconnect()
 
-    with patch("custom_components.truenas_link.api.connect") as connect:
-        assert api.query("pool.query") is None
+    assert api.query("pool.query") is None
 
-    connect.assert_not_called()
+    api.real._session.ws_connect.assert_not_called()
     assert len(ws.requests) == 0
     assert not api.connected()
 
@@ -376,12 +355,10 @@ ERROR_CODES = json.loads(
 )
 def test_connection_failure_gives_a_known_code(error, code):
     """Each connection error maps to a code the forms have a message for."""
-    api = SyncAPI(TrueNASAPI("truenas.lan", "api-key", verify_ssl=False))
+    session = MagicMock(ws_connect=AsyncMock(side_effect=error))
+    api = SyncAPI(TrueNASAPI(session, "truenas.lan", "api-key"))
 
-    with patch(
-        "custom_components.truenas_link.api.connect", new=AsyncMock(side_effect=error)
-    ):
-        assert api.connection_test() == (False, code)
+    assert api.connection_test() == (False, code)
 
     assert code in ERROR_CODES
 

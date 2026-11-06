@@ -44,8 +44,8 @@ rules:
   diagnostics: done
   discovery: done
   discovery-update-info:
-    status: exempt
-    comment: mDNS announcements hold no stable id of the system, and the API gives one only after login. Following an announcement would send the stored API key to whoever announces the name, so the address only changes with Reconfigure.
+    status: todo
+    comment: Not met, and the rule only exempts devices that cannot be discovered. mDNS announcements hold no stable id of the system, and the API gives one only after login. Following an announcement would send the stored API key to whoever announces the name, so the address only changes with Reconfigure.
   docs-data-update: done
   docs-examples: done
   docs-known-limitations: done

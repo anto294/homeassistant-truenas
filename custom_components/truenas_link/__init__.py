@@ -79,6 +79,10 @@ async def async_migrate_entry(
     return True
 
 
+# In the data of a duplicate issue: the entry that holds the system's id
+ISSUE_HOLDER = "holder_entry_id"
+
+
 # ---------------------------
 #   _duplicate_issue_id
 # ---------------------------
@@ -121,6 +125,7 @@ async def _async_set_missing_unique_id(
                 DOMAIN,
                 issue_id,
                 config_entry_id=config_entry.entry_id,
+                data={ISSUE_HOLDER: other.entry_id},
                 is_fixable=False,
                 severity=ir.IssueSeverity.WARNING,
                 translation_key="duplicate_system",
@@ -215,11 +220,13 @@ async def async_unload_entry(
 async def async_remove_entry(
     hass: HomeAssistant, config_entry: TrueNASConfigEntry
 ) -> None:
-    """Remove the repair issues the removal may have solved.
+    """Remove the repair issues of the entries that were waiting for this one's id.
 
-    That includes those of other entries, which may have been waiting for this one's
-    system id. Their next setup raises the issue again if there is still a duplicate.
+    The entry's own issue is linked to it, so it goes away with the entry.
     """
-    entries = [config_entry, *hass.config_entries.async_entries(DOMAIN)]
-    for entry in entries:
-        ir.async_delete_issue(hass, DOMAIN, _duplicate_issue_id(entry.entry_id))
+    registry = ir.async_get(hass)
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        issue_id = _duplicate_issue_id(entry.entry_id)
+        issue = registry.async_get_issue(DOMAIN, issue_id)
+        if issue and issue.data and issue.data[ISSUE_HOLDER] == config_entry.entry_id:
+            ir.async_delete_issue(hass, DOMAIN, issue_id)

@@ -606,6 +606,32 @@ def test_device_of_an_entry_that_is_not_loaded_cannot_be_deleted(run_in_hass):
     run_in_hass(scenario)
 
 
+def test_old_system_device_with_an_entity_is_kept(run_in_hass):
+    """It has identifiers, so it is no item's device, and the entity is not ours."""
+
+    async def scenario(hass, server):
+        server.results = answers("25.10")
+        entry = await async_add_entry(hass)
+        devices = dr.async_get(hass)
+        old = devices.async_get(entry.runtime_data.system_device_id)
+        server.results["system.info"]["hostname"] = "renamed"
+        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done()
+        assert await async_remove_config_entry_device(hass, entry, old)
+
+        er.async_get(hass).async_get_or_create(
+            "sensor",
+            DOMAIN,
+            "left-behind",
+            config_entry=entry,
+            device_id=old.id,
+        )
+
+        assert not await async_remove_config_entry_device(hass, entry, old)
+
+    run_in_hass(scenario)
+
+
 def test_device_with_live_items_cannot_be_deleted(run_in_hass):
     """Its entities would only come back."""
 

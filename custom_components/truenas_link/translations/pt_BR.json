@@ -178,5 +178,11 @@
                 "name": "{name} íntegro"
             }
         }
+    },
+    "issues": {
+        "duplicate_system": {
+            "title": "Duas entradas do TrueNAS se conectam ao mesmo sistema",
+            "description": "\"{entry}\" e \"{other}\" se conectam ao mesmo sistema TrueNAS. Ambas continuam funcionando, mas o consultam duas vezes. Remova a que você não precisa em Configurações → Dispositivos e serviços → TrueNAS Link. Este aviso desaparecerá com ela."
+        }
     }
 }

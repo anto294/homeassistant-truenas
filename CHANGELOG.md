@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- Two entries on the same TrueNAS system now raise a repair issue in **Settings →
+  System → Repairs**, instead of a warning in the log. It goes away when you remove one.
+
 ### Fixed
 
 - A disk without a serial, such as a virtual one, got a second entity

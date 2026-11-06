@@ -7,7 +7,6 @@ import logging
 import json
 from pathlib import Path
 import errno
-import ssl
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

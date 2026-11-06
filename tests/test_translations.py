@@ -93,3 +93,13 @@ def test_access_level_options_are_short_and_explained(path):
     assert "(" not in texts["selector.access_level.options.read_only"]
     assert texts["config.step.user.data_description.access_level"]
     assert texts["options.step.init.data_description.access_level"]
+
+
+@pytest.mark.parametrize(
+    "path",
+    [COMPONENT / "strings.json", *sorted((COMPONENT / "translations").glob("*.json"))],
+    ids=lambda path: path.name,
+)
+def test_reauthentication_title_names_the_entry(path):
+    """With several systems, the dialog has to say which one lost its key."""
+    assert "{name}" in _load(path)["config.step.reauth_confirm.title"]

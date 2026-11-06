@@ -30,7 +30,7 @@
                 }
             },
             "reauth_confirm": {
-                "title": "Nuova autenticazione",
+                "title": "Nuova autenticazione di {name}",
                 "description": "TrueNAS ha rifiutato la chiave API di {name}. Inseriscine una nuova.",
                 "data": {
                     "api_key": "Chiave API"

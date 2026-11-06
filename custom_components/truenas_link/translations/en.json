@@ -30,7 +30,7 @@
                 }
             },
             "reauth_confirm": {
-                "title": "Reauthenticate",
+                "title": "Reauthenticate {name}",
                 "description": "TrueNAS rejected the API key of {name}. Enter a new one.",
                 "data": {
                     "api_key": "API key"

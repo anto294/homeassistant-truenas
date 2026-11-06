@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- The reauthentication dialog now names the entry in its title, so with several TrueNAS
+  systems you can see which one needs a new key.
+
 ## [2.2.0b2] - 2026-11-06
 
 ### Documentation

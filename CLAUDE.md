@@ -32,7 +32,7 @@ Check a method's name, parameters and return shape in these docs before adding o
 - **Names and icons**: a description's `name` stays in English and builds the entity id (`_english_name`, never the translated name), and it must not change. `translation_key` gives the name shown, from `entity` in `strings.json` and `translations/*.json`, where a per-item entity uses `{name}` for the item. Icons are in `icons.json`, by `translation_key`.
 - **Services**: constants and schemas go in `const.py`, the definitions go in `services.yaml`, and the descriptions go in `strings.json`.
 
-- **Quality scale**: `quality_scale.yaml` holds the state of each rule, up to Platinum. Tiers are assigned to integrations in core, so never claim an official one. An announcement proves nothing about a system: discovery only fills in the setup form, and never changes the address of an entry, which would send its key there.
+- **Quality scale**: `quality_scale.yaml` holds the state of each rule, up to Platinum. Tiers are assigned to integrations in core, so never claim an official one. The README's "Quality scale" section counts the rules and explains the choices, so keep it in step. An announcement proves nothing about a system: discovery only fills in the setup form, and never changes the address of an entry, which would send its key there.
 
 ## Adding a feature (typical flow)
 

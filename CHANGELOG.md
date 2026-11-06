@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Documentation
+
+- The README now shows where the integration stands on the Integration Quality Scale,
+  and why discovery never changes the address of an entry.
+
 ### Changed
 
 - The connection to TrueNAS now goes through the web session of Home Assistant, so the
